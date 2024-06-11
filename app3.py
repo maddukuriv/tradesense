@@ -12,6 +12,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from password_validator import PasswordValidator
 from dotenv import load_dotenv
+import plotly.express as px
 
 from scipy.stats import linregress
 from scipy.fftpack import fft, ifft
@@ -236,7 +237,7 @@ def main_menu():
 
 # Sidebar menu
 with st.sidebar:
-    st.title("TradeSense")
+    st.title("TradeSense") 
     if st.session_state.logged_in:
         st.write(f"Logged in as: {st.session_state.username}")
         if st.button("Logout"):
@@ -253,21 +254,41 @@ with st.sidebar:
         elif selected == "Forgot Password":
             forgot_password()
         choice = None
+     
 
 # Main content area
 if not st.session_state.logged_in:
 
-    st.subheader("Unlock your trading potential. Join TradeSense today!")
-    st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
+ 
 
-    # Function to download data and calculate moving averages
+
+    st.subheader("Major Indices")
+
+    # Create three columns
+    col1, col2, col3 = st.columns(3)
+
+    # Set up the start and end date inputs
+    with col1:
+        # List of stock symbols
+        stock_symbols = ["^BSESN", "BSE-500.BO", "^BSEMD", "^BSESMLCAP", "^NSEI", "^NSMIDCP", "^NSEMDCP", "^NSESCP"]
+        
+        # Auto-suggestion using selectbox
+        ticker = st.selectbox("Enter Stock symbol", stock_symbols)
+        st.write(f"You selected: {ticker}")
+
+    with col2:
+        START = st.date_input('Start Date', pd.to_datetime("2020-01-01"))
+
+    with col3:
+        END = st.date_input('End Date', pd.to_datetime("today"))
+
+    # Function to get stock data and calculate moving averages
     def get_stock_data(ticker_symbol, start_date, end_date):
         data = yf.download(ticker_symbol, start=start_date, end=end_date)
         data['MA_15'] = data['Close'].rolling(window=15).mean()
         data['MA_50'] = data['Close'].rolling(window=50).mean()
         data.dropna(inplace=True)
         return data
-
 
     # Function to create Plotly figure
     def create_figure(data, indicators, title):
@@ -281,45 +302,46 @@ if not st.session_state.logged_in:
         if 'MA_50' in indicators:
             fig.add_trace(go.Scatter(x=data.index, y=data['MA_50'], mode='lines', name='50-day MA'))
 
-        fig.update_layout(title=title, xaxis_title='Date', yaxis_title='Price',
-                          xaxis_rangeslider_visible=True,
-                          plot_bgcolor='dark grey',
-                          paper_bgcolor='white',
-                          font=dict(color='black'),
-                          hovermode='x',
-                          xaxis=dict(rangeselector=dict(buttons=list([
-                              dict(count=1, label="1m", step="month", stepmode="backward"),
-                              dict(count=6, label="6m", step="month", stepmode="backward"),
-                              dict(count=1, label="YTD", step="year", stepmode="todate"),
-                              dict(count=1, label="1y", step="year", stepmode="backward"),
-                              dict(step="all")
-                          ])),
-                              rangeslider=dict(visible=True),
-                              type='date'),
-                          yaxis=dict(fixedrange=False),
-                          updatemenus=[dict(type="buttons",
-                                            buttons=[dict(label="Reset Zoom",
-                                                          method="relayout",
-                                                          args=[{"xaxis.range": [None, None],
-                                                                 "yaxis.range": [None, None]}])])])
+        fig.update_layout(
+            title=title, 
+            xaxis_title='Date', 
+            yaxis_title='Price',
+            xaxis_rangeslider_visible=True,
+            plot_bgcolor='dark grey',  # Changed from 'dark grey' to 'darkgrey'
+            paper_bgcolor='white',
+            font=dict(color='black'),
+            hovermode='x',
+            xaxis=dict(
+                rangeselector=dict(
+                    buttons=list([
+                        dict(count=1, label="1m", step="month", stepmode="backward"),
+                        dict(count=6, label="6m", step="month", stepmode="backward"),
+                        dict(count=1, label="YTD", step="year", stepmode="todate"),
+                        dict(count=1, label="1y", step="year", stepmode="backward"),
+                        dict(step="all")
+                    ])
+                ),
+                rangeslider=dict(visible=True),
+                type='date'
+            ),
+            yaxis=dict(fixedrange=False),
+            updatemenus=[dict(
+                type="buttons",
+                buttons=[dict(label="Reset Zoom",
+                            method="relayout",
+                            args=[{"xaxis.range": [None, None],
+                                    "yaxis.range": [None, None]}])]
+            )]
+        )
         return fig
 
+    # Get data and create the figure
+    if ticker and START and END:
+        data = get_stock_data(ticker, START, END)
+        fig = create_figure(data, ['Close', 'MA_15', 'MA_50'], f"{ticker} Stock Prices")
+        st.plotly_chart(fig)
 
-    # Create two columns
-    col1, col2 = st.columns(2)
-
-    # Set up the start and end date inputs
-    with col1:
-        START = st.date_input('Start Date', pd.to_datetime("2022-01-01"))
-    with col2:
-        END = st.date_input('End Date', pd.to_datetime("today"))
-
-    data_bse = get_stock_data("^BSESN", START, END)
-    indicators = st.multiselect("Select Indicators", ['Close', 'MA_15', 'MA_50'], default=['Close'])
-
-    fig_bse = create_figure(data_bse, indicators, 'BSE Price')
-    st.plotly_chart(fig_bse)
-
+    st.subheader("Top Gainers and Losers")
     # List of tickers
     tickers = ["ABBOTINDIA.NS", "ADANIPOWER.NS", "AFFLE.BO", "AIAENG.BO", "AJANTPHARM.BO", "APLLTD.BO", "ALKEM.BO",
                "ARE&M.NS", "ANANDRATHI.BO", "APARINDS.BO", "ASIANPAINT.NS", "ASTRAL.NS", "ASTRAZEN.NS", "BAJFINANCE.NS",
@@ -479,6 +501,96 @@ if not st.session_state.logged_in:
 
         fig = create_horizontal_annotated_heatmap(df_monthly_sorted, 'Monthly Gainers/Losers')
         st.plotly_chart(fig)
+
+    
+
+    st.subheader("Volume Chart")
+    # Function to fetch stock data and volume
+    def get_volume_data(ticker, start_date, end_date):
+        data = yf.download(ticker, start=start_date, end=end_date)
+        return data['Volume'].sum()
+
+    # Get start and end date inputs from user
+    start_date = st.date_input('Start Date', datetime(2020, 1, 1), key='start_date')
+    end_date = st.date_input('End Date', datetime.today(), key='end_date')
+
+    # Fetch volume data for each stock
+    volume_data = {}
+    for ticker in tickers:
+        volume = get_volume_data(ticker, start_date, end_date)
+        volume_data[ticker] = volume
+
+    # Convert the volume data into a DataFrame for visualization
+    volume_df = pd.DataFrame(list(volume_data.items()), columns=['Ticker', 'Volume'])
+
+    # Create a bar chart using Plotly
+    fig = px.bar(volume_df, x='Ticker', y='Volume', title='Trading Volume of Stocks',
+                labels={'Volume': 'Total Volume'}, color='Volume',
+                color_continuous_scale=px.colors.sequential.Viridis)
+
+    # Display the chart
+    st.plotly_chart(fig)
+
+    st.subheader("Sector Performance Chart")
+
+    # List of sector indices (NIFTY and BSE sectors as an example)
+    sector_indices = {
+        'NIFTY_BANK': '^NSEBANK',
+        'NIFTY_IT': '^CNXIT',
+        'NIFTY_AUTO': '^CNXAUTO',
+        'NIFTY_FMCG': '^CNXFMCG',
+        'NIFTY_PHARMA': '^CNXPHARMA',
+        'BSE_TECK': 'BSE-TECK.BO',
+        'BSE_HEALTHCARE': 'BSE-HEALTH.BO',
+        'BSE_FINANCE': 'BSE-FINANCE.BO',
+        'BSE_POWER': 'BSE-POWER.BO',
+    }
+
+    # Function to fetch sector data
+    def get_sector_data(ticker_symbol, start_date, end_date):
+        data = yf.download(ticker_symbol, start=start_date, end=end_date)
+        return data
+
+    # Define the date range for the slider
+    min_date = datetime(2018, 1, 1)
+    max_date = datetime.today()
+
+    # Get start and end date inputs from user using a slider
+    date_range = st.slider("Select Date Range", min_value=min_date, max_value=max_date, value=(min_date, max_date), format="YYYY-MM-DD")
+    start_date, end_date = date_range
+
+    # Debug prints to check the selected dates
+    st.write(f"Selected start date: {start_date}")
+    st.write(f"Selected end date: {end_date}")
+
+    # Function to calculate sector performance
+    def calculate_performance(data):
+        if not data.empty:
+            performance = (data['Close'].iloc[-1] / data['Close'].iloc[0] - 1) * 100
+            return performance
+        return None
+
+    # Fetch data and calculate performance for each sector
+    sector_performance = {}
+    for sector, ticker in sector_indices.items():
+        data = get_sector_data(ticker, start_date, end_date)
+        performance = calculate_performance(data)
+        if performance is not None:
+            sector_performance[sector] = performance
+
+    # Convert the performance data into a DataFrame for visualization
+    performance_df = pd.DataFrame(list(sector_performance.items()), columns=['Sector', 'Performance'])
+
+    # Create a bar chart using Plotly
+    fig = px.bar(performance_df, x='Sector', y='Performance', title='Sector Performance',
+                labels={'Performance': 'Performance (%)'}, color='Performance',
+                color_continuous_scale=px.colors.sequential.Viridis)
+
+    # Display the chart
+    st.plotly_chart(fig)
+    st.markdown("-----------------------------------------------------------------------------------------------------------------------")
+    st.subheader("Unlock your trading potential. Join TradeSense today!")
+    st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")  
 else:
     if choice:
         if choice == "Markets":
