@@ -39,9 +39,7 @@ import mplfinance as mpf
 
 
 
-# Get the port number from the environment variable (use a default for local testing)
-port = int(os.getenv('PORT', 8501))
-st.set_option('server.port', port)
+
 # Set wide mode as default layout
 st.set_page_config(layout="wide", page_title="TradeSense",page_icon=":chart_with_upwards_trend:")
 
