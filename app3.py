@@ -511,9 +511,14 @@ if not st.session_state.logged_in:
         return data['Volume'].sum()
 
     # Get start and end date inputs from user
-    start_date = st.date_input('Start Date', datetime(2020, 1, 1), key='start_date')
-    end_date = st.date_input('End Date', datetime.today(), key='end_date')
+    # Create two columns
+    col1, col2 = st.columns(2)
 
+    # Set up the start and end date inputs
+    with col1:
+        start_date = st.date_input('Start Date', datetime(2020, 1, 1), key='start_date')
+    with col2:
+        end_date = st.date_input('End Date', datetime.today(), key='end_date')
     # Fetch volume data for each stock
     volume_data = {}
     for ticker in tickers:
