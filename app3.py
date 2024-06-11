@@ -36,7 +36,7 @@ from scipy.signal import hilbert
 import pywt
 import holidays
 import mplfinance as mpf
-
+from datetime import datetime, timedelta
 
 
 # Set wide mode as default layout
@@ -593,6 +593,67 @@ if not st.session_state.logged_in:
 
     # Display the chart
     st.plotly_chart(fig)
+
+
+    st.subheader("Market Performance ")
+
+    # List of market indices (Equities, Commodities, Forex, Crypto)
+    market_indices = {
+        'S&P 500': '^GSPC',
+        'Dow Jones': '^DJI',
+        'NASDAQ': '^IXIC',
+        'Gold': 'GC=F',
+        'Silver': 'SI=F',
+        'Oil': 'CL=F',
+        'EUR/USD': 'EURUSD=X',
+        'GBP/USD': 'GBPUSD=X',
+        'Bitcoin': 'BTC-USD',
+        'Ethereum': 'ETH-USD'
+    }
+
+    # Function to fetch market data
+    def get_market_data(ticker_symbol, start_date, end_date):
+        data = yf.download(ticker_symbol, start=start_date, end=end_date)
+        return data
+
+    # Define the date range for the slider
+    min_date = datetime(2020, 1, 1)
+    max_date = datetime.today()
+
+    # Get start and end date inputs from user using a slider
+    date_range = st.slider("Select Date Range", min_value=min_date, max_value=max_date, value=(min_date, max_date), format="YYYY-MM-DD")
+    start_date, end_date = date_range
+
+    # Debug prints to check the selected dates
+    st.write(f"Selected start date: {start_date}")
+    st.write(f"Selected end date: {end_date}")
+
+    # Function to calculate market performance
+    def calculate_performance(data):
+        if not data.empty:
+            performance = (data['Close'].iloc[-1] / data['Close'].iloc[0] - 1) * 100
+            return performance
+        return None
+
+    # Fetch data and calculate performance for each market
+    market_performance = {}
+    for market, ticker in market_indices.items():
+        data = get_market_data(ticker, start_date, end_date)
+        performance = calculate_performance(data)
+        if performance is not None:
+            market_performance[market] = performance
+
+    # Convert the performance data into a DataFrame for visualization
+    performance_df = pd.DataFrame(list(market_performance.items()), columns=['Market', 'Performance'])
+
+    # Create a bar chart using Plotly
+    fig = px.bar(performance_df, x='Market', y='Performance', title='Market Performance',
+                labels={'Performance': 'Performance (%)'}, color='Performance',
+                color_continuous_scale=px.colors.diverging.RdYlGn)
+
+    # Display the chart
+    st.plotly_chart(fig)
+
     st.markdown("-----------------------------------------------------------------------------------------------------------------------")
     st.subheader("Unlock your trading potential. Join TradeSense today!")
     st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")  
