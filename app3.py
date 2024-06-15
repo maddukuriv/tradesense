@@ -1358,7 +1358,7 @@ else:
                 ticker = st.text_input("Enter Stock symbol", '^BSESN')
                 
             with col2:
-                START = st.date_input('Start Date', pd.to_datetime("2015-01-01"))
+                START = st.date_input('Start Date', pd.to_datetime("2023-01-01"))
             with col3:
                 END = st.date_input('End Date', pd.to_datetime("today"))
 
