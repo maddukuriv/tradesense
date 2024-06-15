@@ -984,6 +984,7 @@ else:
             first_conditions = [
                 ('Volume', '>', 'Volume_MA_20'),
                 ('MACD', '>', 'MACD_Signal')
+                
             ]
 
             # Query stocks based on the first set of conditions
@@ -994,7 +995,7 @@ else:
             # st.dataframe(first_query_df.round(2))
             # Generate insights
             second_query_df = first_query_df[
-                (first_query_df['RSI'] < 70) & (first_query_df['RSI'] > 55) & (first_query_df['ADX'] > 20) & (
+                (first_query_df['RSI'] < 70) & (first_query_df['RSI'] > 30) & (first_query_df['ADX'] > 25) & (
                         first_query_df['MACD'] > 0)]
             st.write("Stocks in an uptrend with high volume:")
             st.dataframe(second_query_df)
