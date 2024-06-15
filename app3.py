@@ -277,7 +277,7 @@ if not st.session_state.logged_in:
         st.write(f"You selected: {ticker}")
 
     with col2:
-        START = st.date_input('Start Date', pd.to_datetime("2020-01-01"))
+        START = st.date_input('Start Date', pd.to_datetime("2023-06-06"))
 
     with col3:
         END = st.date_input('End Date', pd.to_datetime("today"))
@@ -307,7 +307,7 @@ if not st.session_state.logged_in:
             xaxis_title='Date', 
             yaxis_title='Price',
             xaxis_rangeslider_visible=True,
-            plot_bgcolor='dark grey',  # Changed from 'dark grey' to 'darkgrey'
+            plot_bgcolor='dark grey',  
             paper_bgcolor='white',
             font=dict(color='black'),
             hovermode='x',
@@ -516,7 +516,7 @@ if not st.session_state.logged_in:
 
     # Set up the start and end date inputs
     with col1:
-        start_date = st.date_input('Start Date', datetime(2020, 1, 1), key='start_date')
+        start_date = st.date_input('Start Date', datetime(2022, 1, 1), key='start_date')
     with col2:
         end_date = st.date_input('End Date', datetime.today(), key='end_date')
     # Fetch volume data for each stock
@@ -557,7 +557,7 @@ if not st.session_state.logged_in:
         return data
 
     # Define the date range for the slider
-    min_date = datetime(2018, 1, 1)
+    min_date = datetime(2021, 1, 1)
     max_date = datetime.today()
 
     # Get start and end date inputs from user using a slider
@@ -1358,7 +1358,7 @@ else:
                 ticker = st.text_input("Enter Stock symbol", '^BSESN')
                 
             with col2:
-                START = st.date_input('Start Date', pd.to_datetime("2023-01-01"))
+                START = st.date_input('Start Date', pd.to_datetime("20-01-01"))
             with col3:
                 END = st.date_input('End Date', pd.to_datetime("today"))
 
