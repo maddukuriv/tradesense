@@ -1353,31 +1353,10 @@ else:
 
             # Set up the start and end date inputs
             with col1:
-                # List of stock symbols
-                stock_symbols = ["ABBOTINDIA.NS", "ADANIPOWER.NS", "AFFLE.BO", "AIAENG.BO", "AJANTPHARM.BO",
-                                 "APLLTD.BO", "ALKEM.BO", "ARE&M.NS", "ANANDRATHI.BO", "APARINDS.BO", "ASIANPAINT.NS",
-                                 "ASTRAL.NS", "ASTRAZEN.NS", "BAJFINANCE.NS", "BASF.NS", "BAYERCROP.BO",
-                                 "BERGEPAINT.BO", "BDL.NS", "BEL.NS", "BSOFT.BO", "CDSL.NS", "CAMS.NS", "CARBORUNIV.BO",
-                                 "CASTROLIND.NS", "CHAMBLFERT.BO", "COALINDIA.NS", "COFORGE.BO", "COLPAL.NS",
-                                 "CONCORDBIO.BO", "COROMANDEL.BO", "CREDITACC.BO", "CUMMINSIND.NS", "CYIENT.NS",
-                                 "DATAPATTNS.NS", "DEEPAKNTR.NS", "DIVISLAB.NS", "LALPATHLAB.NS", "RDY", "ELGIEQUIP.NS",
-                                 "EMAMILTD.NS", "FIVESTAR.BO", "GRINFRA.NS", "GILLETTE.NS", "GLAXO.NS", "GODFRYPHLP.NS",
-                                 "GRINDWELL.NS", "HAVELLS.NS", "HCLTECH.NS", "HAL.BO", "HONAUT.BO", "IRCTC.NS",
-                                 "ISEC.BO", "INFY.NS", "IPCALAB.BO", "ITC.NS", "JBCHEPHARM.BO", "JWL.BO",
-                                 "JYOTHYLAB.BO", "KPRMILL.NS", "KAJARIACER.NS", "KEI.BO", "LTTS.NS", "LTIM.NS",
-                                 "MANKIND.NS", "MARICO.NS", "METROBRAND.BO", "MOTILALOFS.NS", "MPHASIS.NS",
-                                 "MUTHOOTFIN.NS", "NH.NS", "NAVINFLUOR.NS", "NAM-INDIA.BO", "NMDC.NS", "OFSS.NS",
-                                 "PGHH.NS", "PIIND.NS", "PAGEIND.NS", "PERSISTENT.NS", "PETRONET.NS", "PFIZER.NS",
-                                 "PIDILITIND.NS", "POLYMED.NS", "POLYCAB.NS", "RRKABEL.NS", "RVNL.NS", "RATNAMANI.NS",
-                                 "RITES.NS", "SANOFI.NS", "SCHAEFFLER.NS", "SKFINDIA.NS", "SOLARINDS.NS", "SONACOMS.NS",
-                                 "SUMICHEM.NS", "SUNTV.NS", "SUNDRMFAST.NS", "SUPREMEIND.BO", "TATAELXSI.NS",
-                                 "TATATECH.NS", "TCS.NS", "TECHM.NS", "TIMKEN.NS", "TITAN.NS", "TRITURBINE.NS",
-                                 "TIINDIA.NS", "UNITDSPR.BO", "VGUARD.NS", "MANYAVAR.NS", "VINATIORGA.NS", "WIPRO.NS",
-                                 "ZYDUSLIFE.NS"]
-                # ticker = st.text_input("Enter Stock symbol", '^BSESN')
-                # Auto-suggestion using selectbox
-                ticker = st.selectbox("Enter Stock symbol", stock_symbols)
-                st.write(f"You selected: {ticker}")
+
+            
+                ticker = st.text_input("Enter Stock symbol", '^BSESN')
+                
             with col2:
                 START = st.date_input('Start Date', pd.to_datetime("2015-01-01"))
             with col3:
