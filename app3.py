@@ -413,7 +413,8 @@ if not st.session_state.logged_in:
         data = yf.download(ticker_symbol, start=start_date, end=end_date)
         return data
 
-
+    st.title("TradeSense")
+    st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
 
     # Create tiles for different sections
     tile_selection = st.selectbox("Select a section", 
@@ -580,7 +581,7 @@ if not st.session_state.logged_in:
 
     st.markdown("-----------------------------------------------------------------------------------------------------------------------")
     st.subheader("Unlock your trading potential. Join TradeSense today!")
-    st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
+    
 
 else:
     if choice:
