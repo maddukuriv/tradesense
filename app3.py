@@ -538,7 +538,7 @@ if not st.session_state.logged_in:
             'NIFTY_SMALLCAP_100': '^CNXSMCAP',
             'NIFTY_NEXT_50': '^CNXNIFTY'
         }
-        st.subheader("Volume Chart")
+        
         col1, col2 = st.columns(2)
         with col1:
             start_date = st.date_input('Start Date', datetime(2022, 1, 1), key='start_date')
@@ -566,7 +566,7 @@ if not st.session_state.logged_in:
             'Bitcoin': 'BTC-USD',
             'Ethereum': 'ETH-USD'
         }
-        st.subheader("Volume Chart")
+        
         col1, col2 = st.columns(2)
         with col1:
             start_date = st.date_input('Start Date', datetime(2022, 1, 1), key='start_date')
