@@ -2983,7 +2983,7 @@ else:
 
             # Sidebar for user input
             st.sidebar.header('User Input')
-            selected_tickers = st.sidebar.multiselect('Select Tickers', tickers, default=tickers)
+            selected_tickers = st.sidebar.multiselect('Select Tickers', tickers)
 
             if selected_tickers:
                 index_ticker = st.sidebar.selectbox('Select Index Ticker for Relative Performance', tickers, index=0)
@@ -3023,25 +3023,9 @@ else:
                         fig.add_trace(go.Scatter(x=data['Date'], y=data['%K'], mode='lines', name=f'{ticker} %K', yaxis='y2'))
                         fig.add_trace(go.Scatter(x=data['Date'], y=data['%D'], mode='lines', name=f'{ticker} %D', yaxis='y2'))
                     elif indicators == 'MACD':
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['MACD'], mode='lines', name='MACD'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['MACD_Signal'], mode='lines', name='MACD Signal'))
-                        fig.add_trace(go.Bar(x=data['Date'], y=data['MACD_Hist'], name='MACD Histogram', yaxis='y2'))
-                        fig.update_layout(
-                            title='MACD',
-                            xaxis_title='Date',
-                            yaxis_title='Price',
-                            yaxis2=dict(
-                                title='MACD Histogram',
-                                overlaying='y',
-                                side='right'
-                            )
-                        )
-                        add_range_buttons(fig)
-                        st.plotly_chart(fig)
-                    
-                    
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['MACD'], mode='lines', name=f'{ticker} MACD', yaxis='y2'))
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['MACD_Signal'], mode='lines', name=f'{ticker} MACD Signal', yaxis='y2'))
+                        fig.add_trace(go.Bar(x=data['Date'], y=data['MACD_Hist'], name=f'{ticker} MACD Hist', marker_color='gray', opacity=0.5, yaxis='y2'))
                     elif indicators == 'Bollinger Bands':
                         fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_High'], mode='lines', name=f'{ticker} BB High', yaxis='y2'))
                         fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_Middle'], mode='lines', name=f'{ticker} BB Middle', yaxis='y2'))
@@ -3076,3 +3060,4 @@ else:
                     )
                     
                     col.plotly_chart(fig)
+
