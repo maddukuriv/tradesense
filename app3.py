@@ -229,7 +229,7 @@ def get_stock_data(ticker):
 
 def main_menu():
     st.subheader("Main Menu")
-    menu_options = ["Markets", "Stock Screener", "Technical Analysis", "Stock Price Forecasting", "Stock Watch","Market Stats",
+    menu_options = ["Markets", "Stock Screener", "Technical Analysis", "Stock Price Forecasting", "Stock Watch","Stock Comparison","Market Stats",
                      f"{st.session_state.username}'s Watchlist",
                     f"{st.session_state.username}'s Portfolio"]
     choice = st.selectbox("Select an option", menu_options)
@@ -2696,3 +2696,383 @@ else:
                     st.experimental_rerun()  # Refresh the app to reflect changes
             else:
                 st.write("Your portfolio is empty.")
+       
+        elif choice == "Stock Comparison":
+        # 'Stock Comparison' code -------------------------------------------------------------------------------------------
+
+
+            # List of stock tickers
+            tickers = [
+                "ITC.NS", "JBCHEPHARM.BO", "JWL.BO", "JYOTHYLAB.BO", "KPRMILL.NS", "KAJARIACER.NS", "KEI.BO",
+                "LTTS.NS", "LTIM.NS", "MANKIND.NS", "MARICO.NS", "METROBRAND.BO", "MOTILALOFS.NS", "MPHASIS.NS",
+                "MUTHOOTFIN.NS", "NH.NS", "NAVINFLUOR.NS", "NAM-INDIA.BO", "NMDC.NS", "OFSS.NS", "PGHH.NS",
+                "PIIND.NS", "PAGEIND.NS", "PERSISTENT.NS", "PETRONET.NS", "PFIZER.NS", "PIDILITIND.NS",
+                "POLYMED.NS", "POLYCAB.NS", "RRKABEL.NS", "RVNL.NS", "RATNAMANI.NS", "RITES.NS", "SANOFI.NS",
+                "SCHAEFFLER.NS", "SKFINDIA.NS", "SOLARINDS.NS", "SONACOMS.NS", "SUMICHEM.NS", "SUNTV.NS",
+                "SUNDRMFAST.NS", "SUPREMEIND.BO", "TATAELXSI.NS", "TATATECH.NS", "TCS.NS", "TECHM.NS", "TIMKEN.NS",
+                "TITAN.NS", "TRITURBINE.NS", "TIINDIA.NS", "UNITDSPR.BO", "VGUARD.NS", "MANYAVAR.NS",
+                "VINATIORGA.NS", "WIPRO.NS", "ZYDUSLIFE.NS", "CUMMINSIND.NS", "CYIENT.NS", "DATAPATTNS.NS", "DEEPAKNTR.NS",
+                "DIVISLAB.NS", "LALPATHLAB.NS", "RDY", "ELGIEQUIP.NS", "EMAMILTD.NS", "FIVESTAR.BO", "GRINFRA.NS",
+                "GILLETTE.NS", "GLAXO.NS", "GODFRYPHLP.NS", "GRINDWELL.NS", "HAVELLS.NS", "HCLTECH.NS", "HAL.BO",
+                "HONAUT.BO", "IRCTC.NS", "ISEC.BO", "INFY.NS", "IPCALAB.BO", "ABBOTINDIA.NS", "ADANIPOWER.NS",
+                "AFFLE.BO", "AIAENG.BO", "AJANTPHARM.BO", "APLLTD.BO", "ALKEM.BO", "ARE&M.NS", "ANANDRATHI.BO",
+                "APARINDS.BO", "ASIANPAINT.NS", "ASTRAL.NS", "ASTRAZEN.NS", "BAJFINANCE.NS", "BASF.NS", "BAYERCROP.BO",
+                "BERGEPAINT.BO", "BDL.NS", "BEL.NS", "BSOFT.BO", "CDSL.NS", "CAMS.NS", "CARBORUNIV.BO", "CASTROLIND.NS",
+                "CHAMBLFERT.BO", "COALINDIA.NS", "COFORGE.BO", "COLPAL.NS", "CONCORDBIO.BO", "COROMANDEL.BO", "CREDITACC.BO",
+                "PNCINFRA.NS", "INDIASHLTR.NS", "RAYMOND.NS", "KAMAHOLD.BO", "BENGALASM.BO", "CHOICEIN.NS", "GRAVITA.NS",
+                "HGINFRA.NS", "JKPAPER.NS", "MTARTECH.NS", "HAPPSTMNDS.NS", "SARDAEN.NS", "WELENT.NS", "LTFOODS.NS",
+                "GESHIP.NS", "SHRIPISTON.NS", "SHAREINDIA.NS", "CYIENTDLM.NS", "VTL.NS", "EASEMYTRIP.NS", "LLOYDSME.NS",
+                "ROUTE.NS", "VAIBHAVGBL.NS", "GOKEX.NS", "USHAMART.NS", "EIDPARRY.NS", "KIRLOSBROS.NS", "MANINFRA.NS",
+                "CMSINFO.NS", "RALLIS.NS", "GHCL.NS", "NEULANDLAB.NS", "SPLPETRO.NS", "MARKSANS.NS", "NAVINFLUOR.NS",
+                "ELECON.NS", "TANLA.NS", "KFINTECH.NS", "TIPSINDLTD.NS", "ACI.NS", "SURYAROSNI.NS", "GPIL.NS",
+                "GMDCLTD.NS", "MAHSEAMLES.NS", "TDPOWERSYS.NS", "TECHNOE.NS", "JLHL.NS"
+            ]
+
+            # Load stock data
+            @st.cache_data
+            def load_data(ticker):
+                data = yf.download(ticker, period='3mo')
+                data.reset_index(inplace=True)
+                return data
+
+            # Calculate technical indicators
+            def calculate_technical_indicators(df, index_df):
+                # Moving averages
+                df['20_SMA'] = ta.trend.sma_indicator(df['Close'], window=20)
+                df['20_EMA'] = ta.trend.ema_indicator(df['Close'], window=20)
+                df['20_WMA'] = ta.trend.wma_indicator(df['Close'], window=20)
+
+                # Momentum Indicators
+                df['RSI'] = ta.momentum.rsi(df['Close'], window=14)
+                df['%K'] = ta.momentum.stoch(df['High'], df['Low'], df['Close'], window=14, smooth_window=3)
+                df['%D'] = ta.momentum.stoch_signal(df['High'], df['Low'], df['Close'], window=14, smooth_window=3)
+                df['MACD'] = ta.trend.macd(df['Close'])
+                df['MACD_Signal'] = ta.trend.macd_signal(df['Close'])
+                df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
+
+                # Volume Indicators
+                df['OBV'] = ta.volume.on_balance_volume(df['Close'], df['Volume'])
+                df['VWAP'] = ta.volume.volume_weighted_average_price(df['High'], df['Low'], df['Close'], df['Volume'], window=14)
+                df['A/D Line'] = ta.volume.acc_dist_index(df['High'], df['Low'], df['Close'], df['Volume'])
+
+                # Volatility Indicators
+                df['BB_High'] = ta.volatility.bollinger_hband(df['Close'])
+                df['BB_Middle'] = ta.volatility.bollinger_mavg(df['Close'])
+                df['BB_Low'] = ta.volatility.bollinger_lband(df['Close'])
+                df['ATR'] = ta.volatility.average_true_range(df['High'], df['Low'], df['Close'], window=14)
+                df['Std Dev'] = ta.volatility.bollinger_wband(df['Close'])
+
+                # Trend Indicators
+                psar = pta.psar(df['High'], df['Low'], df['Close'])
+                df['Parabolic_SAR'] = psar['PSARl_0.02_0.2']
+                df['Ichimoku_a'] = ta.trend.ichimoku_a(df['High'], df['Low'])
+                df['Ichimoku_b'] = ta.trend.ichimoku_b(df['High'], df['Low'])
+                df['Ichimoku_base'] = ta.trend.ichimoku_base_line(df['High'], df['Low'])
+                df['Ichimoku_conv'] = ta.trend.ichimoku_conversion_line(df['High'], df['Low'])
+
+                # Support and Resistance Levels
+                df['Pivot Points'] = (df['High'] + df['Low'] + df['Close']) / 3
+
+                # Price Oscillators
+                df['ROC'] = ta.momentum.roc(df['Close'], window=12)
+                df['DPO'] = ta.trend.dpo(df['Close'], window=20)
+                df['Williams %R'] = ta.momentum.williams_r(df['High'], df['Low'], df['Close'], lbp=14)
+
+                # Market Breadth Indicators
+                df['Advances'] = df['Close'].diff().apply(lambda x: 1 if x > 0 else 0)
+                df['Declines'] = df['Close'].diff().apply(lambda x: 1 if x < 0 else 0)
+                df['McClellan Oscillator'] = (df['Advances'] - df['Declines']).rolling(window=19).mean() - (df['Advances'] - df['Declines']).rolling(window=39).mean()
+                df['TRIN'] = (df['Advances'] / df['Declines']) / (df['Volume'][df['Advances'] > 0].sum() / df['Volume'][df['Declines'] > 0].sum())
+                df['Advance-Decline Line'] = df['Advances'].cumsum() - df['Declines'].cumsum()
+
+                # Relative Performance Indicators
+                df['Price-to-Volume Ratio'] = df['Close'] / df['Volume']
+                df['Relative Strength Comparison'] = df['Close'] / index_df['Close']
+                df['Performance Relative to an Index'] = df['Close'].pct_change().cumsum() - index_df['Close'].pct_change().cumsum()
+
+                return df
+
+            # Function to add range buttons to the plot
+            def add_range_buttons(fig):
+                fig.update_layout(
+                    xaxis=dict(
+                        rangeselector=dict(
+                            buttons=list([
+                                dict(count=7, label="7d", step="day", stepmode="backward"),
+                                dict(count=14, label="14d", step="day", stepmode="backward"),
+                                dict(count=1, label="1m", step="month", stepmode="backward"),
+                                dict(count=3, label="3m", step="month", stepmode="backward"),
+                                dict(count=6, label="6m", step="month", stepmode="backward"),
+                                dict(count=1, label="1y", step="year", stepmode="backward"),
+                                dict(step="all")
+                            ])
+                        ),
+                        rangeslider=dict(visible=True)
+                    )
+                )
+
+            # Plotly visualization functions
+            def plot_indicator(df, indicator, title, yaxis_title='Price', secondary_y=False):
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator, yaxis="y2" if secondary_y else "y1"))
+                
+                if secondary_y:
+                    fig.update_layout(
+                        yaxis2=dict(
+                            title=indicator,
+                            overlaying='y',
+                            side='right'
+                        )
+                    )
+                
+                fig.update_layout(title=title, xaxis_title='Date', yaxis_title=yaxis_title)
+                add_range_buttons(fig)
+                st.plotly_chart(fig)
+
+            # Plotly visualization for trendlines
+            def plot_trendlines(df):
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+
+                # Adding trendlines using linear regression (advanced method)
+                x = np.arange(len(df))
+                coef = np.polyfit(x, df['Close'], 1)
+                trend = np.poly1d(coef)
+                fig.add_trace(go.Scatter(x=df['Date'], y=trend(x), mode='lines', name='Trendline', line=dict(color='red', dash='dash')))
+
+                fig.update_layout(title='Trendlines', xaxis_title='Date', yaxis_title='Price')
+                add_range_buttons(fig)
+                st.plotly_chart(fig)
+
+            # Plotly visualization for Fibonacci retracement levels
+            def plot_fibonacci_retracement(df):
+                high = df['High'].max()
+                low = df['Low'].min()
+
+                diff = high - low
+                levels = [high, high - 0.236 * diff, high - 0.382 * diff, high - 0.5 * diff, high - 0.618 * diff, low]
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+
+                for level in levels:
+                    fig.add_trace(go.Scatter(x=[df['Date'].iloc[0], df['Date'].iloc[-1]],
+                                            y=[level, level],
+                                            mode='lines', name=f'Level {level}', line=dict(dash='dash')))
+
+                fig.update_layout(title='Fibonacci Retracement Levels', xaxis_title='Date', yaxis_title='Price')
+                add_range_buttons(fig)
+                st.plotly_chart(fig)
+
+            # Plotly visualization for Gann fan lines
+            def plot_gann_fan_lines(df):
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+
+                # Adding Gann fan lines (simple example, for more advanced lines use a proper method)
+                for i in range(1, 5):
+                    fig.add_trace(go.Scatter(x=[df['Date'].iloc[0], df['Date'].iloc[-1]],
+                                            y=[df['Close'].iloc[0], df['Close'].iloc[0] + i * (df['Close'].iloc[-1] - df['Close'].iloc[0]) / 4],
+                                            mode='lines', name=f'Gann Fan {i}', line=dict(dash='dash')))
+
+                fig.update_layout(title='Gann Fan Lines', xaxis_title='Date', yaxis_title='Price')
+                add_range_buttons(fig)
+                st.plotly_chart(fig)
+
+            # Plotly visualization for chart patterns
+            def plot_chart_patterns(df, pattern):
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+
+                # Adding example chart patterns (simple example, for more advanced patterns use a proper method)
+                if pattern == 'Head and Shoulders':
+                    fig.add_trace(go.Scatter(x=[df['Date'].iloc[0], df['Date'].iloc[len(df)//3], df['Date'].iloc[2*len(df)//3], df['Date'].iloc[-1]],
+                                            y=[df['Close'].iloc[0], df['Close'].iloc[len(df)//3], df['Close'].iloc[2*len(df)//3], df['Close'].iloc[-1]],
+                                            mode='lines+markers', name='Head and Shoulders', line=dict(color='orange')))
+
+                elif pattern == 'Double Tops and Bottoms':
+                    fig.add_trace(go.Scatter(x=[df['Date'].iloc[0], df['Date'].iloc[len(df)//2], df['Date'].iloc[-1]],
+                                            y=[df['Close'].iloc[0], df['Close'].iloc[len(df)//2], df['Close'].iloc[-1]],
+                                            mode='lines+markers', name='Double Tops and Bottoms', line=dict(color='green')))
+
+                elif pattern == 'Flags and Pennants':
+                    fig.add_trace(go.Scatter(x=[df['Date'].iloc[0], df['Date'].iloc[-1]],
+                                            y=[df['Close'].iloc[0], df['Close'].iloc[-1]],
+                                            mode='lines', name='Flags and Pennants', line=dict(color='purple', dash='dash')))
+
+                fig.update_layout(title=f'{pattern}', xaxis_title='Date', yaxis_title='Price')
+                st.plotly_chart(fig)
+
+            # Plotly visualization for McClellan Oscillator
+            def plot_mcclellan_oscillator(df):
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=df['Date'], y=df['McClellan Oscillator'], mode='lines', name='McClellan Oscillator'))
+                fig.update_layout(title='McClellan Oscillator', xaxis_title='Date', yaxis_title='Value')
+                add_range_buttons(fig)
+                st.plotly_chart(fig)
+
+            # Plotly visualization for TRIN
+            def plot_trin(df):
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=df['Date'], y=df['TRIN'], mode='lines', name='TRIN'))
+                fig.update_layout(title='Arms Index (TRIN)', xaxis_title='Date', yaxis_title='Value')
+                add_range_buttons(fig)
+                st.plotly_chart(fig)
+
+            # Detect chart patterns
+            def detect_patterns(df):
+                patterns = []
+
+                # Head and Shoulders
+                hs_pattern = detect_head_and_shoulders(df)
+                if hs_pattern:
+                    patterns.append(hs_pattern)
+
+                # Double Tops and Bottoms
+                dt_pattern = detect_double_tops_and_bottoms(df)
+                if dt_pattern:
+                    patterns.append(dt_pattern)
+
+                # Flags and Pennants
+                fp_pattern = detect_flags_and_pennants(df)
+                if fp_pattern:
+                    patterns.append(fp_pattern)
+
+                return patterns
+
+            # Placeholder function to detect head and shoulders pattern
+            def detect_head_and_shoulders(df):
+                # Simplified logic to detect head and shoulders pattern
+                pattern_detected = False
+                for i in range(2, len(df)-2):
+                    if df['High'].iloc[i] > df['High'].iloc[i-1] and df['High'].iloc[i] > df['High'].iloc[i+1] and \
+                    df['High'].iloc[i-1] < df['High'].iloc[i-2] and df['High'].iloc[i+1] < df['High'].iloc[i+2]:
+                        pattern_detected = True
+                        break
+                if pattern_detected:
+                    return ("Head and Shoulders", "Sell", "Regular Head and Shoulders pattern detected.")
+                return None
+
+            # Placeholder function to detect double tops and bottoms
+            def detect_double_tops_and_bottoms(df):
+                # Simplified logic to detect double tops and bottoms
+                pattern_detected = False
+                for i in range(1, len(df)-1):
+                    if df['High'].iloc[i] == df['High'].iloc[i-1] and df['High'].iloc[i] == df['High'].iloc[i+1]:
+                        pattern_detected = True
+                        break
+                if pattern_detected:
+                    return ("Double Tops", "Sell", "Double Tops pattern detected.")
+                return None
+
+            # Placeholder function to detect flags and pennants
+            def detect_flags_and_pennants(df):
+                # Simplified logic to detect flags and pennants
+                pattern_detected = False
+                for i in range(1, len(df)-1):
+                    if df['Close'].iloc[i] > df['Close'].iloc[i-1] and df['Close'].iloc[i] > df['Close'].iloc[i+1]:
+                        pattern_detected = True
+                        break
+                if pattern_detected:
+                    return ("Flags and Pennants", "Buy", "Bullish Flag pattern detected.")
+                return None
+
+            # Streamlit UI
+            st.title('Stock Technical Indicators Comparison')
+
+            # Sidebar for user input
+            st.sidebar.header('User Input')
+            selected_tickers = st.sidebar.multiselect('Select Tickers', tickers, default=tickers)
+
+            if selected_tickers:
+                index_ticker = st.sidebar.selectbox('Select Index Ticker for Relative Performance', tickers, index=0)
+                index_data = load_data(index_ticker).copy()
+                
+                all_data = {}
+
+                # Load and process data for each selected ticker
+                for ticker in selected_tickers:
+                    data_load_state = st.text(f'Loading data for {ticker}...')
+                    data = load_data(ticker).copy()
+                    data = calculate_technical_indicators(data, index_data)
+                    all_data[ticker] = data
+                    data_load_state.text(f'Loading data for {ticker}...done!')
+
+                # Display raw data and technical indicators side-by-side
+                st.subheader('Technical Indicators Comparison')
+                indicators = st.selectbox("Select Technical Indicator", 
+                                        ['20_SMA', '20_EMA', '20_WMA', 'RSI', 'Stochastic Oscillator', 'MACD', 'OBV', 'VWAP', 'A/D Line', 
+                                        'Bollinger Bands', 'ATR', 'Standard Deviation', 'Parabolic SAR', 'Pivot Points', 'ROC', 'DPO', 
+                                        'Williams %R', 'Ichimoku Cloud', 'McClellan Oscillator', 'TRIN', 'Advance-Decline Line', 
+                                        'Price-to-Volume Ratio', 'Relative Strength Comparison', 'Performance Relative to an Index'])
+
+                cols = st.columns(2)  # Create two columns for the layout
+                
+                for idx, ticker in enumerate(selected_tickers):
+                    col = cols[idx % 2]  # Alternate between columns
+                    data = all_data[ticker]
+                    fig = go.Figure()
+                    
+                    # Add close price to the primary y-axis
+                    fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name=f'{ticker} Close', yaxis='y1'))
+
+                    if indicators in data.columns:
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data[indicators], mode='lines', name=f'{ticker} {indicators}', yaxis='y2'))
+                    elif indicators == 'Stochastic Oscillator':
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['%K'], mode='lines', name=f'{ticker} %K', yaxis='y2'))
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['%D'], mode='lines', name=f'{ticker} %D', yaxis='y2'))
+                    elif indicators == 'MACD':
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['MACD'], mode='lines', name='MACD'))
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['MACD_Signal'], mode='lines', name='MACD Signal'))
+                        fig.add_trace(go.Bar(x=data['Date'], y=data['MACD_Hist'], name='MACD Histogram', yaxis='y2'))
+                        fig.update_layout(
+                            title='MACD',
+                            xaxis_title='Date',
+                            yaxis_title='Price',
+                            yaxis2=dict(
+                                title='MACD Histogram',
+                                overlaying='y',
+                                side='right'
+                            )
+                        )
+                        add_range_buttons(fig)
+                        st.plotly_chart(fig)
+                    
+                    
+                    elif indicators == 'Bollinger Bands':
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_High'], mode='lines', name=f'{ticker} BB High', yaxis='y2'))
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_Middle'], mode='lines', name=f'{ticker} BB Middle', yaxis='y2'))
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_Low'], mode='lines', name=f'{ticker} BB Low', yaxis='y2'))
+                    elif indicators == 'Ichimoku Cloud':
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_a'], mode='lines', name=f'{ticker} Ichimoku_a', yaxis='y2'))
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_b'], mode='lines', name=f'{ticker} Ichimoku_b', yaxis='y2'))
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_base'], mode='lines', name=f'{ticker} Ichimoku_base', yaxis='y2'))
+                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_conv'], mode='lines', name=f'{ticker} Ichimoku_conv', yaxis='y2'))
+
+                    # Update layout with dual y-axes and time range selector
+                    fig.update_layout(
+                        title=f'{indicators} for {ticker}',
+                        xaxis_title='Date',
+                        yaxis=dict(title='Close Price', side='left'),
+                        yaxis2=dict(title=indicators, side='right', overlaying='y'),
+                        legend_title='Indicators',
+                        xaxis=dict(
+                            rangeselector=dict(
+                                buttons=list([
+                                    dict(count=7, label='7d', step='day', stepmode='backward'),
+                                    dict(count=14, label='14d', step='day', stepmode='backward'),
+                                    dict(count=1, label='1m', step='month', stepmode='backward'),
+                                    dict(count=2, label='2m', step='month', stepmode='backward'),
+                                    dict(step='all', label='All Time')
+                                ])
+                            ),
+                            rangeslider=dict(visible=True),
+                            type='date',
+                            range=[data['Date'].iloc[-7], data['Date'].iloc[-1]]  # Default to last 7 days
+                        )
+                    )
+                    
+                    col.plotly_chart(fig)
