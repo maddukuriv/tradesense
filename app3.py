@@ -885,7 +885,7 @@ else:
 
 
         elif choice == "Stock Screener":
-            # 'Stock Screener' code -------------------------------------------------------------------------------------------
+        # 'Stock Screener' code---------------------------------------------------------------
             st.sidebar.subheader("Screens")
             submenu = st.sidebar.radio("Select Option", ["LargeCap", "MidCap", "SmallCap"])
 
@@ -924,7 +924,6 @@ else:
             # Function to create Plotly figure
             def create_figure(data, indicators, title):
                 fig = go.Figure()
-               
 
                 fig.update_layout(
                     title=title, 
@@ -936,9 +935,7 @@ else:
                     font=dict(color='black'),
                     hovermode='x',
                     xaxis=dict(
-                        rangeselector=dict(
-                        
-                        ),
+                        rangeselector=dict(),
                         rangeslider=dict(visible=True),
                         type='date'
                     ),
@@ -952,9 +949,6 @@ else:
                     )]
                 )
                 return fig
-            
-            # Plotly visualization functions
-
 
             # Function to fetch and process stock data
             @st.cache_data(ttl=3600)
@@ -977,8 +971,6 @@ else:
             @st.cache_data(ttl=3600)
             def calculate_indicators(df):
                 # Calculate Moving Averages
-
-                
                 df['5_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=5).wma()
                 df['20_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=20).wma()
                 df['50_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=50).wma()
@@ -994,8 +986,8 @@ else:
                 df['ADX'] = adx.adx()
 
                 # Calculate Parabolic SAR
-                psar = pta.psar(df['High'], df['Low'], df['Close'])
-                df['Parabolic_SAR'] = psar['PSARl_0.02_0.2']
+                psar = ta.trend.PSARIndicator(df['High'], df['Low'], df['Close'])
+                df['Parabolic_SAR'] = psar.psar()
 
                 # Calculate RSI
                 rsi = ta.momentum.RSIIndicator(df['Close'])
@@ -1011,6 +1003,21 @@ else:
                 df['Bollinger_High'] = bollinger.bollinger_hband()
                 df['Bollinger_Low'] = bollinger.bollinger_lband()
                 df['Bollinger_Middle'] = bollinger.bollinger_mavg()
+
+                # Calculate Detrended Price Oscillator (DPO)
+                df['DPO'] = ta.trend.DPOIndicator(close=df['Close']).dpo()
+
+                # Calculate On-Balance Volume (OBV)
+                df['OBV'] = ta.volume.OnBalanceVolumeIndicator(close=df['Close'], volume=df['Volume']).on_balance_volume()
+
+                # Calculate Volume Weighted Average Price (VWAP)
+                df['VWAP'] = ta.volume.VolumeWeightedAveragePrice(high=df['High'], low=df['Low'], close=df['Close'], volume=df['Volume']).volume_weighted_average_price()
+
+                # Calculate Accumulation/Distribution Line (A/D Line)
+                df['A/D Line'] = ta.volume.AccDistIndexIndicator(high=df['High'], low=df['Low'], close=df['Close'], volume=df['Volume']).acc_dist_index()
+
+                # Calculate Average True Range (ATR)
+                df['ATR'] = ta.volatility.AverageTrueRange(high=df['High'], low=df['Low'], close=df['Close']).average_true_range()
 
                 return df
 
@@ -1060,7 +1067,8 @@ else:
                             'Parabolic_SAR': df['Parabolic_SAR'].iloc[-1],
                             'Volume': df['Volume'].iloc[-1],
                             'Volume_MA_10': df['Volume_MA_10'].iloc[-1],
-                            'Volume_MA_20': df['Volume_MA_20'].iloc[-1]
+                            'Volume_MA_20': df['Volume_MA_20'].iloc[-1],
+                            'DPO': df['DPO'].iloc[-1]
                         }
                         results.append(row)
                 return pd.DataFrame(results)
@@ -1081,19 +1089,21 @@ else:
 
             # Define first set of conditions
             first_conditions = [
-                ('Volume', '>', 'Volume_MA_10'),
-                ('MACD', '>', 'MACD_Signal')
+                ('MACD', '>', 'MACD_Signal'),
+                ('Parabolic_SAR', '<', 'Close')
+
             ]
 
             # Query stocks based on the first set of conditions
             first_query_df = query_stocks(stock_data, first_conditions)
 
-            # Filter stocks in an uptrend with high volume
+            # Filter stocks in an uptrend with high volume and positive DPO
             second_query_df = first_query_df[
-                (first_query_df['RSI'] < 70) & (first_query_df['RSI'] > 30) & (first_query_df['ADX'] > 20) & (first_query_df['MACD'] > 0)
+                (first_query_df['RSI'] < 65) & (first_query_df['RSI'] > 45) & 
+                (first_query_df['ADX'] > 25) & (first_query_df['MACD'] > 0)
             ]
 
-            st.write("Stocks in an uptrend with high volume:")
+            st.write("Stocks in an uptrend with high volume and positive DPO:")
             st.dataframe(second_query_df)
 
             # Dropdown for analysis type
@@ -1130,247 +1140,193 @@ else:
                     st.write("No data available for the provided ticker.")
                 else:
                     df.interpolate(method='linear', inplace=True)
+                    df = calculate_indicators(df)
 
-                    if len(df) > 200:
-                        df = calculate_indicators(df)
+                    # Identify Horizontal Support and Resistance
+                    def find_support_resistance(df, window=20):
+                        df['Support'] = df['Low'].rolling(window, center=True).min()
+                        df['Resistance'] = df['High'].rolling(window, center=True).max()
+                        return df
 
-                        # Identify Horizontal Support and Resistance
-                        def find_support_resistance(df, window=20):
-                            df['Support'] = df['Low'].rolling(window, center=True).min()
-                            df['Resistance'] = df['High'].rolling(window, center=True).max()
-                            return df
+                    df = find_support_resistance(df)
 
-                        df = find_support_resistance(df)
+                    # Draw Trendlines
+                    def calculate_trendline(df, kind='support'):
+                        if kind == 'support':
+                            prices = df['Low']
+                        elif kind == 'resistance':
+                            prices = df['High']
+                        else:
+                            raise ValueError("kind must be either 'support' or 'resistance'")
 
-                        # Draw Trendlines
-                        def calculate_trendline(df, kind='support'):
-                            if kind == 'support':
-                                prices = df['Low']
-                            elif kind == 'resistance':
-                                prices = df['High']
+                        indices = np.arange(len(prices))
+                        slope, intercept, _, _, _ = linregress(indices, prices)
+                        trendline = slope * indices + intercept
+                        return trendline
+
+                    df['Support_Trendline'] = calculate_trendline(df, kind='support')
+                    df['Resistance_Trendline'] = calculate_trendline(df, kind='resistance')
+
+                    # Calculate Fibonacci Retracement Levels
+                    def fibonacci_retracement_levels(high, low):
+                        diff = high - low
+                        levels = {
+                            'Level_0': high,
+                            'Level_0.236': high - 0.236 * diff,
+                            'Level_0.382': high - 0.382 * diff,
+                            'Level_0.5': high - 0.5 * diff,
+                            'Level_0.618': high - 0.618 * diff,
+                            'Level_1': low
+                        }
+                        return levels
+
+                    recent_high = df['High'].max()
+                    recent_low = df['Low'].min()
+                    fib_levels = fibonacci_retracement_levels(recent_high, recent_low)
+
+                    # Calculate Pivot Points
+                    def pivot_points(df):
+                        df['Pivot'] = (df['High'].shift(1) + df['Low'].shift(1) + df['Close'].shift(1)) / 3
+                        df['R1'] = 2 * df['Pivot'] - df['Low'].shift(1)
+                        df['S1'] = 2 * df['Pivot'] - df['High'].shift(1)
+                        df['R2'] = df['Pivot'] + (df['High'].shift(1) - df['Low'].shift(1))
+                        df['S2'] = df['Pivot'] - (df['High'].shift(1) - df['Low'].shift(1))
+                        return df
+
+                    df = pivot_points(df)
+
+                    # Function to generate buy/sell signals
+                    def generate_signals(macd, signal, rsi, close):
+                        buy_signals = [0] * len(macd)
+                        sell_signals = [0] * len(macd)
+                        for i in range(1, len(macd)):
+                            if macd[i] > signal[i] and macd[i-1] <= signal[i-1]:
+                                buy_signals[i] = 1
+                            elif macd[i] < signal[i] and macd[i-1] >= signal[i-1]:
+                                sell_signals[i] = 1
+                        return buy_signals, sell_signals
+
+                    df['Buy_Signal'], df['Sell_Signal'] = generate_signals(df['MACD'], df['MACD_Signal'], df['RSI'], df['Close'])
+
+                    if analysis_type == "Trend Analysis":
+                        st.subheader("Trend Analysis")
+
+                        indicators = st.multiselect(
+                            "Select Indicators",
+                            ['Close', '20_MA', '50_MA', '200_MA', 'MACD', 'MACD_Signal', 'MACD_Histogram', 'RSI', 'Buy_Signal', 'Sell_Signal', 'ADX',
+                            'Parabolic_SAR', 'Bollinger_High', 'Bollinger_Low', 'Bollinger_Middle', 'ATR'],
+                            default=['Close', 'Buy_Signal', 'Sell_Signal']
+                        )
+                        timeframe = st.radio(
+                            "Select Timeframe",
+                            ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
+                            index=2,
+                            horizontal=True
+                        )
+
+                        if timeframe == '15 days':
+                            df = df[-15:]
+                        elif timeframe == '30 days':
+                            df = df[-30:]
+                        elif timeframe == '90 days':
+                            df = df[-90:]
+                        elif timeframe == '180 days':
+                            df = df[-180:]
+                        elif timeframe == '1 year':
+                            df = df[-365:]
+
+                        fig = create_figure(df.set_index('Date'), indicators, f"Trend Analysis for {selected_stock}")
+
+                        colors = {'Close': 'blue', '20_MA': 'orange', '50_MA': 'green', '200_MA': 'red', 'MACD': 'purple',
+                                'MACD_Signal': 'brown', 'RSI': 'pink', 'Buy_Signal': 'green', 'Sell_Signal': 'red', 'ADX': 'magenta',
+                                'Parabolic_SAR': 'yellow', 'Bollinger_High': 'black', 'Bollinger_Low': 'cyan',
+                                'Bollinger_Middle': 'grey', 'ATR': 'darkblue'}
+
+                        for indicator in indicators:
+                            if indicator == 'Buy_Signal':
+                                fig.add_trace(
+                                    go.Scatter(x=df[df[indicator] == 1]['Date'],
+                                            y=df[df[indicator] == 1]['Close'], mode='markers', name='Buy Signal',
+                                            marker=dict(color='green', symbol='triangle-up')))
+                            elif indicator == 'Sell_Signal':
+                                fig.add_trace(
+                                    go.Scatter(x=df[df[indicator] == 1]['Date'],
+                                            y=df[df[indicator] == 1]['Close'], mode='markers', name='Sell Signal',
+                                            marker=dict(color='red', symbol='triangle-down')))
+                            elif indicator == 'MACD_Histogram':
+                                fig.add_trace(
+                                    go.Bar(x=df['Date'], y=df[indicator], name=indicator, marker_color='gray'))
                             else:
-                                raise ValueError("kind must be either 'support' or 'resistance'")
+                                fig.add_trace(
+                                    go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator,
+                                            line=dict(color=colors.get(indicator, 'black'))))
 
-                            indices = np.arange(len(prices))
-                            slope, intercept, _, _, _ = linregress(indices, prices)
-                            trendline = slope * indices + intercept
-                            return trendline
+                        st.plotly_chart(fig)
 
-                        df['Support_Trendline'] = calculate_trendline(df, kind='support')
-                        df['Resistance_Trendline'] = calculate_trendline(df, kind='resistance')
+                    elif analysis_type == "Volume Analysis":
+                        st.subheader("Volume Analysis")
+                        volume_indicators = st.multiselect(
+                            "Select Volume Indicators",
+                            ['Close','Volume', 'Volume_MA_20', 'Volume_MA_10', 'Volume_MA_5', 'OBV', 'VWAP', 'A/D Line'],
+                            default=['Close','VWAP']
+                        )
+                        volume_timeframe = st.radio(
+                            "Select Timeframe",
+                            ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
+                            index=2,
+                            horizontal=True
+                        )
 
-                        # Calculate Fibonacci Retracement Levels
-                        def fibonacci_retracement_levels(high, low):
-                            diff = high - low
-                            levels = {
-                                'Level_0': high,
-                                'Level_0.236': high - 0.236 * diff,
-                                'Level_0.382': high - 0.382 * diff,
-                                'Level_0.5': high - 0.5 * diff,
-                                'Level_0.618': high - 0.618 * diff,
-                                'Level_1': low
-                            }
-                            return levels
+                        if volume_timeframe == '15 days':
+                            df = df[-15:]
+                        elif volume_timeframe == '30 days':
+                            df = df[-30:]
+                        elif volume_timeframe == '90 days':
+                            df = df[-90:]
+                        elif volume_timeframe == '180 days':
+                            df = df[-180:]
+                        elif volume_timeframe == '1 year':
+                            df = df[-365:]
 
-                        recent_high = df['High'].max()
-                        recent_low = df['Low'].min()
-                        fib_levels = fibonacci_retracement_levels(recent_high, recent_low)
+                        fig = create_figure(df.set_index('Date'), volume_indicators, f"Volume Analysis for {selected_stock}")
 
-                        # Calculate Pivot Points
-                        def pivot_points(df):
-                            df['Pivot'] = (df['High'].shift(1) + df['Low'].shift(1) + df['Close'].shift(1)) / 3
-                            df['R1'] = 2 * df['Pivot'] - df['Low'].shift(1)
-                            df['S1'] = 2 * df['Pivot'] - df['High'].shift(1)
-                            df['R2'] = df['Pivot'] + (df['High'].shift(1) - df['Low'].shift(1))
-                            df['S2'] = df['Pivot'] - (df['High'].shift(1) - df['Low'].shift(1))
-                            return df
+                        for indicator in volume_indicators:
+                            fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator))
 
-                        df = pivot_points(df)
+                        st.plotly_chart(fig)
 
-                        # Generate buy/sell signals using advanced methods
-                        def advanced_signals(data):
-                            prices = data['Close'].values
+                    elif analysis_type == "Support & Resistance Levels":
+                        st.subheader("Support & Resistance Levels")
+                        sr_indicators = st.multiselect(
+                            "Select Indicators",
+                            ['Close', '20_MA', '50_MA', '200_MA', 'Support', 'Resistance', 'Support_Trendline',
+                            'Resistance_Trendline', 'Pivot', 'R1', 'S1', 'R2', 'S2'],
+                            default=['Close', 'Support', 'Resistance']
+                        )
+                        sr_timeframe = st.radio(
+                            "Select Timeframe",
+                            ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
+                            index=2,
+                            horizontal=True
+                        )
 
-                            def apply_fft(prices):
-                                N = len(prices)
-                                T = 1.0  # Assuming daily data, T=1 day
-                                yf = fft(prices)
-                                xf = np.fft.fftfreq(N, T)[:N // 2]
-                                return xf, 2.0 / N * np.abs(yf[0:N // 2])
+                        if sr_timeframe == '15 days':
+                            df = df[-15:]
+                        elif sr_timeframe == '30 days':
+                            df = df[-30:]
+                        elif sr_timeframe == '90 days':
+                            df = df[-90:]
+                        elif sr_timeframe == '180 days':
+                            df = df[-180:]
+                        elif sr_timeframe == '1 year':
+                            df = df[-365:]
 
-                            frequencies, magnitudes = apply_fft(prices)
+                        fig = create_figure(df.set_index('Date'), sr_indicators, f"Support & Resistance Levels for {selected_stock}")
 
-                            def inverse_fft(yf, threshold=0.1):
-                                yf_filtered = yf.copy()
-                                yf_filtered[np.abs(yf_filtered) < threshold] = 0
-                                return ifft(yf_filtered)
+                        for indicator in sr_indicators:
+                            fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator))
 
-                            yf_transformed = fft(prices)
-                            filtered_signal = inverse_fft(yf_transformed)
-
-                            def apply_wavelet(prices, wavelet='db4', level=4):
-                                coeffs = pywt.wavedec(prices, wavelet, level=level)
-                                return coeffs
-
-                            coeffs = apply_wavelet(prices)
-                            reconstructed_signal = pywt.waverec(coeffs, 'db4')
-
-                            def apply_hilbert_transform(prices):
-                                analytic_signal = hilbert(prices)
-                                amplitude_envelope = np.abs(analytic_signal)
-                                instantaneous_phase = np.unwrap(np.angle(analytic_signal))
-                                instantaneous_frequency = np.diff(instantaneous_phase) / (2.0 * np.pi)
-                                return amplitude_envelope, instantaneous_phase, instantaneous_frequency
-
-                            amplitude_envelope, instantaneous_phase, instantaneous_frequency = apply_hilbert_transform(prices)
-
-                            def generate_signals(prices, reconstructed_signal, amplitude_envelope, instantaneous_frequency, df):
-                                buy_signals = []
-                                sell_signals = []
-                                for i in range(2, len(prices) - 1):
-                                    if (reconstructed_signal[i] > reconstructed_signal[i - 1] and
-                                            reconstructed_signal[i - 1] < reconstructed_signal[i - 2] and
-                                            instantaneous_frequency[i - 1] < instantaneous_frequency[i - 2] and
-                                            amplitude_envelope[i] > amplitude_envelope[i - 1] and
-                                            df['20_MA'][i] > df['50_MA'][i] and df['RSI'][i] < 70):
-                                        buy_signals.append((i, prices[i]))
-                                    elif (reconstructed_signal[i] < reconstructed_signal[i - 1] and
-                                        reconstructed_signal[i - 1] > reconstructed_signal[i - 2] and
-                                        instantaneous_frequency[i - 1] > instantaneous_frequency[i - 2] and
-                                        amplitude_envelope[i] < amplitude_envelope[i - 1] and
-                                        df['20_MA'][i] < df['50_MA'][i] and df['RSI'][i] > 30):
-                                        sell_signals.append((i, prices[i]))
-                                return buy_signals, sell_signals
-
-                            buy_signals, sell_signals = generate_signals(prices, reconstructed_signal, amplitude_envelope, instantaneous_frequency, data)
-                            return buy_signals, sell_signals
-
-                        buy_signals, sell_signals = advanced_signals(df)
-
-                        if analysis_type == "Trend Analysis":
-                            st.subheader("Trend Analysis")
-
-                            indicators = st.multiselect(
-                                "Select Indicators",
-                                ['Close', '20_MA', '50_MA', '200_MA', 'MACD', 'MACD_Signal', 'MACD_Histogram', 'RSI', 'Signal', 'ADX',
-                                'Parabolic_SAR', 'Bollinger_High', 'Bollinger_Low', 'Bollinger_Middle'],
-                                default=['Close', 'Signal']
-                            )
-                            timeframe = st.radio(
-                                "Select Timeframe",
-                                ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
-                                index=2,
-                                horizontal=True
-                            )
-
-                            if timeframe == '15 days':
-                                df = df[-15:]
-                            elif timeframe == '30 days':
-                                df = df[-30:]
-                            elif timeframe == '90 days':
-                                df = df[-90:]
-                            elif timeframe == '180 days':
-                                df = df[-180:]
-                            elif timeframe == '1 year':
-                                df = df[-365:]
-
-                            fig = create_figure(df.set_index('Date'), indicators, f"Trend Analysis for {selected_stock}")
-
-                            colors = {'Close': 'blue', '20_MA': 'orange', '50_MA': 'green', '200_MA': 'red', 'MACD': 'purple',
-                                    'MACD_Signal': 'brown', 'RSI': 'pink', 'Signal': 'black', 'ADX': 'magenta',
-                                    'Parabolic_SAR': 'yellow', 'Bollinger_High': 'black', 'Bollinger_Low': 'cyan',
-                                    'Bollinger_Middle': 'grey'}
-
-                            for indicator in indicators:
-                                if indicator == 'Signal':
-                                    # Plot buy and sell signals
-                                    buy_signal_points = [df.iloc[bs[0]] for bs in buy_signals if bs[0] < len(df)]
-                                    sell_signal_points = [df.iloc[ss[0]] for ss in sell_signals if ss[0] < len(df)]
-                                    fig.add_trace(
-                                        go.Scatter(x=[point['Date'] for point in buy_signal_points],
-                                                y=[point['Close'] for point in buy_signal_points], mode='markers', name='Buy Signal',
-                                                marker=dict(color='green', symbol='triangle-up')))
-                                    fig.add_trace(
-                                        go.Scatter(x=[point['Date'] for point in sell_signal_points],
-                                                y=[point['Close'] for point in sell_signal_points], mode='markers', name='Sell Signal',
-                                                marker=dict(color='red', symbol='triangle-down')))
-                                elif indicator == 'MACD_Histogram':
-                                    fig.add_trace(
-                                        go.Bar(x=df['Date'], y=df[indicator], name=indicator, marker_color='gray'))
-                                else:
-                                    fig.add_trace(
-                                        go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator,
-                                                line=dict(color=colors.get(indicator, 'black'))))
-
-                            st.plotly_chart(fig)
-
-                        elif analysis_type == "Volume Analysis":
-                            st.subheader("Volume Analysis")
-                            volume_indicators = st.multiselect(
-                                "Select Volume Indicators",
-                                ['Volume', 'Volume_MA_20', 'Volume_MA_10', 'Volume_MA_5'],
-                                default=['Volume']
-                            )
-                            volume_timeframe = st.radio(
-                                "Select Timeframe",
-                                ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
-                                index=2,
-                                horizontal=True
-                            )
-
-                            if volume_timeframe == '15 days':
-                                df = df[-15:]
-                            elif volume_timeframe == '30 days':
-                                df = df[-30:]
-                            elif volume_timeframe == '90 days':
-                                df = df[-90:]
-                            elif volume_timeframe == '180 days':
-                                df = df[-180:]
-                            elif volume_timeframe == '1 year':
-                                df = df[-365:]
-
-                            fig = create_figure(df.set_index('Date'), volume_indicators, f"Volume Analysis for {selected_stock}")
-
-                            for indicator in volume_indicators:
-                                fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator))
-
-                            st.plotly_chart(fig)
-
-                        elif analysis_type == "Support & Resistance Levels":
-                            st.subheader("Support & Resistance Levels")
-                            sr_indicators = st.multiselect(
-                                "Select Indicators",
-                                ['Close', '20_MA', '50_MA', '200_MA', 'Support', 'Resistance', 'Support_Trendline',
-                                'Resistance_Trendline', 'Pivot', 'R1', 'S1', 'R2', 'S2'],
-                                default=['Close']
-                            )
-                            sr_timeframe = st.radio(
-                                "Select Timeframe",
-                                ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
-                                index=2,
-                                horizontal=True
-                            )
-
-                            if sr_timeframe == '15 days':
-                                df = df[-15:]
-                            elif sr_timeframe == '30 days':
-                                df = df[-30:]
-                            elif sr_timeframe == '90 days':
-                                df = df[-90:]
-                            elif sr_timeframe == '180 days':
-                                df = df[-180:]
-                            elif sr_timeframe == '1 year':
-                                df = df[-365:]
-
-                            fig = create_figure(df.set_index('Date'), sr_indicators, f"Support & Resistance Levels for {selected_stock}")
-
-                            for indicator in sr_indicators:
-                                fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator))
-
-                            st.plotly_chart(fig)
-
-                    else:
-                        st.write("Not enough data points for technical analysis.")
+                        st.plotly_chart(fig) 
 
 
         elif choice == "Technical Analysis":
