@@ -889,9 +889,6 @@ else:
             st.sidebar.subheader("Screens")
             submenu = st.sidebar.radio("Select Option", ["LargeCap", "MidCap", "SmallCap"])
 
-        # Sidebar for stock selection
-        st.sidebar.subheader("Screens")
-        submenu = st.sidebar.radio("Select Option", ["LargeCap", "MidCap", "SmallCap"])
 
         # List of stock tickers
         largecap_tickers = [
