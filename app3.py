@@ -681,7 +681,7 @@ else:
                 END = st.date_input('End Date', pd.to_datetime("today"))
 
             # Markets submenu
-            submenu = st.sidebar.radio("Select Option", ["Equities", "Commodities", "Currencies", "Cryptocurrencies", "Analysis"])
+            submenu = st.sidebar.radio("Select Option", ["Equities", "Commodities", "Currencies", "Cryptocurrencies", "Insights"])
 
             if submenu == "Equities":
                 st.subheader("Equity Markets")
@@ -740,7 +740,7 @@ else:
                         fig = create_figure(data, indicators, f'{ticker} Price')
                         col.plotly_chart(fig)
 
-            elif submenu == "Analysis":
+            elif submenu == "Insights":
                 st.subheader("Detailed Market Analysis")
                 st.write("This section provides an in-depth analysis of the markets, commodities, forex, and cryptos.")
 
@@ -2030,10 +2030,10 @@ else:
         elif choice == "Stock Watch":
         # 'Stock Watch' code -------------------------------------------------------------------------------------------
             st.sidebar.subheader("Screens")
-            submenu = st.sidebar.radio("Select Option", ["Bollinger", "Macd"])
+            submenu = st.sidebar.radio("Select Option", ["MACD","Bollinger"])
 
             # List of stock tickers
-            stock_tickers = [
+            tickers = [
                 "ITC.NS", "JBCHEPHARM.BO", "JWL.BO", "JYOTHYLAB.BO", "KPRMILL.NS", "KAJARIACER.NS", "KEI.BO",
                 "LTTS.NS", "LTIM.NS", "MANKIND.NS", "MARICO.NS", "METROBRAND.BO", "MOTILALOFS.NS", "MPHASIS.NS",
                 "MUTHOOTFIN.NS", "NH.NS", "NAVINFLUOR.NS", "NAM-INDIA.BO", "NMDC.NS", "OFSS.NS", "PGHH.NS",
@@ -2059,382 +2059,290 @@ else:
                 "GMDCLTD.NS", "MAHSEAMLES.NS", "TDPOWERSYS.NS", "TECHNOE.NS", "JLHL.NS"
             ]
 
-            # Function to fetch and process stock data
-            def get_stock_data(ticker_symbols, period):
-                try:
-                    stock_data = {}
-                    for ticker_symbol in ticker_symbols:
-                        df = yf.download(ticker_symbol, period=period)
-                        print(f"Downloaded data for {ticker_symbol}: Shape = {df.shape}")
+            
+            if submenu == "MACD":
+                # Function to calculate MACD and related values
+                def calculate_macd(data, slow=26, fast=12, signal=9):
+                    data['EMA_fast'] = data['Close'].ewm(span=fast, min_periods=fast).mean()
+                    data['EMA_slow'] = data['Close'].ewm(span=slow, min_periods=slow).mean()
+                    data['MACD'] = data['EMA_fast'] - data['EMA_slow']
+                    data['MACD_signal'] = data['MACD'].ewm(span=signal, min_periods=signal).mean()
+                    data['MACD_histogram'] = data['MACD'] - data['MACD_signal']
+                    return data
+
+                # Function to calculate RSI
+                def calculate_rsi(data, period=14):
+                    rsi_indicator = ta.momentum.RSIIndicator(close=data['Close'], window=period)
+                    data['RSI'] = rsi_indicator.rsi()
+                    return data
+
+                # Function to calculate ADX
+                def calculate_adx(data, period=14):
+                    adx_indicator = ta.trend.ADXIndicator(high=data['High'], low=data['Low'], close=data['Close'], window=period)
+                    data['ADX'] = adx_indicator.adx()
+                    return data
+
+                # Function to check MACD < MACD signal
+                def check_macd_signal(data):
+                    return data['MACD'].iloc[-1] < data['MACD_signal'].iloc[-1]
+
+                # Function to check the second criteria
+                def check_negative_histogram_and_price(data):
+                    histogram_increasing = (data['MACD_histogram'].iloc[-3] <= data['MACD_histogram'].iloc[-2] <= data['MACD_histogram'].iloc[-1])
+                    histogram_negative = data['MACD_histogram'].iloc[-1] < 0
+                    price_increasing = (data['Close'].iloc[-1] >= data['Close'].iloc[-2] >= data['Close'].iloc[-3] >= data['Close'].iloc[-4])
+                    return histogram_increasing, histogram_negative, price_increasing
+
+                # Function to fetch and process stock data
+                @st.cache_data(ttl=3600)
+                def get_stock_data(ticker_symbols, period, interval):
+                    try:
+                        stock_data = {}
+                        progress_bar = st.progress(0)
+                        for idx, ticker_symbol in enumerate(ticker_symbols):
+                            df = yf.download(ticker_symbol, period=period, interval=interval)
+                            if not df.empty:
+                                df.interpolate(method='linear', inplace=True)
+                                df = calculate_indicators(df)
+                                df.dropna(inplace=True)
+                                stock_data[ticker_symbol] = df
+                            progress_bar.progress((idx + 1) / len(ticker_symbols))
+                        return stock_data
+                    except Exception as e:
+                        st.error(f"Error fetching data: {e}")
+                        return {}
+
+                # Function to calculate technical indicators
+                @st.cache_data(ttl=3600)
+                def calculate_indicators(df):
+                    # Calculate Moving Averages
+                    df['5_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=5).wma()
+                    df['20_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=20).wma()
+                    df['50_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=50).wma()
+
+                    # Calculate MACD
+                    macd = ta.trend.MACD(df['Close'])
+                    df['MACD'] = macd.macd()
+                    df['MACD_Signal'] = macd.macd_signal()
+                    df['MACD_Histogram'] = macd.macd_diff()
+
+                    # Calculate ADX
+                    adx = ta.trend.ADXIndicator(df['High'], df['Low'], df['Close'])
+                    df['ADX'] = adx.adx()
+
+                    # Calculate Parabolic SAR
+                    psar = ta.trend.PSARIndicator(df['High'], df['Low'], df['Close'])
+                    df['Parabolic_SAR'] = psar.psar()
+
+                    # Calculate RSI
+                    rsi = ta.momentum.RSIIndicator(df['Close'])
+                    df['RSI'] = rsi.rsi()
+
+                    # Calculate Volume Moving Averages
+                    df['Volume_MA_20'] = df['Volume'].rolling(window=20).mean()
+                    df['Volume_MA_10'] = df['Volume'].rolling(window=10).mean()
+                    df['Volume_MA_5'] = df['Volume'].rolling(window=5).mean()
+
+                    # Calculate Bollinger Bands
+                    bollinger = ta.volatility.BollingerBands(df['Close'])
+                    df['Bollinger_High'] = bollinger.bollinger_hband()
+                    df['Bollinger_Low'] = bollinger.bollinger_lband()
+                    df['Bollinger_Middle'] = bollinger.bollinger_mavg()
+
+                    # Calculate Detrended Price Oscillator (DPO)
+                    df['DPO'] = ta.trend.DPOIndicator(close=df['Close']).dpo()
+
+                    # Calculate On-Balance Volume (OBV)
+                    df['OBV'] = ta.volume.OnBalanceVolumeIndicator(close=df['Close'], volume=df['Volume']).on_balance_volume()
+
+                    # Calculate Volume Weighted Average Price (VWAP)
+                    df['VWAP'] = ta.volume.VolumeWeightedAveragePrice(high=df['High'], low=df['Low'], close=df['Close'], volume=df['Volume']).volume_weighted_average_price()
+
+                    # Calculate Accumulation/Distribution Line (A/D Line)
+                    df['A/D Line'] = ta.volume.AccDistIndexIndicator(high=df['High'], low=df['Low'], close=df['Close'], volume=df['Volume']).acc_dist_index()
+
+                    # Calculate Average True Range (ATR)
+                    df['ATR'] = ta.volatility.AverageTrueRange(high=df['High'], low=df['Low'], close=df['Close']).average_true_range()
+
+                    # Identify Horizontal Support and Resistance
+                    df = find_support_resistance(df)
+
+                    # Draw Trendlines
+                    df['Support_Trendline'] = calculate_trendline(df, kind='support')
+                    df['Resistance_Trendline'] = calculate_trendline(df, kind='resistance')
+
+                    # Calculate Pivot Points
+                    df = pivot_points(df)
+
+                    return df
+
+                # Identify Horizontal Support and Resistance
+                def find_support_resistance(df, window=20):
+                    df['Support'] = df['Low'].rolling(window, center=True).min()
+                    df['Resistance'] = df['High'].rolling(window, center=True).max()
+                    return df
+
+                # Draw Trendlines
+                def calculate_trendline(df, kind='support'):
+                    if kind == 'support':
+                        prices = df['Low']
+                    elif kind == 'resistance':
+                        prices = df['High']
+                    else:
+                        raise ValueError("kind must be either 'support' or 'resistance'")
+
+                    indices = np.arange(len(prices))
+                    slope, intercept, _, _, _ = linregress(indices, prices)
+                    trendline = slope * indices + intercept
+                    return trendline
+
+                # Calculate Pivot Points
+                def pivot_points(df):
+                    df['Pivot'] = (df['High'].shift(1) + df['Low'].shift(1) + df['Close'].shift(1)) / 3
+                    df['R1'] = 2 * df['Pivot'] - df['Low'].shift(1)
+                    df['S1'] = 2 * df['Pivot'] - df['High'].shift(1)
+                    df['R2'] = df['Pivot'] + (df['High'].shift(1) - df['Low'].shift(1))
+                    df['S2'] = df['Pivot'] - (df['High'].shift(1) - df['Low'].shift(1))
+                    return df
+
+                # Function to create Plotly figure
+                def create_figure(data, indicators, title):
+                    fig = go.Figure()
+
+                    fig.update_layout(
+                        title=title,
+                        xaxis_title='Date',
+                        yaxis_title='Price',
+                        xaxis_rangeslider_visible=True,
+                        plot_bgcolor='dark grey',
+                        paper_bgcolor='white',
+                        font=dict(color='black'),
+                        hovermode='x',
+                        xaxis=dict(
+                            rangeselector=dict(),
+                            rangeslider=dict(visible=True),
+                            type='date'
+                        ),
+                        yaxis=dict(fixedrange=False),
+                        updatemenus=[dict(
+                            type="buttons",
+                            buttons=[dict(label="Reset Zoom",
+                                        method="relayout",
+                                        args=[{"xaxis.range": [None, None],
+                                                "yaxis.range": [None, None]}])]
+                        )]
+                    )
+                    return fig
+
+                # Initialize lists to store the results
+                macd_signal_list = []
+                negative_histogram_tickers = []
+
+                # Create progress bar
+                progress_bar = st.progress(0)
+                progress_step = 1 / len(tickers)
+
+                # Process each ticker
+                for i, ticker in enumerate(tickers):
+                    # Update progress bar
+                    progress_bar.progress((i + 1) * progress_step)
+                    
+                    # Fetch historical data
+                    data = yf.download(ticker, period="3mo", interval="1d")
+                    
+                    if data.empty:
+                        continue
+                    
+                    # Calculate MACD and related values
+                    data = calculate_macd(data)
+                    
+                    # Calculate RSI
+                    data = calculate_rsi(data)
+                    
+                    # Calculate ADX
+                    data = calculate_adx(data)
+                    
+                    # Check MACD < MACD signal
+                    if check_macd_signal(data):
+                        macd_signal_list.append(ticker)
+                    
+                    # Check the second criteria
+                    histogram_increasing, histogram_negative, price_increasing = check_negative_histogram_and_price(data)
+                    if histogram_increasing and histogram_negative and price_increasing:
+                        negative_histogram_tickers.append(ticker)
+
+                # Display the results in DataFrames
+                df_macd_signal = pd.DataFrame(macd_signal_list, columns=["Ticker"])
+                df_negative_histogram = pd.DataFrame(negative_histogram_tickers, columns=["Ticker"])
+
+                st.title("Stock Analysis Based on MACD Strategy")
+
+                st.subheader("Stocks with Negative MACD Histogram Increasing and Price Increasing for 3 Consecutive Days:")
+                st.dataframe(df_negative_histogram)
+
+                # Dropdown for analysis type
+                col1, col2 = st.columns(2)
+
+                # Set up the start and end date inputs
+                with col1:
+                    selected_stock = st.selectbox("Select Stock", df_negative_histogram['Ticker'].tolist())
+
+                with col2:
+                    analysis_type = st.selectbox("Select Analysis Type", ["Trend Analysis", "Volume Analysis"])
+
+                # Create two columns
+                col1, col2 = st.columns(2)
+
+                # Set up the start and end date inputs
+                with col1:
+                    START = st.date_input('Start Date', pd.to_datetime("2023-06-01"))
+
+                with col2:
+                    END = st.date_input('End Date', pd.to_datetime("today"))
+
+                # If a stock is selected, plot its data with the selected indicators
+                if selected_stock:
+                    @st.cache_data(ttl=3600)
+                    def load_data(ticker, start, end):
+                        df = yf.download(ticker, start=start, end=end)
+                        df.reset_index(inplace=True)
+                        return df
+
+                    df = load_data(selected_stock, START, END)
+
+                    if df.empty:
+                        st.write("No data available for the provided ticker.")
+                    else:
                         df.interpolate(method='linear', inplace=True)
                         df = calculate_indicators(df)
-                        df.dropna(inplace=True)
-                        print(f"Processed data for {ticker_symbol}: Shape = {df.shape}")
-                        stock_data[ticker_symbol] = df
-                    combined_df = pd.concat(stock_data.values(), axis=1)
-                    combined_df.columns = ['_'.join([ticker, col]).strip() for ticker, df in stock_data.items() for col in df.columns]
-                    return combined_df
-                except Exception as e:
-                    print(f"Error fetching data: {e}")
-                    return pd.DataFrame()
 
-            # Function to calculate technical indicators
-            def calculate_indicators(df):
-                # Calculate Moving Averages
-                df['5_MA'] = df['Close'].rolling(window=5).mean()
-                df['20_MA'] = df['Close'].rolling(window=20).mean()
-                df['50_MA'] = df['Close'].rolling(window=50).mean()
-
-                # Calculate MACD
-                macd = ta.trend.MACD(df['Close'])
-                df['MACD'] = macd.macd()
-                df['MACD_Signal'] = macd.macd_signal()
-                df['MACD_Histogram'] = macd.macd_diff()
-
-                # Calculate ADX
-                adx = ta.trend.ADXIndicator(df['High'], df['Low'], df['Close'])
-                df['ADX'] = adx.adx()
-
-                # Calculate Parabolic SAR
-                psar = pta.psar(df['High'], df['Low'], df['Close'])
-                df['Parabolic_SAR'] = psar['PSARl_0.02_0.2']
-
-                # Calculate RSI
-                rsi = ta.momentum.RSIIndicator(df['Close'])
-                df['RSI'] = rsi.rsi()
-
-                # Calculate Volume Moving Averages
-                df['Volume_MA_20'] = df['Volume'].rolling(window=20).mean()
-                df['Volume_MA_10'] = df['Volume'].rolling(window=10).mean()
-
-                # Calculate Bollinger Bands
-                bollinger = ta.volatility.BollingerBands(df['Close'])
-                df['Bollinger_High'] = bollinger.bollinger_hband()
-                df['Bollinger_Low'] = bollinger.bollinger_lband()
-                df['Bollinger_Middle'] = bollinger.bollinger_mavg()
-
-                return df
-
-            # Function to query the stocks
-            def query_stocks(df, conditions, tickers):
-                results = []
-                if df is None or df.empty:
-                    return pd.DataFrame(results)
-                
-                for ticker in tickers:
-                    condition_met = True
-                    for condition in conditions:
-                        col1, op, col2 = condition
-                        col1 = f"{ticker}_{col1}"
-                        col2 = f"{ticker}_{col2}"
-                        if col1 not in df.columns or col2 not in df.columns:
-                            condition_met = False
-                            break
-                        if op == '>':
-                            if not (df[col1] > df[col2]).iloc[-1]:
-                                condition_met = False
-                                break
-                        elif op == '<':
-                            if not (df[col1] < df[col2]).iloc[-1]:
-                                condition_met = False
-                                break
-                        elif op == '>=':
-                            if not (df[col1] >= df[col2]).iloc[-1]:
-                                condition_met = False
-                                break
-                        elif op == '<=':
-                            if not (df[col1] <= df[col2]).iloc[-1]:
-                                condition_met = False
-                                break
-                    if condition_met:
-                        row = {
-                            'Ticker': ticker,
-                            'MACD': df[f"{ticker}_MACD"].iloc[-1],
-                            'MACD_Signal': df[f"{ticker}_MACD_Signal"].iloc[-1],
-                            'RSI': df[f"{ticker}_RSI"].iloc[-1],
-                            'ADX': df[f"{ticker}_ADX"].iloc[-1],
-                            'Close': df[f"{ticker}_Close"].iloc[-1],
-                            '5_MA': df[f"{ticker}_5_MA"].iloc[-1],
-                            '20_MA': df[f"{ticker}_20_MA"].iloc[-1],
-                            'Bollinger_High': df[f"{ticker}_Bollinger_High"].iloc[-1],
-                            'Bollinger_Low': df[f"{ticker}_Bollinger_Low"].iloc[-1],
-                            'Bollinger_Middle': df[f"{ticker}_Bollinger_Middle"].iloc[-1],
-                            'Parabolic_SAR': df[f"{ticker}_Parabolic_SAR"].iloc[-1],
-                            'Volume': df[f"{ticker}_Volume"].iloc[-1],
-                            'Volume_MA_20': df[f"{ticker}_Volume_MA_20"].iloc[-1]
-                        }
-                        results.append(row)
-                return pd.DataFrame(results)
-
-            # Fetch data and calculate indicators for each stock
-            stock_data = get_stock_data(stock_tickers, period='3mo')
-
-            if submenu == "Bollinger":
-                # Define first set of conditions
-                first_conditions = [
-                    ('Close', '>', 'Bollinger_Low'),
-                    ('Close', '<', 'Bollinger_Middle')
-                ]
-
-                # Query stocks based on the first set of conditions
-                first_query_df = query_stocks(stock_data, first_conditions, stock_tickers)
-
-                # Generate insights
-                if not first_query_df.empty:
-                    second_query_df = first_query_df[
-                        (first_query_df['RSI'] < 40)
-                    ]
-
-                    # Display the final results
-                    st.write("Stocks in an uptrend with high volume:")
-                    st.dataframe(second_query_df.round(2))
-                else:
-                    st.write("No stocks met the first set of conditions.")
-
-            elif submenu == "Macd":
-                # Define first set of conditions
-                first_conditions = [
-                    ('MACD', '>', 'MACD_Signal')
-                ]
-
-                # Query stocks based on the first set of conditions
-                first_query_df = query_stocks(stock_data, first_conditions, stock_tickers)
-
-                # Generate insights
-                if not first_query_df.empty:
-                    second_query_df = first_query_df[
-                        (first_query_df['RSI'] < 65) & (first_query_df['RSI'] > 30) & (first_query_df['ADX'] > 20) & (first_query_df['MACD'] > 0)
-                    ]
-
-                    # Display the final results
-                    st.write("Stocks in an uptrend with high volume:")
-                    st.dataframe(second_query_df.round(2))
-                else:
-                    st.write("No stocks met the first set of conditions.")
-
-            # Dropdown for analysis type
-            # Create two columns for date input
-            col1, col2 = st.columns(2)
-            with col1:
-                
-                selected_stock = st.selectbox("Select Stock", second_query_df['Ticker'].tolist())
-            with col2:
-                analysis_type = st.selectbox("Select Analysis Type", ["Trend Analysis", "Volume Analysis", "Support & Resistance Levels"])
-
-            # Create two columns for date input
-            col1, col2 = st.columns(2)
-
-            # Set up the start and end date inputs with default values
-
-            with col1:
-                START = st.date_input('Start Date', pd.to_datetime("01-06-23"))
-
-            with col2:
-                END = st.date_input('End Date', pd.to_datetime("today"))
-
-
-            # If a stock is selected, plot its data with the selected indicators
-            if selected_stock:
-                # Load data
-                def load_data(ticker):
-                    df = yf.download(ticker, START, END)
-                    df.reset_index(inplace=True)
-                    return df
-
-                # Handle null values
-                def interpolate_dataframe(df):
-                    if df.isnull().values.any():
-                        df = df.interpolate()
-                    return df
-
-                # Load data for the given ticker
-                df = load_data(selected_stock)
-
-                if df.empty:
-                    st.write("No data available for the provided ticker.")
-                else:
-                    df = interpolate_dataframe(df)
-
-                    # Ensure enough data points for the calculations
-                    if len(df) > 200:  # 200 is the maximum window size used in calculations
-                        # Calculate Moving Averages
-                        df['15_MA'] = df['Close'].rolling(window=15).mean()
-                        df['20_MA'] = df['Close'].rolling(window=20).mean()
-                        df['50_MA'] = df['Close'].rolling(window=50).mean()
-                        df['200_MA'] = df['Close'].rolling(window=200).mean()
-
-                        # Calculate MACD
-                        df['MACD'] = ta.trend.MACD(df['Close']).macd()
-                        df['MACD_Signal'] = ta.trend.MACD(df['Close']).macd_signal()
-                        df['MACD_Histogram'] = df['MACD'] - df['MACD_Signal']
-
-                        # Calculate ADX
-                        df['ADX'] = ta.trend.ADXIndicator(df['High'], df['Low'], df['Close']).adx()
-
-                        # Calculate Parabolic SAR using 'pandas_ta' library
-                        psar = pta.psar(df['High'], df['Low'], df['Close'])
-                        df['Parabolic_SAR'] = psar['PSARl_0.02_0.2']
-
-                        # Calculate RSI
-                        df['RSI'] = ta.momentum.RSIIndicator(df['Close']).rsi()
-
-                        # Calculate Volume Moving Average (20 days)
-                        df['Volume_MA_20'] = df['Volume'].rolling(window=20).mean()
-
-                        # Calculate On-Balance Volume (OBV)
-                        df['OBV'] = ta.volume.OnBalanceVolumeIndicator(df['Close'], df['Volume']).on_balance_volume()
-
-                        # Calculate Volume Oscillator (20-day EMA and 50-day EMA)
-                        df['Volume_EMA_20'] = ta.trend.EMAIndicator(df['Volume'], window=20).ema_indicator()
-                        df['Volume_EMA_50'] = ta.trend.EMAIndicator(df['Volume'], window=50).ema_indicator()
-                        df['Volume_Oscillator'] = df['Volume_EMA_20'] - df['Volume_EMA_50']
-
-                        # Calculate Chaikin Money Flow (20 days)
-                        df['CMF'] = ta.volume.ChaikinMoneyFlowIndicator(df['High'], df['Low'], df['Close'], df['Volume']).chaikin_money_flow()
-
-                        # Identify Horizontal Support and Resistance
-                        def find_support_resistance(df, window=20):
-                            df['Support'] = df['Low'].rolling(window, center=True).min()
-                            df['Resistance'] = df['High'].rolling(window, center=True).max()
-                            return df
-
-                        df = find_support_resistance(df)
-
-                        # Draw Trendlines
-                        def calculate_trendline(df, kind='support'):
-                            if kind == 'support':
-                                prices = df['Low']
-                            elif kind == 'resistance':
-                                prices = df['High']
-                            else:
-                                raise ValueError("kind must be either 'support' or 'resistance'")
-
-                            indices = np.arange(len(prices))
-                            slope, intercept, _, _, _ = linregress(indices, prices)
-                            trendline = slope * indices + intercept
-                            return trendline
-
-                        df['Support_Trendline'] = calculate_trendline(df, kind='support')
-                        df['Resistance_Trendline'] = calculate_trendline(df, kind='resistance')
-
-                        # Calculate Fibonacci Retracement Levels
-                        def fibonacci_retracement_levels(high, low):
-                            diff = high - low
-                            levels = {
-                                'Level_0': high,
-                                'Level_0.236': high - 0.236 * diff,
-                                'Level_0.382': high - 0.382 * diff,
-                                'Level_0.5': high - 0.5 * diff,
-                                'Level_0.618': high - 0.618 * diff,
-                                'Level_1': low
-                            }
-                            return levels
-
-                        recent_high = df['High'].max()
-                        recent_low = df['Low'].min()
-                        fib_levels = fibonacci_retracement_levels(recent_high, recent_low)
-
-                        # Calculate Pivot Points
-                        def pivot_points(df):
-                            df['Pivot'] = (df['High'].shift(1) + df['Low'].shift(1) + df['Close'].shift(1)) / 3
-                            df['R1'] = 2 * df['Pivot'] - df['Low'].shift(1)
-                            df['S1'] = 2 * df['Pivot'] - df['High'].shift(1)
-                            df['R2'] = df['Pivot'] + (df['High'].shift(1) - df['Low'].shift(1))
-                            df['S2'] = df['Pivot'] - (df['High'].shift(1) - df['Low'].shift(1))
-                            return df
-
-                        df = pivot_points(df)
-
-                        # Calculate Bollinger Bands
-                        bollinger = ta.volatility.BollingerBands(df['Close'])
-                        df['Bollinger_High'] = bollinger.bollinger_hband()
-                        df['Bollinger_Low'] = bollinger.bollinger_lband()
-                        df['Bollinger_Middle'] = bollinger.bollinger_mavg()  # Middle band is typically the SMA
-
-                        # Generate buy/sell signals using advanced methods
-                        def advanced_signals(data):
-                            prices = data['Close'].values
-
-                            # Fourier Transform
-                            def apply_fft(prices):
-                                N = len(prices)
-                                T = 1.0  # Assuming daily data, T=1 day
-                                yf = fft(prices)
-                                xf = np.fft.fftfreq(N, T)[:N // 2]
-                                return xf, 2.0 / N * np.abs(yf[0:N // 2])
-
-                            # Apply FFT
-                            frequencies, magnitudes = apply_fft(prices)
-
-                            # Inverse FFT for noise reduction (optional)
-                            def inverse_fft(yf, threshold=0.1):
-                                yf_filtered = yf.copy()
-                                yf_filtered[np.abs(yf_filtered) < threshold] = 0
-                                return ifft(yf_filtered)
-
-                            yf_transformed = fft(prices)
-                            filtered_signal = inverse_fft(yf_transformed)
-
-                            # Wavelet Transform
-                            def apply_wavelet(prices, wavelet='db4', level=4):
-                                coeffs = pywt.wavedec(prices, wavelet, level=level)
-                                return coeffs
-
-                            # Apply Wavelet Transform
-                            coeffs = apply_wavelet(prices)
-                            reconstructed_signal = pywt.waverec(coeffs, 'db4')
-
-                            # Hilbert Transform
-                            def apply_hilbert_transform(prices):
-                                analytic_signal = hilbert(prices)
-                                amplitude_envelope = np.abs(analytic_signal)
-                                instantaneous_phase = np.unwrap(np.angle(analytic_signal))
-                                instantaneous_frequency = np.diff(instantaneous_phase) / (2.0 * np.pi)
-                                return amplitude_envelope, instantaneous_phase, instantaneous_frequency
-
-                            amplitude_envelope, instantaneous_phase, instantaneous_frequency = apply_hilbert_transform(prices)
-
-                            # Generate Signals
-                            def generate_signals(prices, reconstructed_signal, amplitude_envelope,
-                                                instantaneous_frequency, df):
-                                buy_signals = []
-                                sell_signals = []
-                                for i in range(2, len(prices) - 1):
-                                    if (reconstructed_signal[i] > reconstructed_signal[i - 1] and
-                                            reconstructed_signal[i - 1] < reconstructed_signal[i - 2] and
-                                            instantaneous_frequency[i - 1] < instantaneous_frequency[i - 2] and
-                                            amplitude_envelope[i] > amplitude_envelope[i - 1] and
-                                            df['20_MA'][i] > df['50_MA'][i] and df['RSI'][i] < 70):
-                                        buy_signals.append((i, prices[i]))
-                                    elif (reconstructed_signal[i] < reconstructed_signal[i - 1] and
-                                        reconstructed_signal[i - 1] > reconstructed_signal[i - 2] and
-                                        instantaneous_frequency[i - 1] > instantaneous_frequency[i - 2] and
-                                        amplitude_envelope[i] < amplitude_envelope[i - 1] and
-                                        df['20_MA'][i] < df['50_MA'][i] and df['RSI'][i] > 30):
-                                        sell_signals.append((i, prices[i]))
-                                return buy_signals, sell_signals
-
-                            buy_signals, sell_signals = generate_signals(prices, reconstructed_signal,
-                                                                        amplitude_envelope, instantaneous_frequency,
-                                                                        data)
+                        # Function to generate buy/sell signals
+                        def generate_signals(macd, signal, rsi, close):
+                            buy_signals = [0] * len(macd)
+                            sell_signals = [0] * len(macd)
+                            for i in range(1, len(macd)):
+                                if macd[i] > signal[i] and macd[i-1] <= signal[i-1]:
+                                    buy_signals[i] = 1
+                                elif macd[i] < signal[i] and macd[i-1] >= signal[i-1]:
+                                    sell_signals[i] = 1
                             return buy_signals, sell_signals
 
-                        buy_signals, sell_signals = advanced_signals(df)
+                        df['Buy_Signal'], df['Sell_Signal'] = generate_signals(df['MACD'], df['MACD_Signal'], df['RSI'], df['Close'])
 
                         if analysis_type == "Trend Analysis":
                             st.subheader("Trend Analysis")
 
                             indicators = st.multiselect(
                                 "Select Indicators",
-                                ['Close', '20_MA', '50_MA', '200_MA', 'MACD', 'MACD_Signal', 'MACD_Histogram', 'RSI',
-                                'Signal', 'ADX',
-                                'Parabolic_SAR', 'Bollinger_High', 'Bollinger_Low', 'Bollinger_Middle'],
-                                default=['Close', 'Signal']
+                                ['Close', '20_MA', '50_MA', 'MACD', 'MACD_Signal', 'MACD_Histogram', 'RSI', 'Buy_Signal', 'Sell_Signal', 'ADX',
+                                'Parabolic_SAR', 'Bollinger_High', 'Bollinger_Low', 'Bollinger_Middle', 'ATR', 'Support', 'Resistance',
+                                'Support_Trendline', 'Resistance_Trendline', 'Pivot', 'R1', 'S1', 'R2', 'S2'],
+                                default=['Close', 'MACD_Histogram','Support', 'Resistance']
                             )
                             timeframe = st.radio(
                                 "Select Timeframe",
                                 ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
-                                index=2,
+                                index=3,
                                 horizontal=True
                             )
 
@@ -2449,34 +2357,47 @@ else:
                             elif timeframe == '1 year':
                                 df = df[-365:]
 
-                            fig = go.Figure()
-                            colors = {'Close': 'blue', '20_MA': 'orange', '50_MA': 'green', '200_MA': 'red',
-                                    'MACD': 'purple',
-                                    'MACD_Signal': 'brown', 'RSI': 'pink', 'Signal': 'black', 'ADX': 'magenta',
+                            fig = create_figure(df.set_index('Date'), indicators, f"Trend Analysis for {selected_stock}")
+
+                            colors = {'Close': 'blue', '20_MA': 'orange', '50_MA': 'green', 'MACD': 'purple',
+                                    'MACD_Signal': 'brown', 'RSI': 'pink', 'Buy_Signal': 'green', 'Sell_Signal': 'red', 'ADX': 'magenta',
                                     'Parabolic_SAR': 'yellow', 'Bollinger_High': 'black', 'Bollinger_Low': 'cyan',
-                                    'Bollinger_Middle': 'grey'}
+                                    'Bollinger_Middle': 'grey', 'ATR': 'darkblue', 'Support': 'lightblue', 'Resistance': 'lightcoral',
+                                    'Support_Trendline': 'darkblue', 'Resistance_Trendline': 'darkred', 'Pivot': 'orange',
+                                    'R1': 'yellow', 'S1': 'purple', 'R2': 'lightgreen', 'S2': 'lightpink'}
+                            
+                            # Create secondary y-axis if MACD indicators are selected
+                            if any(ind in indicators for ind in ['MACD', 'MACD_Signal', 'MACD_Histogram']):
+                                fig.update_layout(yaxis2=dict(title='MACD', overlaying='y', side='right'))
+
+                                # Plot MACD Histogram with different colors
+                                for i in range(1, len(df)):
+                                    if df['MACD_Histogram'].iloc[i] > 0:
+                                        color = 'green' if df['MACD_Histogram'].iloc[i] > df['MACD_Histogram'].iloc[i - 1] else 'lightgreen'
+                                    else:
+                                        color = 'red' if df['MACD_Histogram'].iloc[i] < df['MACD_Histogram'].iloc[i - 1] else 'lightcoral'
+
+                                    fig.add_trace(
+                                        go.Bar(x=[df['Date'].iloc[i]], y=[df['MACD_Histogram'].iloc[i]], name='MACD_Histogram',
+                                            marker_color=color, yaxis='y2', showlegend=False))
 
                             for indicator in indicators:
-                                if indicator == 'Signal':
-                                    # Plot buy and sell signals
+                                if indicator == 'Buy_Signal':
                                     fig.add_trace(
-                                        go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close',
-                                                line=dict(color=colors['Close'])))
-                                    buy_signal_points = [df.iloc[bs[0]] for bs in buy_signals if bs[0] < len(df)]
-                                    sell_signal_points = [df.iloc[ss[0]] for ss in sell_signals if ss[0] < len(df)]
-                                    fig.add_trace(
-                                        go.Scatter(x=[point['Date'] for point in buy_signal_points],
-                                                y=[point['Close'] for point in buy_signal_points], mode='markers',
-                                                name='Buy Signal',
+                                        go.Scatter(x=df[df[indicator] == 1]['Date'],
+                                                y=df[df[indicator] == 1]['Close'], mode='markers', name='Buy Signal',
                                                 marker=dict(color='green', symbol='triangle-up')))
+                                elif indicator == 'Sell_Signal':
                                     fig.add_trace(
-                                        go.Scatter(x=[point['Date'] for point in sell_signal_points],
-                                                y=[point['Close'] for point in sell_signal_points], mode='markers',
-                                                name='Sell Signal',
+                                        go.Scatter(x=df[df[indicator] == 1]['Date'],
+                                                y=df[df[indicator] == 1]['Close'], mode='markers', name='Sell Signal',
                                                 marker=dict(color='red', symbol='triangle-down')))
                                 elif indicator == 'MACD_Histogram':
+                                    continue  # Skip MACD_Histogram here since it's already plotted above
+                                elif indicator in ['MACD', 'MACD_Signal']:
                                     fig.add_trace(
-                                        go.Bar(x=df['Date'], y=df[indicator], name=indicator, marker_color='gray'))
+                                        go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator,
+                                                line=dict(color=colors.get(indicator, 'black')), yaxis='y2'))
                                 else:
                                     fig.add_trace(
                                         go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator,
@@ -2488,8 +2409,8 @@ else:
                             st.subheader("Volume Analysis")
                             volume_indicators = st.multiselect(
                                 "Select Volume Indicators",
-                                ['Volume', 'Volume_MA_20', 'OBV', 'Volume_Oscillator', 'CMF'],
-                                default=['Volume']
+                                ['Close', 'Volume', 'Volume_MA_20', 'Volume_MA_10', 'Volume_MA_5', 'OBV', 'VWAP', 'A/D Line'],
+                                default=['Close', 'VWAP']
                             )
                             volume_timeframe = st.radio(
                                 "Select Timeframe",
@@ -2509,47 +2430,487 @@ else:
                             elif volume_timeframe == '1 year':
                                 df = df[-365:]
 
-                            fig = go.Figure()
+                            fig = create_figure(df.set_index('Date'), volume_indicators, f"Volume Analysis for {selected_stock}")
+
                             for indicator in volume_indicators:
                                 fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator))
 
                             st.plotly_chart(fig)
+                            
 
-                        elif analysis_type == "Support & Resistance Levels":
-                            st.subheader("Support & Resistance Levels")
-                            sr_indicators = st.multiselect(
-                                "Select Indicators",
-                                ['Close', '20_MA', '50_MA', '200_MA', 'Support', 'Resistance', 'Support_Trendline',
-                                'Resistance_Trendline', 'Pivot', 'R1', 'S1', 'R2', 'S2'],
-                                default=['Close']
-                            )
-                            sr_timeframe = st.radio(
-                                "Select Timeframe",
-                                ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
-                                index=2,
-                                horizontal=True
-                            )
 
-                            if sr_timeframe == '15 days':
-                                df = df[-15:]
-                            elif sr_timeframe == '30 days':
-                                df = df[-30:]
-                            elif sr_timeframe == '90 days':
-                                df = df[-90:]
-                            elif sr_timeframe == '180 days':
-                                df = df[-180:]
-                            elif sr_timeframe == '1 year':
-                                df = df[-365:]
+            elif submenu == "Bollinger":
+                # Function to fetch and process stock data
+                def get_stock_data(ticker_symbols, period):
+                    try:
+                        stock_data = {}
+                        for ticker_symbol in ticker_symbols:
+                            df = yf.download(ticker_symbol, period=period)
+                            print(f"Downloaded data for {ticker_symbol}: Shape = {df.shape}")
+                            df.interpolate(method='linear', inplace=True)
+                            df = calculate_indicators(df)
+                            df.dropna(inplace=True)
+                            print(f"Processed data for {ticker_symbol}: Shape = {df.shape}")
+                            stock_data[ticker_symbol] = df
+                        combined_df = pd.concat(stock_data.values(), axis=1)
+                        combined_df.columns = ['_'.join([ticker, col]).strip() for ticker, df in stock_data.items() for col in df.columns]
+                        return combined_df
+                    except Exception as e:
+                        print(f"Error fetching data: {e}")
+                        return pd.DataFrame()
 
-                            fig = go.Figure()
-                            for indicator in sr_indicators:
-                                fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator))
+                # Function to calculate technical indicators
+                def calculate_indicators(df):
+                    # Calculate Moving Averages
+                    df['5_MA'] = df['Close'].rolling(window=5).mean()
+                    df['20_MA'] = df['Close'].rolling(window=20).mean()
+                    df['50_MA'] = df['Close'].rolling(window=50).mean()
 
-                            st.plotly_chart(fig)
+                    # Calculate MACD
+                    macd = ta.trend.MACD(df['Close'])
+                    df['MACD'] = macd.macd()
+                    df['MACD_Signal'] = macd.macd_signal()
+                    df['MACD_Histogram'] = macd.macd_diff()
 
-                    else:
-                        st.write("Not enough data points for technical analysis.")
+                    # Calculate ADX
+                    adx = ta.trend.ADXIndicator(df['High'], df['Low'], df['Close'])
+                    df['ADX'] = adx.adx()
+
+                    # Calculate Parabolic SAR
+                    psar = pta.psar(df['High'], df['Low'], df['Close'])
+                    df['Parabolic_SAR'] = psar['PSARl_0.02_0.2']
+
+                    # Calculate RSI
+                    rsi = ta.momentum.RSIIndicator(df['Close'])
+                    df['RSI'] = rsi.rsi()
+
+                    # Calculate Volume Moving Averages
+                    df['Volume_MA_20'] = df['Volume'].rolling(window=20).mean()
+                    df['Volume_MA_10'] = df['Volume'].rolling(window=10).mean()
+
+                    # Calculate Bollinger Bands
+                    bollinger = ta.volatility.BollingerBands(df['Close'])
+                    df['Bollinger_High'] = bollinger.bollinger_hband()
+                    df['Bollinger_Low'] = bollinger.bollinger_lband()
+                    df['Bollinger_Middle'] = bollinger.bollinger_mavg()
+
+                    return df
+
+                # Function to query the stocks
+                def query_stocks(df, conditions, tickers):
+                    results = []
+                    if df is None or df.empty:
+                        return pd.DataFrame(results)
                     
+                    for ticker in tickers:
+                        condition_met = True
+                        for condition in conditions:
+                            col1, op, col2 = condition
+                            col1 = f"{ticker}_{col1}"
+                            col2 = f"{ticker}_{col2}"
+                            if col1 not in df.columns or col2 not in df.columns:
+                                condition_met = False
+                                break
+                            if op == '>':
+                                if not (df[col1] > df[col2]).iloc[-1]:
+                                    condition_met = False
+                                    break
+                            elif op == '<':
+                                if not (df[col1] < df[col2]).iloc[-1]:
+                                    condition_met = False
+                                    break
+                            elif op == '>=':
+                                if not (df[col1] >= df[col2]).iloc[-1]:
+                                    condition_met = False
+                                    break
+                            elif op == '<=':
+                                if not (df[col1] <= df[col2]).iloc[-1]:
+                                    condition_met = False
+                                    break
+                        if condition_met:
+                            row = {
+                                'Ticker': ticker,
+                                'MACD': df[f"{ticker}_MACD"].iloc[-1],
+                                'MACD_Signal': df[f"{ticker}_MACD_Signal"].iloc[-1],
+                                'RSI': df[f"{ticker}_RSI"].iloc[-1],
+                                'ADX': df[f"{ticker}_ADX"].iloc[-1],
+                                'Close': df[f"{ticker}_Close"].iloc[-1],
+                                '5_MA': df[f"{ticker}_5_MA"].iloc[-1],
+                                '20_MA': df[f"{ticker}_20_MA"].iloc[-1],
+                                'Bollinger_High': df[f"{ticker}_Bollinger_High"].iloc[-1],
+                                'Bollinger_Low': df[f"{ticker}_Bollinger_Low"].iloc[-1],
+                                'Bollinger_Middle': df[f"{ticker}_Bollinger_Middle"].iloc[-1],
+                                'Parabolic_SAR': df[f"{ticker}_Parabolic_SAR"].iloc[-1],
+                                'Volume': df[f"{ticker}_Volume"].iloc[-1],
+                                'Volume_MA_20': df[f"{ticker}_Volume_MA_20"].iloc[-1]
+                            }
+                            results.append(row)
+                    return pd.DataFrame(results)
+
+                # Fetch data and calculate indicators for each stock
+                stock_data = get_stock_data(tickers, period='3mo')
+            
+                # Define first set of conditions
+                first_conditions = [
+                    ('Close', '>', 'Bollinger_Low'),
+                    ('Close', '<', 'Bollinger_Middle')
+                ]
+
+                # Query stocks based on the first set of conditions
+                first_query_df = query_stocks(stock_data, first_conditions, tickers)
+
+                # Generate insights
+                if not first_query_df.empty:
+                    second_query_df = first_query_df[
+                        (first_query_df['RSI'] < 40)
+                    ]
+
+                    # Display the final results
+                    st.write("Stocks in an uptrend with high volume:")
+                    st.dataframe(second_query_df.round(2))
+                else:
+                    st.write("No stocks met the first set of conditions.")
+
+
+
+                # Dropdown for analysis type
+                # Create two columns for date input
+                col1, col2 = st.columns(2)
+                with col1:
+                    
+                    selected_stock = st.selectbox("Select Stock", second_query_df['Ticker'].tolist())
+                with col2:
+                    analysis_type = st.selectbox("Select Analysis Type", ["Trend Analysis", "Volume Analysis", "Support & Resistance Levels"])
+
+                # Create two columns for date input
+                col1, col2 = st.columns(2)
+
+                # Set up the start and end date inputs with default values
+
+                with col1:
+                    START = st.date_input('Start Date', pd.to_datetime("01-06-23"))
+
+                with col2:
+                    END = st.date_input('End Date', pd.to_datetime("today"))
+
+
+                # If a stock is selected, plot its data with the selected indicators
+                if selected_stock:
+                    # Load data
+                    def load_data(ticker):
+                        df = yf.download(ticker, START, END)
+                        df.reset_index(inplace=True)
+                        return df
+
+                    # Handle null values
+                    def interpolate_dataframe(df):
+                        if df.isnull().values.any():
+                            df = df.interpolate()
+                        return df
+
+                    # Load data for the given ticker
+                    df = load_data(selected_stock)
+
+                    if df.empty:
+                        st.write("No data available for the provided ticker.")
+                    else:
+                        df = interpolate_dataframe(df)
+
+                        # Ensure enough data points for the calculations
+                        if len(df) > 200:  # 200 is the maximum window size used in calculations
+                            # Calculate Moving Averages
+                            df['15_MA'] = df['Close'].rolling(window=15).mean()
+                            df['20_MA'] = df['Close'].rolling(window=20).mean()
+                            df['50_MA'] = df['Close'].rolling(window=50).mean()
+                            df['200_MA'] = df['Close'].rolling(window=200).mean()
+
+                            # Calculate MACD
+                            df['MACD'] = ta.trend.MACD(df['Close']).macd()
+                            df['MACD_Signal'] = ta.trend.MACD(df['Close']).macd_signal()
+                            df['MACD_Histogram'] = df['MACD'] - df['MACD_Signal']
+
+                            # Calculate ADX
+                            df['ADX'] = ta.trend.ADXIndicator(df['High'], df['Low'], df['Close']).adx()
+
+                            # Calculate Parabolic SAR using 'pandas_ta' library
+                            psar = pta.psar(df['High'], df['Low'], df['Close'])
+                            df['Parabolic_SAR'] = psar['PSARl_0.02_0.2']
+
+                            # Calculate RSI
+                            df['RSI'] = ta.momentum.RSIIndicator(df['Close']).rsi()
+
+                            # Calculate Volume Moving Average (20 days)
+                            df['Volume_MA_20'] = df['Volume'].rolling(window=20).mean()
+
+                            # Calculate On-Balance Volume (OBV)
+                            df['OBV'] = ta.volume.OnBalanceVolumeIndicator(df['Close'], df['Volume']).on_balance_volume()
+
+                            # Calculate Volume Oscillator (20-day EMA and 50-day EMA)
+                            df['Volume_EMA_20'] = ta.trend.EMAIndicator(df['Volume'], window=20).ema_indicator()
+                            df['Volume_EMA_50'] = ta.trend.EMAIndicator(df['Volume'], window=50).ema_indicator()
+                            df['Volume_Oscillator'] = df['Volume_EMA_20'] - df['Volume_EMA_50']
+
+                            # Calculate Chaikin Money Flow (20 days)
+                            df['CMF'] = ta.volume.ChaikinMoneyFlowIndicator(df['High'], df['Low'], df['Close'], df['Volume']).chaikin_money_flow()
+
+                            # Identify Horizontal Support and Resistance
+                            def find_support_resistance(df, window=20):
+                                df['Support'] = df['Low'].rolling(window, center=True).min()
+                                df['Resistance'] = df['High'].rolling(window, center=True).max()
+                                return df
+
+                            df = find_support_resistance(df)
+
+                            # Draw Trendlines
+                            def calculate_trendline(df, kind='support'):
+                                if kind == 'support':
+                                    prices = df['Low']
+                                elif kind == 'resistance':
+                                    prices = df['High']
+                                else:
+                                    raise ValueError("kind must be either 'support' or 'resistance'")
+
+                                indices = np.arange(len(prices))
+                                slope, intercept, _, _, _ = linregress(indices, prices)
+                                trendline = slope * indices + intercept
+                                return trendline
+
+                            df['Support_Trendline'] = calculate_trendline(df, kind='support')
+                            df['Resistance_Trendline'] = calculate_trendline(df, kind='resistance')
+
+                            # Calculate Fibonacci Retracement Levels
+                            def fibonacci_retracement_levels(high, low):
+                                diff = high - low
+                                levels = {
+                                    'Level_0': high,
+                                    'Level_0.236': high - 0.236 * diff,
+                                    'Level_0.382': high - 0.382 * diff,
+                                    'Level_0.5': high - 0.5 * diff,
+                                    'Level_0.618': high - 0.618 * diff,
+                                    'Level_1': low
+                                }
+                                return levels
+
+                            recent_high = df['High'].max()
+                            recent_low = df['Low'].min()
+                            fib_levels = fibonacci_retracement_levels(recent_high, recent_low)
+
+                            # Calculate Pivot Points
+                            def pivot_points(df):
+                                df['Pivot'] = (df['High'].shift(1) + df['Low'].shift(1) + df['Close'].shift(1)) / 3
+                                df['R1'] = 2 * df['Pivot'] - df['Low'].shift(1)
+                                df['S1'] = 2 * df['Pivot'] - df['High'].shift(1)
+                                df['R2'] = df['Pivot'] + (df['High'].shift(1) - df['Low'].shift(1))
+                                df['S2'] = df['Pivot'] - (df['High'].shift(1) - df['Low'].shift(1))
+                                return df
+
+                            df = pivot_points(df)
+
+                            # Calculate Bollinger Bands
+                            bollinger = ta.volatility.BollingerBands(df['Close'])
+                            df['Bollinger_High'] = bollinger.bollinger_hband()
+                            df['Bollinger_Low'] = bollinger.bollinger_lband()
+                            df['Bollinger_Middle'] = bollinger.bollinger_mavg()  # Middle band is typically the SMA
+
+                            # Generate buy/sell signals using advanced methods
+                            def advanced_signals(data):
+                                prices = data['Close'].values
+
+                                # Fourier Transform
+                                def apply_fft(prices):
+                                    N = len(prices)
+                                    T = 1.0  # Assuming daily data, T=1 day
+                                    yf = fft(prices)
+                                    xf = np.fft.fftfreq(N, T)[:N // 2]
+                                    return xf, 2.0 / N * np.abs(yf[0:N // 2])
+
+                                # Apply FFT
+                                frequencies, magnitudes = apply_fft(prices)
+
+                                # Inverse FFT for noise reduction (optional)
+                                def inverse_fft(yf, threshold=0.1):
+                                    yf_filtered = yf.copy()
+                                    yf_filtered[np.abs(yf_filtered) < threshold] = 0
+                                    return ifft(yf_filtered)
+
+                                yf_transformed = fft(prices)
+                                filtered_signal = inverse_fft(yf_transformed)
+
+                                # Wavelet Transform
+                                def apply_wavelet(prices, wavelet='db4', level=4):
+                                    coeffs = pywt.wavedec(prices, wavelet, level=level)
+                                    return coeffs
+
+                                # Apply Wavelet Transform
+                                coeffs = apply_wavelet(prices)
+                                reconstructed_signal = pywt.waverec(coeffs, 'db4')
+
+                                # Hilbert Transform
+                                def apply_hilbert_transform(prices):
+                                    analytic_signal = hilbert(prices)
+                                    amplitude_envelope = np.abs(analytic_signal)
+                                    instantaneous_phase = np.unwrap(np.angle(analytic_signal))
+                                    instantaneous_frequency = np.diff(instantaneous_phase) / (2.0 * np.pi)
+                                    return amplitude_envelope, instantaneous_phase, instantaneous_frequency
+
+                                amplitude_envelope, instantaneous_phase, instantaneous_frequency = apply_hilbert_transform(prices)
+
+                                # Generate Signals
+                                def generate_signals(prices, reconstructed_signal, amplitude_envelope,
+                                                    instantaneous_frequency, df):
+                                    buy_signals = []
+                                    sell_signals = []
+                                    for i in range(2, len(prices) - 1):
+                                        if (reconstructed_signal[i] > reconstructed_signal[i - 1] and
+                                                reconstructed_signal[i - 1] < reconstructed_signal[i - 2] and
+                                                instantaneous_frequency[i - 1] < instantaneous_frequency[i - 2] and
+                                                amplitude_envelope[i] > amplitude_envelope[i - 1] and
+                                                df['20_MA'][i] > df['50_MA'][i] and df['RSI'][i] < 70):
+                                            buy_signals.append((i, prices[i]))
+                                        elif (reconstructed_signal[i] < reconstructed_signal[i - 1] and
+                                            reconstructed_signal[i - 1] > reconstructed_signal[i - 2] and
+                                            instantaneous_frequency[i - 1] > instantaneous_frequency[i - 2] and
+                                            amplitude_envelope[i] < amplitude_envelope[i - 1] and
+                                            df['20_MA'][i] < df['50_MA'][i] and df['RSI'][i] > 30):
+                                            sell_signals.append((i, prices[i]))
+                                    return buy_signals, sell_signals
+
+                                buy_signals, sell_signals = generate_signals(prices, reconstructed_signal,
+                                                                            amplitude_envelope, instantaneous_frequency,
+                                                                            data)
+                                return buy_signals, sell_signals
+
+                            buy_signals, sell_signals = advanced_signals(df)
+
+                            if analysis_type == "Trend Analysis":
+                                st.subheader("Trend Analysis")
+
+                                indicators = st.multiselect(
+                                    "Select Indicators",
+                                    ['Close', '20_MA', '50_MA', '200_MA', 'MACD', 'MACD_Signal', 'MACD_Histogram', 'RSI',
+                                    'Signal', 'ADX',
+                                    'Parabolic_SAR', 'Bollinger_High', 'Bollinger_Low', 'Bollinger_Middle'],
+                                    default=['Close', 'Signal']
+                                )
+                                timeframe = st.radio(
+                                    "Select Timeframe",
+                                    ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
+                                    index=2,
+                                    horizontal=True
+                                )
+
+                                if timeframe == '15 days':
+                                    df = df[-15:]
+                                elif timeframe == '30 days':
+                                    df = df[-30:]
+                                elif timeframe == '90 days':
+                                    df = df[-90:]
+                                elif timeframe == '180 days':
+                                    df = df[-180:]
+                                elif timeframe == '1 year':
+                                    df = df[-365:]
+
+                                fig = go.Figure()
+                                colors = {'Close': 'blue', '20_MA': 'orange', '50_MA': 'green', '200_MA': 'red',
+                                        'MACD': 'purple',
+                                        'MACD_Signal': 'brown', 'RSI': 'pink', 'Signal': 'black', 'ADX': 'magenta',
+                                        'Parabolic_SAR': 'yellow', 'Bollinger_High': 'black', 'Bollinger_Low': 'cyan',
+                                        'Bollinger_Middle': 'grey'}
+
+                                for indicator in indicators:
+                                    if indicator == 'Signal':
+                                        # Plot buy and sell signals
+                                        fig.add_trace(
+                                            go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close',
+                                                    line=dict(color=colors['Close'])))
+                                        buy_signal_points = [df.iloc[bs[0]] for bs in buy_signals if bs[0] < len(df)]
+                                        sell_signal_points = [df.iloc[ss[0]] for ss in sell_signals if ss[0] < len(df)]
+                                        fig.add_trace(
+                                            go.Scatter(x=[point['Date'] for point in buy_signal_points],
+                                                    y=[point['Close'] for point in buy_signal_points], mode='markers',
+                                                    name='Buy Signal',
+                                                    marker=dict(color='green', symbol='triangle-up')))
+                                        fig.add_trace(
+                                            go.Scatter(x=[point['Date'] for point in sell_signal_points],
+                                                    y=[point['Close'] for point in sell_signal_points], mode='markers',
+                                                    name='Sell Signal',
+                                                    marker=dict(color='red', symbol='triangle-down')))
+                                    elif indicator == 'MACD_Histogram':
+                                        fig.add_trace(
+                                            go.Bar(x=df['Date'], y=df[indicator], name=indicator, marker_color='gray'))
+                                    else:
+                                        fig.add_trace(
+                                            go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator,
+                                                    line=dict(color=colors.get(indicator, 'black'))))
+
+                                st.plotly_chart(fig)
+
+                            elif analysis_type == "Volume Analysis":
+                                st.subheader("Volume Analysis")
+                                volume_indicators = st.multiselect(
+                                    "Select Volume Indicators",
+                                    ['Volume', 'Volume_MA_20', 'OBV', 'Volume_Oscillator', 'CMF'],
+                                    default=['Volume']
+                                )
+                                volume_timeframe = st.radio(
+                                    "Select Timeframe",
+                                    ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
+                                    index=2,
+                                    horizontal=True
+                                )
+
+                                if volume_timeframe == '15 days':
+                                    df = df[-15:]
+                                elif volume_timeframe == '30 days':
+                                    df = df[-30:]
+                                elif volume_timeframe == '90 days':
+                                    df = df[-90:]
+                                elif volume_timeframe == '180 days':
+                                    df = df[-180:]
+                                elif volume_timeframe == '1 year':
+                                    df = df[-365:]
+
+                                fig = go.Figure()
+                                for indicator in volume_indicators:
+                                    fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator))
+
+                                st.plotly_chart(fig)
+
+                            elif analysis_type == "Support & Resistance Levels":
+                                st.subheader("Support & Resistance Levels")
+                                sr_indicators = st.multiselect(
+                                    "Select Indicators",
+                                    ['Close', '20_MA', '50_MA', '200_MA', 'Support', 'Resistance', 'Support_Trendline',
+                                    'Resistance_Trendline', 'Pivot', 'R1', 'S1', 'R2', 'S2'],
+                                    default=['Close']
+                                )
+                                sr_timeframe = st.radio(
+                                    "Select Timeframe",
+                                    ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
+                                    index=2,
+                                    horizontal=True
+                                )
+
+                                if sr_timeframe == '15 days':
+                                    df = df[-15:]
+                                elif sr_timeframe == '30 days':
+                                    df = df[-30:]
+                                elif sr_timeframe == '90 days':
+                                    df = df[-90:]
+                                elif sr_timeframe == '180 days':
+                                    df = df[-180:]
+                                elif sr_timeframe == '1 year':
+                                    df = df[-365:]
+
+                                fig = go.Figure()
+                                for indicator in sr_indicators:
+                                    fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator))
+
+                                st.plotly_chart(fig)
+
+                        else:
+                            st.write("Not enough data points for technical analysis.")
+                        
 
         
 
