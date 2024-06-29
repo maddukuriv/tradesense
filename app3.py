@@ -2935,9 +2935,35 @@ else:
 
             # Display watchlist
             if watchlist:
-                watchlist_data = {entry.ticker: yf.download(entry.ticker, period='1d').iloc[-1]['Close'] for entry in
-                                  watchlist}
-                watchlist_df = pd.DataFrame(list(watchlist_data.items()), columns=['Ticker', 'Close'])
+                watchlist_data = {}
+                for entry in watchlist:
+                    ticker = entry.ticker
+                    data = yf.download(ticker, period='1y')  # Fetch 1 year of data for indicators
+                    data['5_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=5)
+                    data['MACD'] = ta.trend.macd(data['Close'])
+                    data['MACD_Hist'] = ta.trend.macd_diff(data['Close'])
+                    data['RSI'] = ta.momentum.rsi(data['Close'])
+                    data['ADX'] = ta.trend.adx(data['High'], data['Low'], data['Close'])
+                    data['Bollinger_High'] = ta.volatility.bollinger_hband(data['Close'])
+                    data['Bollinger_Low'] = ta.volatility.bollinger_lband(data['Close'])
+                    data['20_day_vol_MA'] = data['Volume'].rolling(window=20).mean()
+                    
+                    # Get the latest data for the indicators
+                    latest_data = data.iloc[-1]
+                    watchlist_data[ticker] = {
+                        'Close': latest_data['Close'],
+                        '5_day_EMA': latest_data['5_day_EMA'],
+                        'MACD': latest_data['MACD'],
+                        'MACD_Hist': latest_data['MACD_Hist'],
+                        'RSI': latest_data['RSI'],
+                        'ADX': latest_data['ADX'],
+                        'Bollinger_High': latest_data['Bollinger_High'],
+                        'Bollinger_Low': latest_data['Bollinger_Low'],
+                        'Volume': latest_data['Volume'],
+                        '20_day_vol_MA': latest_data['20_day_vol_MA']
+                    }
+
+                watchlist_df = pd.DataFrame.from_dict(watchlist_data, orient='index')
                 st.write("Your Watchlist:")
                 st.dataframe(watchlist_df)
 
@@ -2950,6 +2976,9 @@ else:
                     st.experimental_rerun()  # Refresh the app to reflect changes
             else:
                 st.write("Your watchlist is empty.")
+
+
+
         elif choice == f"{st.session_state.username}'s Portfolio":
         # 'Portifolio' code -------------------------------------------------------------------------------------------
             st.header(f"{st.session_state.username}'s Portfolio")
