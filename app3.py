@@ -886,8 +886,8 @@ else:
 
         elif choice == "Stock Screener":
         # 'Stock Screener' code---------------------------------------------------------------
-            st.sidebar.subheader("Screens")
-            submenu = st.sidebar.radio("Select Option", ["LargeCap", "MidCap", "SmallCap"])
+            st.sidebar.subheader("Indices")
+            submenu = st.sidebar.radio("Select Option", ["India-LargeCap", "India-MidCap", "FTSE100","S&P500"])
 
 
             # List of stock tickers
@@ -920,7 +920,68 @@ else:
                 "SURYAROSNI.NS", "GPIL.NS", "GMDCLTD.NS", "MAHSEAMLES.NS", "TDPOWERSYS.NS", "TECHNOE.NS", "JLHL.NS"
             ]
 
-            smallcap_tickers = ["TAPARIA.BO", "LKPFIN.BO", "EQUITAS.NS"]
+            ftse100_tickers = [
+            "III.L", "ADM.L", "AAF.L", "AAL.L", "ANTO.L", "AHT.L", "ABF.L", "AZN.L",
+            "AUTO.L", "AV.L", "BME.L", "BA.L", "BARC.L", "BDEV.L", "BEZ.L", "BKGH.L", 
+            "BP.L", "BATS.L", "BT.A.L", "BNZL.L", "BRBY.L", "CNA.L", "CCH.L", "CPG.L", 
+            "CTEC.L", "CRDA.L", "DARK.L", "DCC.L", "DGE.L", "DPLM.L", "EZJ.L", "ENT.L", 
+            "EXPN.L", "FCIT.L", "FRAS.L", "FRES.L", "GLEN.L", "GSK.L", "HLN.L", "HLMA.L", 
+            "HL.L", "HIK.L", "HWDN.L", "HSBA.L", "IMI.L", "IMB.L", "INF.L", "IHG.L", 
+            "ICP.L", "IAG.L", "ITRK.L", "JD.L", "KGF.L", "LAND.L", "LGEN.L", "LLOY.L", 
+            "LSEG.L", "LMP.L", "MNG.L", "MKS.L", "MRO.L", "MNDI.L", "NG.L", "NWG.L", 
+            "NXT.L", "PSON.L", "PSH.L", "PSN.L", "PHNX.L", "PRU.L", "RKT.L", "REL.L", 
+            "RTO.L", "RMV.L", "RIO.L", "RR.L", "SGE.L", "SBRY.L", "SDR.L", "SMT.L", 
+            "SGRO.L", "SVT.L", "SHEL.L", "SN.L", "SMDS.L", "SMIN.L", "SKG.L", "SPX.L", 
+            "SSE.L", "STAN.L", "TW.L", "TSCO.L", "ULVR.L", "UTG.L", "UU.L", "VTY.L", 
+            "VOD.L", "WEIR.L", "WTB.L", "WPP.L"
+            ]
+
+            sp500_tickers = [
+            "MMM", "AOS", "ABT", "ABBV", "ACN", "ADBE", "AMD", "AES", "AFL", "A", "APD", "ABNB",
+            "AKAM", "ALB", "ARE", "ALGN", "ALLE", "LNT", "ALL", "GOOGL", "GOOG", "MO", "AMZN",
+            "AMCR", "AEE", "AAL", "AEP", "AXP", "AIG", "AMT", "AWK", "AMP", "AME", "AMGN", "APH",
+            "ADI", "ANSS", "AON", "APA", "AAPL", "AMAT", "APTV", "ACGL", "ADM", "ANET", "AJG", 
+            "AIZ", "T", "ATO", "ADSK", "ADP", "AZO", "AVB", "AVY", "AXON", "BKR", "BALL", "BAC", 
+            "BK", "BBWI", "BAX", "BDX", "BRK.B", "BBY", "BIO", "TECH", "BIIB", "BLK", "BX", "BA", 
+            "BKNG", "BWA", "BXP", "BSX", "BMY", "AVGO", "BR", "BRO", "BF.B", "BLDR", "BG", "CDNS", 
+            "CZR", "CPT", "CPB", "COF", "CAH", "KMX", "CCL", "CARR", "CTLT", "CAT", "CBOE", "CBRE", 
+            "CDW", "CE", "COR", "CNC", "CNP", "CF", "CHRW", "CRL", "SCHW", "CHTR", "CVX", "CMG", 
+            "CB", "CHD", "CI", "CINF", "CTAS", "CSCO", "C", "CFG", "CLX", "CME", "CMS", "KO", 
+            "CTSH", "CL", "CMCSA", "CAG", "COP", "ED", "STZ", "CEG", "COO", "CPRT", "GLW", "CPAY", 
+            "CTVA", "CSGP", "COST", "CTRA", "CRWD", "CCI", "CSX", "CMI", "CVS", "DHR", "DRI", 
+            "DVA", "DAY", "DECK", "DE", "DAL", "DVN", "DXCM", "FANG", "DLR", "DFS", "DG", "DLTR", 
+            "D", "DPZ", "DOV", "DOW", "DHI", "DTE", "DUK", "DD", "EMN", "ETN", "EBAY", "ECL", 
+            "EIX", "EW", "EA", "ELV", "LLY", "EMR", "ENPH", "ETR", "EOG", "EPAM", "EQT", "EFX", 
+            "EQIX", "EQR", "ESS", "EL", "ETSY", "EG", "EVRG", "ES", "EXC", "EXPE", "EXPD", "EXR", 
+            "XOM", "FFIV", "FDS", "FICO", "FAST", "FRT", "FDX", "FIS", "FITB", "FSLR", "FE", 
+            "FI", "FMC", "F", "FTNT", "FTV", "FOXA", "FOX", "BEN", "FCX", "GRMN", "IT", "GE", 
+            "GEHC", "GEV", "GEN", "GNRC", "GD", "GIS", "GM", "GPC", "GILD", "GPN", "GL", "GDDY", 
+            "GS", "HAL", "HIG", "HAS", "HCA", "DOC", "HSIC", "HSY", "HES", "HPE", "HLT", "HOLX", 
+            "HD", "HON", "HRL", "HST", "HWM", "HPQ", "HUBB", "HUM", "HBAN", "HII", "IBM", "IEX", 
+            "IDXX", "ITW", "INCY", "IR", "PODD", "INTC", "ICE", "IFF", "IP", "IPG", "INTU", "ISRG", 
+            "IVZ", "INVH", "IQV", "IRM", "JBHT", "JBL", "JKHY", "J", "JNJ", "JCI", "JPM", "JNPR", 
+            "K", "KVUE", "KDP", "KEY", "KEYS", "KMB", "KIM", "KMI", "KKR", "KLAC", "KHC", "KR", 
+            "LHX", "LH", "LRCX", "LW", "LVS", "LDOS", "LEN", "LIN", "LYV", "LKQ", "LMT", "L", 
+            "LOW", "LULU", "LYB", "MTB", "MRO", "MPC", "MKTX", "MAR", "MMC", "MLM", "MAS", "MA", 
+            "MTCH", "MKC", "MCD", "MCK", "MDT", "MRK", "META", "MET", "MTD", "MGM", "MCHP", "MU", 
+            "MSFT", "MAA", "MRNA", "MHK", "MOH", "TAP", "MDLZ", "MPWR", "MNST", "MCO", "MS", 
+            "MOS", "MSI", "MSCI", "NDAQ", "NTAP", "NFLX", "NEM", "NWSA", "NWS", "NEE", "NKE", 
+            "NI", "NDSN", "NSC", "NTRS", "NOC", "NCLH", "NRG", "NUE", "NVDA", "NVR", "NXPI", 
+            "ORLY", "OXY", "ODFL", "OMC", "ON", "OKE", "ORCL", "OTIS", "PCAR", "PKG", "PANW", 
+            "PARA", "PH", "PAYX", "PAYC", "PYPL", "PNR", "PEP", "PFE", "PCG", "PM", "PSX", "PNW", 
+            "PNC", "POOL", "PPG", "PPL", "PFG", "PG", "PGR", "PLD", "PRU", "PEG", "PTC", "PSA", 
+            "PHM", "QRVO", "PWR", "QCOM", "DGX", "RL", "RJF", "RTX", "O", "REG", "REGN", "RF", 
+            "RSG", "RMD", "RVTY", "ROK", "ROL", "ROP", "ROST", "RCL", "SPGI", "CRM", "SBAC", 
+            "SLB", "STX", "SRE", "NOW", "SHW", "SPG", "SWKS", "SJM", "SNA", "SOLV", "SO", "LUV", 
+            "SWK", "SBUX", "STT", "STLD", "STE", "SYK", "SMCI", "SYF", "SNPS", "SYY", "TMUS", 
+            "TROW", "TTWO", "TPR", "TRGP", "TGT", "TEL", "TDY", "TFX", "TER", "TSLA", "TXN", 
+            "TXT", "TMO", "TJX", "TSCO", "TT", "TDG", "TRV", "TRMB", "TFC", "TYL", "TSN", "USB", 
+            "UBER", "UDR", "ULTA", "UNP", "UAL", "UPS", "URI", "UNH", "UHS", "VLO", "VTR", "VLTO", 
+            "VRSN", "VRSK", "VZ", "VRTX", "VTRS", "VICI", "V", "VST", "VMC", "WRB", "GWW", 
+            "WAB", "WBA", "WMT", "DIS", "WBD", "WM", "WAT", "WEC", "WFC", "WELL", "WST", "WDC", 
+            "WRK", "WY", "WMB", "WTW", "WYNN", "XEL", "XYL", "YUM", "ZBRA", "ZBH", "ZTS"
+             ]
+
 
             # Function to create Plotly figure
             def create_figure(data, indicators, title):
@@ -1075,16 +1136,20 @@ else:
                 return pd.DataFrame(results)
 
             # Determine tickers based on submenu selection
-            if submenu == "LargeCap":
-                st.subheader("LargeCap")
+            if submenu == "India-LargeCap":
+                st.subheader("India-LargeCap")
                 tickers = largecap_tickers
-            elif submenu == "MidCap":
-                st.subheader("MidCap")
+            elif submenu == "India-MidCap":
+                st.subheader("India-MidCap")
                 tickers = midcap_tickers
-            else:
-                st.subheader("SmallCap")
-                tickers = smallcap_tickers
+            elif submenu == "FTSE100":
+                st.subheader("FTSE100")
+                tickers = ftse100_tickers
+            elif submenu == "S&P500":
+                st.subheader("S&P500")
+                tickers = sp500_tickers
 
+            
             # Fetch data and calculate indicators for each stock
             stock_data = get_stock_data(tickers, period='3mo')
 
@@ -1341,14 +1406,14 @@ else:
             # Load stock data
             @st.cache_data
             def load_data(ticker):
-                data = yf.download(ticker, period='3mo')
+                data = yf.download(ticker, period='1y')
                 data.reset_index(inplace=True)
                 return data
 
             # Load index data
             @st.cache_data
             def load_index_data(ticker):
-                data = yf.download(ticker, start="2024-02-01", end="2024-06-20")
+                data = yf.download(ticker, period='1y')
                 data.reset_index(inplace=True)
                 return data
 
@@ -2029,7 +2094,7 @@ else:
 
         elif choice == "Stock Watch":
         # 'Stock Watch' code -------------------------------------------------------------------------------------------
-            st.sidebar.subheader("Screens")
+            st.sidebar.subheader("Strategies")
             submenu = st.sidebar.radio("Select Option", ["MACD","Bollinger"])
 
             # List of stock tickers
@@ -2277,7 +2342,7 @@ else:
 
                 st.title("Stock Analysis Based on MACD Strategy")
 
-                st.subheader("Stocks with Negative MACD Histogram Increasing and Price Increasing for 3 Consecutive Days:")
+                st.write("Stocks with Negative MACD Histogram Increasing and Price Increasing for 3 Consecutive Days:")
                 st.dataframe(df_negative_histogram)
 
                 # Dropdown for analysis type
@@ -3334,7 +3399,7 @@ else:
             st.title('Stock Technical Indicators Comparison')
 
             # Sidebar for user input
-            st.sidebar.header('User Input')
+            st.sidebar.header('Add Tickers')
             selected_tickers = st.sidebar.multiselect('Select Tickers', tickers)
 
             if selected_tickers:
