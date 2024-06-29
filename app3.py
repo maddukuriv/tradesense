@@ -3148,7 +3148,7 @@ else:
             # Load stock data
             @st.cache_data
             def load_data(ticker):
-                data = yf.download(ticker, period='3mo')
+                data = yf.download(ticker, period='6mo')
                 data.reset_index(inplace=True)
                 return data
 
