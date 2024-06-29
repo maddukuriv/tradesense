@@ -2940,6 +2940,7 @@ else:
                     ticker = entry.ticker
                     data = yf.download(ticker, period='1y')  # Fetch 1 year of data for indicators
                     data['5_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=5)
+                    data['15_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=15)
                     data['MACD'] = ta.trend.macd(data['Close'])
                     data['MACD_Hist'] = ta.trend.macd_diff(data['Close'])
                     data['RSI'] = ta.momentum.rsi(data['Close'])
@@ -2953,6 +2954,7 @@ else:
                     watchlist_data[ticker] = {
                         'Close': latest_data['Close'],
                         '5_day_EMA': latest_data['5_day_EMA'],
+                        '15_day_EMA': latest_data['15_day_EMA'],
                         'MACD': latest_data['MACD'],
                         'MACD_Hist': latest_data['MACD_Hist'],
                         'RSI': latest_data['RSI'],
