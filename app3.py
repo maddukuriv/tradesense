@@ -2980,7 +2980,7 @@ else:
         
 
         elif choice == f"{st.session_state.username}'s Watchlist":
-        # 'watchlist' code -------------------------------------------------------------------------------------------
+            # 'watchlist' code -------------------------------------------------------------------------------------------
             st.header(f"{st.session_state.username}'s Watchlist")
             user_id = session.query(User.id).filter_by(email=st.session_state.email).first()[0]
             watchlist = session.query(Watchlist).filter_by(user_id=user_id).all()
@@ -3013,7 +3013,7 @@ else:
                     data['Bollinger_High'] = ta.volatility.bollinger_hband(data['Close'])
                     data['Bollinger_Low'] = ta.volatility.bollinger_lband(data['Close'])
                     data['20_day_vol_MA'] = data['Volume'].rolling(window=20).mean()
-                    
+
                     # Get the latest data for the indicators
                     latest_data = data.iloc[-1]
                     watchlist_data[ticker] = {
@@ -3043,6 +3043,7 @@ else:
                     st.experimental_rerun()  # Refresh the app to reflect changes
             else:
                 st.write("Your watchlist is empty.")
+
 
 
 
