@@ -1403,26 +1403,30 @@ else:
 
             # Sidebar setup
             st.sidebar.subheader("Interactive Charts")
+
             # Load stock data
             @st.cache_data
-            def load_data(ticker):
-                data = yf.download(ticker, period='1y')
+            def load_data(ticker,start,end):
+                data = yf.download(ticker,start=start, end=end)
                 data.reset_index(inplace=True)
                 return data
 
             # Load index data
             @st.cache_data
             def load_index_data(ticker):
-                data = yf.download(ticker, period='1y')
+                data = yf.download(ticker, start=start, end=end)
                 data.reset_index(inplace=True)
                 return data
 
             st.title('Stock Technical Analysis')
 
-            # Sidebar for user input
 
+
+            # Sidebar for user input
             ticker = st.sidebar.text_input("Enter Stock Symbol", value='RVNL.NS')
             index_ticker = "^NSEI"  # NIFTY 50 index ticker
+            start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime('2023-06-01'))
+            end_date = st.sidebar.date_input("End Date", value=pd.to_datetime('today'))
 
             # Load data
             data_load_state = st.text('Loading data...')
@@ -2299,7 +2303,7 @@ else:
                     )
                     return fig
                 
-                
+
                 macd_signal_list = []
                 negative_histogram_tickers = []
 
