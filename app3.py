@@ -2298,49 +2298,53 @@ else:
                         )]
                     )
                     return fig
-
-                # Initialize lists to store the results
+                
+                
                 macd_signal_list = []
                 negative_histogram_tickers = []
 
-                # Create progress bar
                 progress_bar = st.progress(0)
                 progress_step = 1 / len(tickers)
 
-                # Process each ticker
                 for i, ticker in enumerate(tickers):
-                    # Update progress bar
                     progress_bar.progress((i + 1) * progress_step)
-                    
-                    # Fetch historical data
                     data = yf.download(ticker, period="3mo", interval="1d")
-                    
                     if data.empty:
                         continue
-                    
-                    # Calculate MACD and related values
                     data = calculate_macd(data)
-                    
-                    # Calculate RSI
                     data = calculate_rsi(data)
-                    
-                    # Calculate ADX
                     data = calculate_adx(data)
-                    
-                    # Check MACD < MACD signal
                     if check_macd_signal(data):
                         macd_signal_list.append(ticker)
-                    
-                    # Check the second criteria
                     histogram_increasing, histogram_negative, price_increasing = check_negative_histogram_and_price(data)
                     if histogram_increasing and histogram_negative and price_increasing:
                         negative_histogram_tickers.append(ticker)
 
-                # Display the results in DataFrames
                 df_macd_signal = pd.DataFrame(macd_signal_list, columns=["Ticker"])
                 df_negative_histogram = pd.DataFrame(negative_histogram_tickers, columns=["Ticker"])
 
                 st.title("Stock Analysis Based on MACD Strategy")
+
+                for ticker in df_negative_histogram['Ticker']:
+                    data = yf.download(ticker, period='1y')
+                    if len(data) >= 15:  # Ensure sufficient data for indicator calculations
+                        data['5_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=5)
+                        data['15_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=15)
+                        data['MACD'] = ta.trend.macd(data['Close'])
+                        data['MACD_Hist'] = ta.trend.macd_diff(data['Close'])
+                        data['RSI'] = ta.momentum.rsi(data['Close'])
+                        data['ADX'] = ta.trend.adx(data['High'], data['Low'], data['Close'])
+                        data['Bollinger_High'] = ta.volatility.bollinger_hband(data['Close'])
+                        data['Bollinger_Low'] = ta.volatility.bollinger_lband(data['Close'])
+                        data['20_day_vol_MA'] = data['Volume'].rolling(window=20).mean()
+                        latest_data = data.iloc[-1]
+                        df_negative_histogram.loc[df_negative_histogram['Ticker'] == ticker, [
+                            'Close', '5_day_EMA', '15_day_EMA', 'MACD', 'MACD_Hist', 'RSI', 'ADX', 'Bollinger_High', 'Bollinger_Low', 'Volume', '20_day_vol_MA'
+                        ]] = [
+                            latest_data['Close'], latest_data['5_day_EMA'], latest_data['15_day_EMA'], latest_data['MACD'], latest_data['MACD_Hist'],
+                            latest_data['RSI'], latest_data['ADX'], latest_data['Bollinger_High'], latest_data['Bollinger_Low'],
+                            latest_data['Volume'], latest_data['20_day_vol_MA']
+                        ]
 
                 st.write("Stocks with Negative MACD Histogram Increasing and Price Increasing for 3 Consecutive Days:")
                 st.dataframe(df_negative_histogram)
@@ -2977,8 +2981,7 @@ else:
                             st.write("Not enough data points for technical analysis.")
                         
 
-        
-
+                
         elif choice == f"{st.session_state.username}'s Watchlist":
             # 'watchlist' code -------------------------------------------------------------------------------------------
             st.header(f"{st.session_state.username}'s Watchlist")
@@ -3043,6 +3046,7 @@ else:
                     st.experimental_rerun()  # Refresh the app to reflect changes
             else:
                 st.write("Your watchlist is empty.")
+
 
 
 
