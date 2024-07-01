@@ -40,9 +40,22 @@ import mplfinance as mpf
 from datetime import datetime, timedelta
 
 
-# Set wide mode as default layout
-st.set_page_config(layout="wide", page_title="TradeSense",page_icon=":chart_with_upwards_trend:")
 
+
+# Set wide mode as default layout and custom theme
+st.set_page_config(
+    layout="wide", 
+    page_title="TradeSense", 
+    page_icon=":chart_with_upwards_trend:", 
+    initial_sidebar_state="expanded",
+    theme={
+        "primaryColor": "#1E90FF",
+        "backgroundColor": "#F8F8F8",
+        "secondaryBackgroundColor": "#FFFFFF",
+        "textColor": "#000000",
+        "font": "sans serif"
+    }
+)
 # Load environment variables from .env file
 load_dotenv()
 
