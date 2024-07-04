@@ -3,10 +3,27 @@ import streamlit as st
 import hashlib
 import random
 import string
+from datetime import datetime
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+import yfinance as yf
+import pandas as pd
+import plotly.graph_objs as go
+import ta
+
 from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime
+from sqlalchemy.orm.exc import NoResultFound
+
+import bcrypt  # for password hashing
+from dotenv import load_dotenv
+from password_validator import PasswordValidator
+
+
+
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -18,11 +35,7 @@ from functools import lru_cache
 from scipy.stats import linregress
 from scipy.fftpack import fft, ifft
 
-import yfinance as yf
-import pandas as pd
-import numpy as np
-import plotly.graph_objs as go
-import ta
+
 import pandas_ta as pta
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
@@ -40,16 +53,15 @@ import mplfinance as mpf
 from datetime import datetime, timedelta
 
 
-# Set wide mode as default layout
-st.set_page_config(layout="wide", page_title="TradeSense",page_icon=":chart_with_upwards_trend:")
 
+# Set wide mode as default layout
+st.set_page_config(layout="wide", page_title="TradeSense")
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Database setup
 Base = declarative_base()
-
 
 class User(Base):
     __tablename__ = 'users'
@@ -58,14 +70,12 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
 
-
 class Watchlist(Base):
     __tablename__ = 'watchlists'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     ticker = Column(String, nullable=False)
     date_added = Column(Date, default=datetime.utcnow)
-
 
 class Portfolio(Base):
     __tablename__ = 'portfolios'
@@ -75,7 +85,6 @@ class Portfolio(Base):
     shares = Column(Float, nullable=False)
     bought_price = Column(Float, nullable=False)
     date_added = Column(Date, default=datetime.utcnow)
-
 
 # Create the database session
 DATABASE_URL = "sqlite:///etrade.db"
@@ -105,11 +114,24 @@ password_schema \
     .has().digits() \
     .has().no().spaces()
 
-
+# Function to hash password using bcrypt
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed_password.decode('utf-8')
 
 
+# Function to verify password using bcrypt
+def verify_password(hashed_password, plain_password):
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except ValueError as e:
+        print(f"Error verifying password: {e}")
+        return False
+
+
+
+# Function to send email
 def send_email(to_email, subject, body):
     from_email = os.getenv('EMAIL_ADDRESS')
     password = os.getenv('EMAIL_PASSWORD')
@@ -132,7 +154,7 @@ def send_email(to_email, subject, body):
         print(f"Failed to send email: {e}")
         return False
 
-
+# Signup function
 def signup():
     st.subheader("Sign Up")
     name = st.text_input("Enter your name", key='signup_name')
@@ -149,28 +171,37 @@ def signup():
         elif not password_schema.validate(password):
             st.error("Password does not meet the requirements.")
         else:
-            new_user = User(name=name, email=email, password=hash_password(password))
+            hashed_password = hash_password(password)
+            new_user = User(name=name, email=email, password=hashed_password)
             session.add(new_user)
             session.commit()
             st.success("User registered successfully!")
 
 
+# Login function
 def login():
     st.subheader("Login")
     email = st.text_input("Enter your email", key='login_email')
     password = st.text_input("Enter your password", type="password", key='login_password')
 
     if st.button("Login"):
-        user = session.query(User).filter_by(email=email).first()
-        if user and user.password == hash_password(password):
-            st.success("Login successful!")
-            st.session_state.logged_in = True
-            st.session_state.username = user.name
-            st.session_state.email = user.email
-        else:
+        try:
+            user = session.query(User).filter_by(email=email).one()
+            if verify_password(user.password, password):
+                st.success("Login successful!")
+                st.session_state.logged_in = True
+                st.session_state.username = user.name
+                st.session_state.email = user.email
+            else:
+                st.error("Invalid email or password.")
+        except NoResultFound:
             st.error("Invalid email or password.")
+        except Exception as e:
+            st.error(f"Error during login: {e}")
 
 
+
+# Forgot password function
 def forgot_password():
     st.subheader("Forgot Password")
     email = st.text_input("Enter your email", key='forgot_email')
@@ -205,11 +236,13 @@ def forgot_password():
         else:
             st.error("Invalid reset code.")
 
-
+# Logout function
 def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
     st.session_state.email = ""
+
+
 
 
 def get_stock_data(ticker):
