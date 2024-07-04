@@ -56,8 +56,6 @@ import holidays
 import mplfinance as mpf
 from datetime import datetime, timedelta
 
-
-
 # Set wide mode as default layout
 st.set_page_config(layout="wide", page_title="TradeSense")
 
@@ -239,7 +237,6 @@ def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
     st.session_state.email = ""
-
 
 
 def get_stock_data(ticker):
