@@ -220,7 +220,7 @@ def forgot_password():
             send_email(email, "Password Reset Code", f"Your password reset code is {reset_code}")
             st.success("Reset code sent to your email.")
         else:
-            st.error("Email not found.")
+            st.error("Email address not found. Please enter a valid email.")
 
     reset_code = st.text_input("Enter the reset code sent to your email", key='reset_code_input')
     new_password = st.text_input("Enter a new password", type="password", key='new_password')
