@@ -91,7 +91,7 @@ class Portfolio(Base):
     date_added = Column(Date, default=datetime.utcnow)
 
 # Create the database session
-DATABASE_URL = "sqlite:///etrade.db"
+DATABASE_URL = "sqlite:///tradesense.db"
 engine = create_engine(DATABASE_URL)
 Base.metadata.create_all(engine)
 
