@@ -56,7 +56,7 @@ import holidays
 import mplfinance as mpf
 from datetime import datetime, timedelta
 
-from dotenv import load_dotenv
+
 
 # Set wide mode as default layout
 st.set_page_config(layout="wide", page_title="TradeSense")
@@ -64,7 +64,6 @@ st.set_page_config(layout="wide", page_title="TradeSense")
 # Load environment variables from .env file
 load_dotenv()
 
-load_dotenv()
 
 # Database setup
 Base = declarative_base()
@@ -139,16 +138,16 @@ def verify_password(hashed_password, plain_password):
 
 # Function to send email
 def send_email(to_email, subject, body):
+    from_email = os.getenv('tradesense.connect@gmail.com')
+    password = os.getenv('Delhi@369')
+
+    msg = MIMEMultipart()
+    msg['From'] = from_email
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
     try:
-        from_email = os.getenv('tradesense.connect@gmail.com')
-        password = os.getenv('Delhi@369')
-
-        msg = MIMEMultipart()
-        msg['From'] = from_email
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(from_email, password)
@@ -159,7 +158,6 @@ def send_email(to_email, subject, body):
     except Exception as e:
         print(f"Failed to send email: {e}")
         st.error("Failed to send reset code. Please try again later.")
-        return False
         
 
 # Signup function
@@ -210,7 +208,7 @@ def login():
 
 
 # Forgot password function
-def forgot_password(session, st, password_schema):
+def forgot_password():
     st.subheader("Forgot Password")
     email = st.text_input("Enter your email", key='forgot_email')
 
