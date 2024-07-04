@@ -3086,6 +3086,8 @@ else:
             # Display portfolio
             if portfolio:
                 portfolio_data = []
+                invested_values = []
+                current_values = []
                 for entry in portfolio:
                     current_data = yf.download(entry.ticker, period='1d')
                     last_price = current_data['Close'].iloc[-1]
@@ -3102,6 +3104,8 @@ else:
                         "Current Value": current_value,
                         "P&L (%)": p_l_percent
                     })
+                    invested_values.append(invested_value)
+                    current_values.append(current_value)
                 portfolio_df = pd.DataFrame(portfolio_data)
                 st.write("Your Portfolio:")
                 st.dataframe(portfolio_df)
@@ -3111,6 +3115,17 @@ else:
                 values = portfolio_df['Current Value']
                 fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.3)])
                 fig.update_layout(title_text="Portfolio Distribution")
+                st.plotly_chart(fig)
+
+                # Generate histogram for sum of Invested Value and Current Value
+                st.header("Profit/Loss: Total Portfolio Analysis")
+                total_invested_value = sum(invested_values)
+                total_current_value = sum(current_values)
+            
+                fig = go.Figure()
+                fig.add_trace(go.Bar(x=['Total Invested Value', 'Total Current Value'], y=[total_invested_value, total_current_value]))
+                fig.update_layout(title_text='Total Portfolio Analysis',
+                              xaxis_title='Value', yaxis_title='Sum')
                 st.plotly_chart(fig)
 
                 # Option to remove stock from portfolio
