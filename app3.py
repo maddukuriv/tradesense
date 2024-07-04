@@ -156,7 +156,8 @@ def send_email(to_email, subject, body):
         return True
     except Exception as e:
         print(f"Failed to send email: {e}")
-        return False
+        st.error("Failed to send reset code. Please try again later.")
+        
 
 # Signup function
 def signup():
