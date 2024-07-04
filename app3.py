@@ -24,7 +24,6 @@ from dotenv import load_dotenv
 from password_validator import PasswordValidator
 
 
-
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -125,7 +124,6 @@ def hash_password(password):
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
     return hashed_password.decode('utf-8')
 
-
 # Function to verify password using bcrypt
 def verify_password(hashed_password, plain_password):
     try:
@@ -133,8 +131,6 @@ def verify_password(hashed_password, plain_password):
     except ValueError as e:
         print(f"Error verifying password: {e}")
         return False
-
-
 
 # Function to send email
 def send_email(to_email, subject, body):
@@ -182,7 +178,6 @@ def signup():
             session.commit()
             st.success("User registered successfully!")
 
-
 # Login function
 def login():
     st.subheader("Login")
@@ -203,8 +198,6 @@ def login():
             st.error("Invalid email or password.")
         except Exception as e:
             st.error(f"Error during login: {e}")
-
-
 
 # Forgot password function
 def forgot_password():
@@ -246,7 +239,6 @@ def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
     st.session_state.email = ""
-
 
 
 
