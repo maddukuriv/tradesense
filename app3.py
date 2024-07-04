@@ -3107,26 +3107,34 @@ else:
                     invested_values.append(invested_value)
                     current_values.append(current_value)
                 portfolio_df = pd.DataFrame(portfolio_data)
+                
+                
                 st.write("Your Portfolio:")
                 st.dataframe(portfolio_df)
 
-                # Generate donut chart
-                labels = portfolio_df['Ticker']
-                values = portfolio_df['Current Value']
-                fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.3)])
-                fig.update_layout(title_text="Portfolio Distribution")
-                st.plotly_chart(fig)
+                # Create two columns for date input
+                col1, col2 = st.columns(2)
 
-                # Generate histogram for sum of Invested Value and Current Value
-                st.header("Profit/Loss: Total Portfolio Analysis")
-                total_invested_value = sum(invested_values)
-                total_current_value = sum(current_values)
-            
-                fig = go.Figure()
-                fig.add_trace(go.Bar(x=['Total Invested Value', 'Total Current Value'], y=[total_invested_value, total_current_value]))
-                fig.update_layout(title_text='Total Portfolio Analysis',
-                              xaxis_title='Value', yaxis_title='Sum')
-                st.plotly_chart(fig)
+                # Set up the start and end date inputs with default values
+
+                with col1:
+                    # Generate donut chart
+                    labels = portfolio_df['Ticker']
+                    values = portfolio_df['Current Value']
+                    fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.3)])
+                    fig.update_layout(title_text="Portfolio Distribution")
+                    st.plotly_chart(fig)
+
+                with col2:
+  
+                    # Generate histogram for sum of Invested Value and Current Value
+                    total_invested_value = sum(invested_values)
+                    total_current_value = sum(current_values)
+                    fig = go.Figure()
+                    fig.add_trace(go.Bar(x=['Total Invested Value', 'Total Current Value'], y=[total_invested_value, total_current_value]))
+                    fig.update_layout(title_text='Profit/Loss',
+                                xaxis_title='Value', yaxis_title='Sum')
+                    st.plotly_chart(fig)
 
                 # Option to remove stock from portfolio
                 ticker_to_remove = st.selectbox("Select a ticker to remove", [entry.ticker for entry in portfolio])
