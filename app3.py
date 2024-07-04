@@ -64,7 +64,6 @@ st.set_page_config(layout="wide", page_title="TradeSense")
 # Load environment variables from .env file
 load_dotenv()
 
-
 # Database setup
 Base = declarative_base()
 
