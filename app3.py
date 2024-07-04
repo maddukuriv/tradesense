@@ -1447,7 +1447,8 @@ else:
             # Sidebar for user input
             ticker = st.sidebar.text_input("Enter Stock Symbol", value='RVNL.NS')
             start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime('2023-01-01'))
-            end_date = st.sidebar.date_input("End Date", value=pd.to_datetime('2024-01-01'))
+            end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("today"))
+            
 
             # Load stock data
             @st.cache_data
