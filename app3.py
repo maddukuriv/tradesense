@@ -32,6 +32,10 @@ from dotenv import load_dotenv
 import plotly.express as px
 from functools import lru_cache
 
+
+
+
+
 from scipy.stats import linregress
 from scipy.fftpack import fft, ifft
 
@@ -133,8 +137,8 @@ def verify_password(hashed_password, plain_password):
 
 # Function to send email
 def send_email(to_email, subject, body):
-    from_email = os.getenv('EMAIL_ADDRESS')
-    password = os.getenv('EMAIL_PASSWORD')
+    from_email = os.getenv('tradesense.connect@gmail.com')
+    password = os.getenv('Delhi@369')
 
     msg = MIMEMultipart()
     msg['From'] = from_email
@@ -260,7 +264,7 @@ def get_stock_data(ticker):
         st.error(f"Error fetching data for {ticker}: {e}")
         return pd.Series(dtype='float64')  # Return an empty Series
 
-
+# Main menu function
 def main_menu():
     st.subheader("Main Menu")
     menu_options = ["Markets", "Stock Screener", "Technical Analysis", "Stock Price Forecasting", "Stock Watch","Stock Comparison","Market Stats",
