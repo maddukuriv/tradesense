@@ -12,6 +12,7 @@ import yfinance as yf
 import pandas as pd
 import plotly.graph_objs as go
 import ta
+import numpy as np
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
@@ -220,7 +221,7 @@ def forgot_password():
             send_email(email, "Password Reset Code", f"Your password reset code is {reset_code}")
             st.success("Reset code sent to your email.")
         else:
-            st.error("Email address not found. Please enter a valid email.")
+            st.error("Email not found.")
 
     reset_code = st.text_input("Enter the reset code sent to your email", key='reset_code_input')
     new_password = st.text_input("Enter a new password", type="password", key='new_password')
