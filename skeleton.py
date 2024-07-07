@@ -1,22 +1,25 @@
 import os
 import streamlit as st
-import hashlib
 import random
 import string
-from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from password_validator import PasswordValidator
-from dotenv import load_dotenv
+
 import yfinance as yf
 import pandas as pd
 import plotly.graph_objs as go
-import numpy as np
+import ta
 
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
+
+import bcrypt  # for password hashing
+from dotenv import load_dotenv
+from password_validator import PasswordValidator
 
 # Set wide mode as default layout
 st.set_page_config(layout="wide", page_title="TradeSense")
@@ -27,14 +30,14 @@ load_dotenv()
 # Database setup
 Base = declarative_base()
 
-
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
-
+    dob = Column(Date, nullable=False)  # Date of birth
+    pob = Column(String, nullable=False)  # Place of birth
 
 class Watchlist(Base):
     __tablename__ = 'watchlists'
@@ -42,7 +45,6 @@ class Watchlist(Base):
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     ticker = Column(String, nullable=False)
     date_added = Column(Date, default=datetime.utcnow)
-
 
 class Portfolio(Base):
     __tablename__ = 'portfolios'
@@ -53,11 +55,10 @@ class Portfolio(Base):
     bought_price = Column(Float, nullable=False)
     date_added = Column(Date, default=datetime.utcnow)
 
-
 # Create the database session
-DATABASE_URL = "sqlite:///etrade.db"
+DATABASE_URL = "sqlite:///new_etrade.db"  # Change the database name here
 engine = create_engine(DATABASE_URL)
-Base.metadata.create_all(engine)
+Base.metadata.create_all(engine)  # This will create the new database
 
 Session = sessionmaker(bind=engine)
 session = Session()
@@ -69,8 +70,8 @@ if 'username' not in st.session_state:
     st.session_state.username = ""
 if 'email' not in st.session_state:
     st.session_state.email = ""
-if 'reset_code' not in st.session_state:
-    st.session_state.reset_code = ""
+if 'user_id' not in st.session_state:
+    st.session_state.user_id = None
 
 # Password validation schema
 password_schema = PasswordValidator()
@@ -82,13 +83,23 @@ password_schema \
     .has().digits() \
     .has().no().spaces()
 
-
+# Function to hash password using bcrypt
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed_password.decode('utf-8')
 
+# Function to verify password using bcrypt
+def verify_password(hashed_password, plain_password):
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except ValueError as e:
+        print(f"Error verifying password: {e}")
+        return False
 
+# Function to send email (if needed)
 def send_email(to_email, subject, body):
-    from_email = os.getenv('EMAIL_ADDRESS')
+    from_email = os.getenv('EMAIL_USER')
     password = os.getenv('EMAIL_PASSWORD')
 
     msg = MIMEMultipart()
@@ -109,11 +120,13 @@ def send_email(to_email, subject, body):
         print(f"Failed to send email: {e}")
         return False
 
-
+# Signup function
 def signup():
     st.subheader("Sign Up")
     name = st.text_input("Enter your name", key='signup_name')
     email = st.text_input("Enter your email", key='signup_email')
+    dob = st.date_input("Enter your date of birth", key='signup_dob')
+    pob = st.text_input("Enter your place of birth", key='signup_pob')
     password = st.text_input("Enter a new password", type="password", key='signup_password')
     confirm_password = st.text_input("Confirm your password", type="password", key='signup_confirm_password')
 
@@ -126,93 +139,125 @@ def signup():
         elif not password_schema.validate(password):
             st.error("Password does not meet the requirements.")
         else:
-            new_user = User(name=name, email=email, password=hash_password(password))
+            hashed_password = hash_password(password)
+            new_user = User(name=name, email=email, password=hashed_password, dob=dob, pob=pob)
             session.add(new_user)
             session.commit()
             st.success("User registered successfully!")
 
-
+# Login function
 def login():
     st.subheader("Login")
     email = st.text_input("Enter your email", key='login_email')
     password = st.text_input("Enter your password", type="password", key='login_password')
 
     if st.button("Login"):
-        user = session.query(User).filter_by(email=email).first()
-        if user and user.password == hash_password(password):
-            st.success("Login successful!")
-            st.session_state.logged_in = True
-            st.session_state.username = user.name
-            st.session_state.email = user.email
-        else:
+        try:
+            user = session.query(User).filter_by(email=email).one()
+            if verify_password(user.password, password):
+                st.success("Login successful!")
+                st.session_state.logged_in = True
+                st.session_state.username = user.name
+                st.session_state.email = user.email
+                st.session_state.user_id = user.id
+            else:
+                st.error("Invalid email or password.")
+        except NoResultFound:
             st.error("Invalid email or password.")
+        except Exception as e:
+            st.error(f"Error during login: {e}")
 
-
+# Forgot password function with security questions
 def forgot_password():
     st.subheader("Forgot Password")
     email = st.text_input("Enter your email", key='forgot_email')
+    dob = st.date_input("Enter your date of birth", key='forgot_dob')
+    pob = st.text_input("Enter your place of birth", key='forgot_pob')
 
-    if st.button("Send Reset Code"):
-        user = session.query(User).filter_by(email=email).first()
-        if user:
-            reset_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-            st.session_state.reset_code = reset_code
-            st.session_state.email = email  # Save email in session state to use during password reset
-            send_email(email, "Password Reset Code", f"Your password reset code is {reset_code}")
-            st.success("Reset code sent to your email.")
-        else:
-            st.error("Email not found.")
+    if 'identity_verified' not in st.session_state:
+        st.session_state.identity_verified = False
 
-    reset_code = st.text_input("Enter the reset code sent to your email", key='reset_code_input')
-    new_password = st.text_input("Enter a new password", type="password", key='new_password')
-    confirm_new_password = st.text_input("Confirm your new password", type="password", key='confirm_new_password')
+    if st.button("Submit"):
+        try:
+            user = session.query(User).filter_by(email=email, dob=dob, pob=pob).one()
+            st.session_state.email = email
+            st.session_state.user_id = user.id
+            st.session_state.identity_verified = True
+            st.success("Identity verified. Please reset your password.")
+        except NoResultFound:
+            st.error("Invalid details provided.")
+        except Exception as e:
+            st.error(f"Error during password reset: {e}")
 
-    if st.button("Reset Password"):
-        if reset_code == st.session_state.reset_code:
+    if st.session_state.identity_verified:
+        new_password = st.text_input("Enter a new password", type="password", key='reset_new_password')
+        confirm_new_password = st.text_input("Confirm your new password", type="password", key='reset_confirm_new_password')
+
+        if st.button("Reset Password"):
             if new_password != confirm_new_password:
                 st.error("Passwords do not match.")
             elif not password_schema.validate(new_password):
                 st.error("Password does not meet the requirements.")
             else:
-                user = session.query(User).filter_by(email=st.session_state.email).first()
+                user = session.query(User).filter_by(id=st.session_state.user_id).one()
                 user.password = hash_password(new_password)
                 session.commit()
-                st.success("Password reset successfully.")
-                st.session_state.reset_code = ""
-        else:
-            st.error("Invalid reset code.")
+                st.success("Password reset successfully. You can now log in with the new password.")
+                st.session_state.identity_verified = False
 
 
+# My Account function to edit details and change password
+def my_account():
+    st.subheader("My Account")
+
+    if st.session_state.logged_in:
+        user = session.query(User).filter_by(id=st.session_state.user_id).one()
+
+        new_name = st.text_input("Update your name", value=user.name, key='account_name')
+        new_dob = st.date_input("Update your date of birth", value=user.dob, key='account_dob')
+        new_pob = st.text_input("Update your place of birth", value=user.pob, key='account_pob')
+
+        if st.button("Update Details"):
+            user.name = new_name
+            user.dob = new_dob
+            user.pob = new_pob
+            session.commit()
+            st.success("Details updated successfully!")
+
+        st.subheader("Change Password")
+        current_password = st.text_input("Enter your current password", type="password", key='account_current_password')
+        new_password = st.text_input("Enter a new password", type="password", key='account_new_password')
+        confirm_new_password = st.text_input("Confirm your new password", type="password", key='account_confirm_new_password')
+
+        if st.button("Change Password"):
+            if verify_password(user.password, current_password):
+                if new_password != confirm_new_password:
+                    st.error("Passwords do not match.")
+                elif not password_schema.validate(new_password):
+                    st.error("Password does not meet the requirements.")
+                else:
+                    user.password = hash_password(new_password)
+                    session.commit()
+                    st.success("Password changed successfully!")
+            else:
+                st.error("Current password is incorrect.")
+
+# Logout function
 def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
     st.session_state.email = ""
+    st.session_state.user_id = None
 
-
-def get_stock_data(ticker):
-    try:
-        df = yf.download(ticker, period='1y')
-        if df.empty:
-            st.warning(f"No data found for {ticker}.")
-            return pd.DataFrame()  # Return an empty DataFrame
-        df['2_MA'] = df['Close'].rolling(window=2).mean()
-        df['15_MA'] = df['Close'].rolling(window=15).mean()
-        df['RSI'] = ta.momentum.RSIIndicator(df['Close']).rsi()
-        df['ADX'] = ta.trend.ADXIndicator(df['High'], df['Low'], df['Close']).adx()
-        return df[['Close', '2_MA', '15_MA', 'RSI', 'ADX']].iloc[-1]
-    except Exception as e:
-        st.error(f"Error fetching data for {ticker}: {e}")
-        return pd.Series(dtype='float64')  # Return an empty Series
-
-
+# Main menu function
 def main_menu():
     st.subheader("Main Menu")
-    menu_options = ["Markets", "Stock Screener", "Technical Analysis", "Stock Price Forecasting", "Stock Watch",
-                    "Strategy Backtesting", f"{st.session_state.username}'s Watchlist",
+    menu_options = ["Markets", "Stock Screener","Stock Watch" ,"Technical Analysis", "Stock Price Forecasting",
+                    "Stock Comparison", "Market Stats", "My Account",
+                    f"{st.session_state.username}'s Watchlist",
                     f"{st.session_state.username}'s Portfolio"]
     choice = st.selectbox("Select an option", menu_options)
     return choice
-
 
 # Sidebar menu
 with st.sidebar:
@@ -237,10 +282,18 @@ with st.sidebar:
 # Main content area
 if not st.session_state.logged_in:
     st.subheader("Please login or sign up to access the e-Trade platform.")
-
 else:
     if choice:
-        if choice == "Markets":
+
+        if choice == "My Account":
+            my_account()
+        elif choice == f"{st.session_state.username}'s Watchlist":
+            # Your existing 'Watchlist' code
+            pass
+        elif choice == f"{st.session_state.username}'s Portfolio":
+            # Your existing 'Portfolio' code
+            pass
+        elif choice == "Markets":
             # Your existing 'Markets' code
             pass
         elif choice == "Stock Screener":
@@ -255,102 +308,39 @@ else:
         elif choice == "Stock Watch":
             # Your existing 'Stock Watch' code
             pass
-        elif choice == "Strategy Backtesting":
-            # Your existing 'Strategy Backtesting' code
+        elif choice == "Stock Comparison":
+            # Your existing 'Stock Comparison' code
             pass
-        elif choice == f"{st.session_state.username}'s Watchlist":
-            st.header(f"{st.session_state.username}'s Watchlist")
-            user_id = session.query(User.id).filter_by(email=st.session_state.email).first()[0]
-            watchlist = session.query(Watchlist).filter_by(user_id=user_id).all()
+        
+        # Add your other options here
 
-            # Add new ticker to watchlist
-            new_ticker = st.text_input("Add a new ticker to your watchlist")
-            if st.button("Add Ticker"):
-                if not session.query(Watchlist).filter_by(user_id=user_id, ticker=new_ticker).first():
-                    new_watchlist_entry = Watchlist(user_id=user_id, ticker=new_ticker)
-                    session.add(new_watchlist_entry)
-                    session.commit()
-                    st.success(f"{new_ticker} added to your watchlist!")
-                    # Refresh watchlist data
-                    watchlist = session.query(Watchlist).filter_by(user_id=user_id).all()
-                else:
-                    st.warning(f"{new_ticker} is already in your watchlist.")
+# Debugging function to check users in the database
+def debug_check_users():
+    st.subheader("Debug: Check Users in Database")
+    if st.button("Show Users"):
+        users = session.query(User).all()
+        for user in users:
+            st.write(f"ID: {user.id}, Name: {user.name}, Email: {user.email}, Password: {user.password}, DOB: {user.dob}, POB: {user.pob}")
 
-            # Display watchlist
-            if watchlist:
-                watchlist_data = {entry.ticker: yf.download(entry.ticker, period='1d').iloc[-1]['Close'] for entry in
-                                  watchlist}
-                watchlist_df = pd.DataFrame(list(watchlist_data.items()), columns=['Ticker', 'Close'])
-                st.write("Your Watchlist:")
-                st.dataframe(watchlist_df)
+# Add this function call to your Streamlit app somewhere to use it
+debug_check_users()
 
-                # Option to remove ticker from watchlist
-                ticker_to_remove = st.selectbox("Select a ticker to remove", [entry.ticker for entry in watchlist])
-                if st.button("Remove Ticker"):
-                    session.query(Watchlist).filter_by(user_id=user_id, ticker=ticker_to_remove).delete()
-                    session.commit()
-                    st.success(f"{ticker_to_remove} removed from your watchlist.")
-                    st.experimental_rerun()  # Refresh the app to reflect changes
-            else:
-                st.write("Your watchlist is empty.")
-        elif choice == f"{st.session_state.username}'s Portfolio":
-            st.header(f"{st.session_state.username}'s Portfolio")
-            user_id = session.query(User.id).filter_by(email=st.session_state.email).first()[0]
-            portfolio = session.query(Portfolio).filter_by(user_id=user_id).all()
+# Add a form in your Streamlit app to verify user
+def verify_user(email, plain_password):
+    try:
+        user = session.query(User).filter_by(email=email).one()
+        st.write(f"Debug: Stored hashed password: {user.password}")  # Debugging line
+        if verify_password(user.password, plain_password):
+            st.success(f"User {email} exists and the password is correct!")
+        else:
+            st.error(f"User {email} exists but the password is incorrect.")
+    except NoResultFound:
+        st.error(f"User {email} does not exist.")
+    except Exception as e:
+        st.error(f"Error verifying user: {e}")
 
-            # Add new stock to portfolio
-            st.subheader("Add to Portfolio")
-            new_ticker = st.text_input("Ticker Symbol")
-            shares = st.number_input("Number of Shares", min_value=0.0, step=0.01)
-            bought_price = st.number_input("Bought Price per Share", min_value=0.0, step=0.01)
-            if st.button("Add to Portfolio"):
-                if not session.query(Portfolio).filter_by(user_id=user_id, ticker=new_ticker).first():
-                    new_portfolio_entry = Portfolio(user_id=user_id, ticker=new_ticker, shares=shares,
-                                                    bought_price=bought_price)
-                    session.add(new_portfolio_entry)
-                    session.commit()
-                    st.success(f"{new_ticker} added to your portfolio!")
-                    # Refresh portfolio data
-                    portfolio = session.query(Portfolio).filter_by(user_id=user_id).all()
-                else:
-                    st.warning(f"{new_ticker} is already in your portfolio.")
-
-            # Display portfolio
-            if portfolio:
-                portfolio_data = []
-                for entry in portfolio:
-                    current_data = yf.download(entry.ticker, period='1d')
-                    last_price = current_data['Close'].iloc[-1]
-                    invested_value = entry.shares * entry.bought_price
-                    current_value = entry.shares * last_price
-                    p_l = current_value - invested_value
-                    p_l_percent = (p_l / invested_value) * 100
-                    portfolio_data.append({
-                        "Ticker": entry.ticker,
-                        "Shares": entry.shares,
-                        "Bought Price": entry.bought_price,
-                        "Invested Value": invested_value,
-                        "Last Traded Price": last_price,
-                        "Current Value": current_value,
-                        "P&L (%)": p_l_percent
-                    })
-                portfolio_df = pd.DataFrame(portfolio_data)
-                st.write("Your Portfolio:")
-                st.dataframe(portfolio_df)
-
-                # Generate donut chart
-                labels = portfolio_df['Ticker']
-                values = portfolio_df['Current Value']
-                fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.3)])
-                fig.update_layout(title_text="Portfolio Distribution")
-                st.plotly_chart(fig)
-
-                # Option to remove stock from portfolio
-                ticker_to_remove = st.selectbox("Select a ticker to remove", [entry.ticker for entry in portfolio])
-                if st.button("Remove from Portfolio"):
-                    session.query(Portfolio).filter_by(user_id=user_id, ticker=ticker_to_remove).delete()
-                    session.commit()
-                    st.success(f"{ticker_to_remove} removed from your portfolio.")
-                    st.experimental_rerun()  # Refresh the app to reflect changes
-            else:
-                st.write("Your portfolio is empty.")
+st.subheader("Debug: Verify User")
+debug_email = st.text_input("Enter email to verify", key='debug_email')
+debug_password = st.text_input("Enter password to verify", type="password", key='debug_password')
+if st.button("Verify User"):
+    verify_user(debug_email, debug_password)
