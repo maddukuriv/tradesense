@@ -2375,7 +2375,8 @@ else:
          
         elif choice == "Stock Prediction":
             # Your existing 'Stock Price Forecasting' code-----------------------------------------------------------------------------------------------------------------------
-            
+
+
             # Sidebar for user input
             st.sidebar.subheader("Prediction")
 
@@ -2438,12 +2439,6 @@ else:
                     fft_df['cycles_in_days'] = cycles_in_days
                     return fft_df
 
-                def calculate_hurst(df):
-                    if len(df) < 100:
-                        return np.nan
-                    H, _, _ = compute_Hc(df['Close'], kind='price')
-                    return H
-
                 def calculate_wavelet(df):
                     widths = np.arange(1, 31)
                     cwt_matrix = cwt(df['Close'], ricker, widths)
@@ -2456,7 +2451,7 @@ else:
                     return amplitude_envelope, instantaneous_phase
 
                 # Streamlit UI
-                st.title("Stock Cycle Detection and Analysis")
+                st.title("Multi-Stock Cycle Detection and Analysis")
 
                 results = []
 
@@ -2493,19 +2488,6 @@ else:
                         else:
                             st.write("This means the stock price is currently in a downward trend within its dominant cycle, and it is expected to continue falling.")
 
-                        # Display Hurst Exponent
-                        st.subheader("Hurst Exponent")
-                        hurst_value = calculate_hurst(df)
-                        st.write(f"Hurst Exponent: {hurst_value}")
-
-                        # Interpretation of Hurst Exponent
-                        if hurst_value > 0.5:
-                            st.write("The time series is trending.")
-                        elif hurst_value < 0.5:
-                            st.write("The time series is mean-reverting.")
-                        else:
-                            st.write("The time series is a random walk.")
-
                         # Calculate and display Wavelet Transform results
                         st.subheader("Wavelet Transform")
                         cwt_matrix = calculate_wavelet(df)
@@ -2530,7 +2512,6 @@ else:
                             'Fourier_Dominant_Cycle_Days': fft_df['cycles_in_days'].iloc[0],
                             'Fourier_Angle': fft_df['angle'].iloc[1],  # Correctly selecting the dominant cycle angle
                             'Fourier_Trend': current_position,
-                            'Hurst_Exponent': hurst_value,
                             'Wavelet_Max_Amplitude': max_wavelet_amplitude,
                             'Hilbert_Amplitude': amplitude_envelope[-1],
                             'Hilbert_Instantaneous_Phase': instantaneous_phase[-1]
@@ -2543,7 +2524,6 @@ else:
 
                 # Final Recommendation based on collected results
                 buy_recommendation = results_df[
-                    (results_df['Hurst_Exponent'] > 0.5) &  # Trending
                     (results_df['Wavelet_Max_Amplitude'] > 1000) &  # Adjust threshold as necessary
                     (results_df['Hilbert_Amplitude'] > results_df['Hilbert_Amplitude'].mean()) &  # Strong current price movement
                     (results_df['Fourier_Trend'] == 'upward')  # Current price trend is upward
@@ -2551,12 +2531,14 @@ else:
 
                 if not buy_recommendation.empty:
                     st.write("**Recommendation: Buy**")
-                    st.dataframe(buy_recommendation[['Ticker', 'Fourier_Dominant_Cycle_Days', 'Fourier_Angle', 'Fourier_Trend', 'Hurst_Exponent', 'Wavelet_Max_Amplitude', 'Hilbert_Amplitude']])
+                    st.dataframe(buy_recommendation[['Ticker', 'Fourier_Dominant_Cycle_Days', 'Fourier_Angle', 'Fourier_Trend', 'Wavelet_Max_Amplitude', 'Hilbert_Amplitude']])
                 else:
                     st.write("No strong buy recommendations based on the current analysis.")
 
             else:
                 pass
+
+
         elif choice == "Stock Watch":
             # Your existing 'Stock Watch' code----------------------------------------------------------------------------------------------------------------------------------
             st.sidebar.subheader("Strategies")
