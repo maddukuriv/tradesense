@@ -2381,7 +2381,7 @@ else:
 
             submenu = st.sidebar.selectbox("Select Option", ["Trend", "Price"])  
 
-            tickers = st.sidebar.multiselect("Enter Stock Symbols", options=bse_largecap+bse_midcap+bse_smallcap)
+            tickers = st.sidebar.multiselect("Enter Stock Symbols", options=['rvnl.ns','nh.ns'])
             time_period = st.sidebar.selectbox("Select Time Period", options=["6mo", "1y", "5y"], index=0)
 
             if submenu == "Trend":
