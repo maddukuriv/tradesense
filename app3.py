@@ -2375,12 +2375,12 @@ else:
          
         elif choice == "Stock Prediction":
             # Your existing 'Stock Price Forecasting' code-----------------------------------------------------------------------------------------------------------------------
+            
             # Sidebar for user input
             st.sidebar.subheader("Prediction")
 
             submenu = st.sidebar.selectbox("Select Option", ["Trend", "Price"])  
-            # Default ticker
-            default_ticker = ["rvnl.ns"]
+
             tickers = st.sidebar.multiselect("Enter Stock Symbols", options=bse_largecap+bse_midcap+bse_smallcap)
             time_period = st.sidebar.selectbox("Select Time Period", options=["6mo", "1y", "5y"], index=0)
 
@@ -2456,7 +2456,7 @@ else:
                     return amplitude_envelope, instantaneous_phase
 
                 # Streamlit UI
-                st.title("Multi-Stock Cycle Detection and Analysis")
+                st.title("Stock Cycle Detection and Analysis")
 
                 results = []
 
@@ -2557,7 +2557,6 @@ else:
 
             else:
                 pass
-
         elif choice == "Stock Watch":
             # Your existing 'Stock Watch' code----------------------------------------------------------------------------------------------------------------------------------
             st.sidebar.subheader("Strategies")
