@@ -30,13 +30,15 @@ import plotly.express as px
 from pmdarima import auto_arima
 from scipy.signal import find_peaks, cwt, ricker, hilbert
 from scipy.stats import zscore
+from newsapi import NewsApiClient
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 
  # List of stock tickers
 bse_largecap = ["ABB.BO","ADANIENG.BO","ADANIENT.BO","ADANIGREEN.BO","ADANIPORTS.BO","ADANIPOWER.BO","ATGL.NS","AWL.NS","AMBUJACEM.BO","APOLLOHOSP.BO","ASIANPAINT.BO","DMART.BO","AXISBANK.BO","BAJAJ-AUTO.BO","BAJFINANCE.BO","BAJAJFINSV.BO","BAJAJHLDNG.BO","BANDHANBNK.BO","BANKBARODA.BO","BERGEPAINT.BO","BEL.BO","BPCL.BO","BHARTIARTL.BO","BOSCHLTD.BO","BRITANNIA.BO","CHOLAFIN.BO","CIPLA.BO","COALINDIA.BO","DABUR.BO","DIVISLAB.BO","DLF.BO","DRREDDY.BO","EICHERMOT.BO","NYKAA.NS","GAIL.BO","GODREJCP.BO","GRASIM.BO","HAVELLS.BO","HCLTECH.BO","HDFCAMC.BO","HDFCBANK.BO","HDFCLIFE.BO","HEROMOTOCO.BO","HINDALCO.BO","HAL.BO","HINDUNILVR.BO","HINDZINC.BO","ICICIBANK.BO","ICICIGI.BO","ICICIPRULI.BO","IOC.BO","INDUSTOWER.BO","INDUSINDBK.BO","NAUKRI.BO","INFY.BO","INDIGO.BO","ITC.BO","JIOFIN.NS","JSWSTEEL.BO","KOTAKBANK.BO","LT.BO","LICI.NS","MINDTREE.BO","M&M.BO","MANKIND.NS","MARICO.BO","MARUTI.BO","NESTLEIND.BO","NTPC.BO","ONGC.BO","PAYTM.NS","PIDILITIND.BO","POWERGRID.BO","PNB.BO","RELIANCE.BO","SBICARD.BO","SBILIFE.BO","SHREECEM.BO","SIEMENS.BO","SRF.BO","SBIN.BO","SUNPHARMA.BO","TCS.BO","TATACONSUM.BO","TATAMOTORS.BO","TATAMTRDVR.BO","TATAPOWER.BO","TATASTEEL.BO","TECHM.BO","TITAN.BO","ULTRACEMCO.BO","MCDOWELL-N.BO","UPL.BO","VBL.BO","VEDL.BO","WIPRO.BO","ZOMATO.BO","ZYDUSLIFE.NS"]
 bse_midcap = ["3MINDIA.BO","AARTIIND.BO","ABBOTINDIA.BO","ACC.BO","ABCAPITAL.BO","ABFRL.BO","AJANTPHARM.BO","ALKEM.BO","APLAPOLLO.BO","ASHOKLEY.BO","ASTRAL.BO","AUBANK.BO","AUROPHARMA.BO","BALKRISIND.BO","BANKINDIA.BO","BAYERCROP.BO","BHARATFORG.BO","BHEL.BO","BIOCON.BO","CANBK.BO","CASTROLIND.BO","CGPOWER.BO","CLEANSCIENCE.BO","COLPAL.BO","CONCOR.BO","COROMANDEL.BO","CRISIL.BO","CROMPTON.BO","CUMMINSIND.BO","DALBHARAT.BO","DEEPAKNTR.BO","DELHIVERY.NS","EMAMILTD.BO","ENDURANCE.BO","EXIDEIND.BO","FEDERALBNK.BO","GICRE.BO","GILLETTE.BO","GLAND.BO","GLAXO.BO","GLENMARK.BO","GMRINFRA.BO","GODREJIND.BO","GODREJPROP.BO","GUJFLUORO.BO","GUJGASLTD.BO","HINDPETRO.BO","HONAUT.BO","ISEC.BO","IDBI.BO","IDFCFIRSTB.BO","INDIANB.BO","INDHOTEL.BO","IOB.BO","IRCTC.BO","IRFC.BO","IREDAL.BO","IGL.BO","IPCALAB.BO","JINDALSTEL.BO","JSWENERGY.BO","JSWINFRA.NS","JUBLFOOD.BO","KANSAINER.BO","L&TFH.BO","LTTS.BO","LAURUSLABS.BO","LICHSGFIN.BO","LINDEINDIA.BO","LUPIN.BO","LODHA.BO","M&MFIN.BO","MFSL.BO","MAXHEALTH.BO","MPHASIS.BO","MRF.BO","MUTHOOTFIN.BO","NHPC.BO","NAM-INDIA.BO","NMDC.BO","NUVOCO.BO","OBEROIRLTY.BO","OIL.BO","OFSS.BO","PAGEIND.BO","PATANJALI.NS","PAYTM.BO","PERSISTENT.BO","PETRONET.BO","PIIND.BO","PEL.BO","POLYCAB.BO","PFC.BO","PGHH.BO","RAJESHEXPO.BO","RAMCOCEM.BO","RECLTD.BO","RELAXO.BO","SAMARTI.BO","SCHAEFFLER.BO","SRTRANSFIN.BO","SJVN.BO","SOLARINDS.BO","SONACOMS.BO","STARHEALTH.NS","SAIL.BO","SUNTV.BO","SUPREMEIND.BO","TATACOMM.BO","TATAELXSI.BO","TATATECH.BO","NIACL.BO","TORNTPHARM.BO","TORNTPOWER.BO","TRENT.BO","TIINDIA.BO","TVSMOTOR.BO","UCOBANK.BO","UNIONBANK.BO","UBL.BO","UNOMINDA.BO","VEDL.BO","IDEA.BO","VOLTAS.BO","WHIRLPOOL.BO","YESBANK.BO","ZEEL.BO"]
 bse_smallcap = ["360ONE.NS","3IINFOTECH.NS","5PAISA.NS","63MOONS.NS","AARTIDRUGS.NS","AARTIPHARM.NS","AAVAS.NS","AHL.NS","ACCELYA.NS","ACE.NS","ADFFOODS.NS","ABSLAMC.NS","AVL.BO","ADORWELD.NS","ADVENZYMES.NS","AEGISCHEM.NS","AEROFLEX.NS","AETHER.NS","AFFLE.NS","AGARIND.NS","AGIGREEN.NS","ATFL.NS","AGSTRA.NS","AHLUCONT.NS","AIAENG.NS","AJMERA.NS","AKZOINDIA.NS","ALEMBICLTD.NS","APLLTD.NS","ALICON.NS","ALKYLAMINE.NS","ACLGATI.NS","ALLCARGO.NS","ATL.NS","ALLSEC.NS","ALOKINDS.NS","AMARAJABAT.NS","AMBER.NS","AMBIKCO.NS","AMIORG.NS","ANANDRATHI.NS","ANANTRAJ.NS","ANDHRAPAP.NS","ANDHRAPET.NS","ANDREWYU.NS","ANGELONE.NS","AWHCL.NS","ANURAS.NS","APARINDS.NS","APCOTEXIND.NS","APOLLO.NS","APOLLOPIPE.NS","APOLLOTYRE.NS","APTECHT.NS","APTUS.NS","ARCHIECHEM.NS","ARIHANTCAP.NS","ARIHANTSUP.NS","ARMANFIN.NS","ARTEMISMED.NS","ARVINDFASN.NS","ARVIND.NS","ARVSMART.NS","ASAHIINDIA.NS","ASHAPURMIN.NS","ASHIANA.NS","ASHOKA.NS","ASIANTILES.NS","ASKAUTOLTD.NS","ASALCBR.NS","ASTEC.NS","ASTERDM.NS","ASTRAMICRO.NS","ASTRAZEN.NS","ATULAUTO.NS","ATUL.NS","AURIONPRO.NS","AIIL.BO","AUTOAXLES.NS","ASAL.NS","AVADHSUGAR.NS","AVALON.NS","AVANTEL.NS","AVANTIFEED.NS","AVTNPL.NS","AXISCADES.NS","AZAD.NS","BLKASHYAP.NS","BAJAJCON.NS","BAJAJELEC.NS","BAJAJHCARE.NS","BAJAJHIND.NS","BALAMINES.NS","BALMLAWRIE.NS","BLIL.BO","BALRAMCHIN.NS","BALUFORGE.BO","BANCOINDIA.NS","MAHABANK.NS","BANARISUG.NS","BARBEQUE.NS","BASF.NS","BATAINDIA.NS","BCLIND.NS","BLAL.NS","BEML.NS","BESTAGRO.NS","BFINVEST.NS","BFUTILITIE.NS","BHAGERIA.NS","BHAGCHEM.NS","BEPL.NS","BHARATBIJ.NS","BDL.NS","BHARATWIRE.NS","BIGBLOC.NS","BIKAJI.NS","BIRLACORPN.NS","BSOFT.NS","BLACKBOX.NS","BLACKROSE.NS","BLISSGVS.NS","BLS.NS","BLUEDART.NS","BLUEJET.NS","BLUESTARCO.NS","BODALCHEM.NS","BOMDYEING.NS","BOROLTD.NS","BORORENEW.NS","BRIGADE.NS","BUTTERFLY.NS","CEINFO.NS","CAMLINFINE.NS","CAMPUS.NS","CANFINHOME.NS","CANTABIL.NS","CAPACITE.NS","CAPLIPOINT.NS","CGCL.NS","CARBORUNIV.NS","CARERATING.NS","CARTRADE.NS","CARYSIL.NS","CCL.NS","CEATLTD.NS","CELLO.NS","CENTRALBK.NS","CENTRUM.NS","CENTUM.NS","CENTENKA.NS","CENTURYPLY.NS","CENTURYTEX.NS","CERA.NS","CESC.NS","CHALET.NS","CLSEL.NS","CHAMBLFERT.NS","CHEMCON.NS","CHEMPLASTS.NS","CHENNPETRO.NS","CHEVIOT.NS","CHOICEIN.NS","CHOLAHOLD.NS","CIEINDIA.NS","CIGNITITEC.NS","CUB.NS","CMSINFO.NS","COCHINSHIP.NS","COFFEEDAY.NS","COFORGE.NS","CAMS.NS","CONCORDBIO.NS","CONFIPET.NS","CONTROLPR.NS","COSMOFIRST.NS","CRAFTSMAN.NS","CREDITACC.NS","MUFTI.BO","CRESSANDA.NS","CSBBANK.NS","CYIENTDLM.NS","CYIENT.NS","DLINKINDIA.NS","DALMIASUG.NS","DATAPATTNS.NS","DATAMATICS.NS","DBCORP.NS","DCBBANK.NS","DCMSHRIRAM.NS","DCW.NS","DCXINDIA.NS","DDEVPLASTIK.BO","DECCANCE.NS","DEEPINDS.NS","DEEPAKFERT.NS","DELTACORP.NS","DEN.NS","DEVYANI.NS","DHAMPURBIO.NS","DHAMPURSUG.NS","DHANI.NS","DHANUKA.NS","DHARAMSI.NS","DCGL.NS","DHUNINV.NS","DBL.NS","DISHTV.NS","DISHMAN.NS","DIVGI.NS","DIXON.NS","DODLA.NS","DOLLAR.NS","DOMS.NS","LALPATHLAB.NS","DREAMFOLKS.NS","DREDGECORP.NS","DWARKESH.NS","DYNAMATECH.NS","EASEMYTRIP.NS","ECLERX.NS","EDELWEISS.NS","EIDPARRY.NS","EIHAHOTELS.NS","EIHOTEL.NS","EKIEGS.NS","ELECON.NS","EMIL.NS","ELECTCAST.NS","ELGIEQUIP.NS","ELIN.NS","ELPROINTL.NS","EMAMIPAP.NS","EMSLIMITED.NS","EMUDHRA.NS","ENGINERSIN.NS","ENIL.NS","EPIGRAL.NS","EPL.NS","EQUITASBNK.NS","ERIS.NS","ESABINDIA.NS","ESAFSFB.NS","ESCORTS.NS","ESTER.NS","ETHOSLTD.NS","EUREKAFORBE.BO","EVEREADY.NS","EVERESTIND.NS","EKC.NS","EXCELINDUS.NS","EXPLEOSOL.NS","FAIRCHEM.NS","FAZETHREE.NS","FDC.NS","FEDFINA.NS","FMGOETZE.NS","FIEMIND.NS","FILATEX.NS","FINEORG.NS","FCL.NS","FINOPB.NS","FINCABLES.NS","FINPIPE.NS","FSL.NS","FIVESTAR.NS","FLAIR.NS","FOODSIN.NS","FORCEMOT.NS","FORTIS.NS","FOSECOIND.NS","FUSION.NS","GMBREW.NS","GNA.NS","GRINFRA.NS","GABRIEL.NS","GALAXYSURF.NS","GALLANTT.NS","GANDHAR.NS","GANDHITUBE.NS","GANESHBENZ.NS","GANESHHOUC.NS","GANECOS.NS","GRSE.NS","GARFILA.NS","GARFIBRES.NS","GDL.NS","GEPIL.NS","GET&D.NS","GENESYS.NS","GENSOL.NS","GENUSPOWER.NS","GEOJITFSL.NS","GFLLIMITED.NS","GHCL.NS","GHCLTEXTIL.NS","GICHSGFIN.NS","GLENMARK.NS","MEDANTA.NS","GSURF.NS","GLOBUSSPR.NS","GMMPFAUDLR.NS","GMRINFRA.NS","GOFASHION.NS","GOCLCORP.NS","GPIL.NS","GODFRYPHLP.NS","GODREJAGRO.NS","GOKEX.NS","GOKUL.NS","GOLDIAM.NS","GOODLUCK.NS","GOODYEAR.NS","GRANULES.NS","GRAPHITE.NS","GRAUWEIL.NS","GRAVITA.NS","GESHIP.NS","GREAVESCOT.NS","GREENLAM.NS","GREENPANEL.NS","GREENPLY.NS","GRINDWELL.NS","GRMOVER.NS","GTLINFRA.NS","GTPL.NS","GUFICBIO.NS","GUJALKALI.NS","GAEL.NS","GIPCL.NS","GMDCLTD.NS","GNFC.NS","GPPL.NS","GSFC.NS","GSPL.NS","GUJTHEMIS.NS","GULFOILLUB.NS","GULPOLY.NS","HGINFRA.NS","HAPPSTMNDS.NS","HAPPYFORGE.NS","HARDWYN.NS","HARIOMPIPE.NS","HARSHAENG.NS","HATHWAY.NS","HATSUN.NS","HAWKINCOOK.BO","HBLPOWER.NS","HCG.NS","HEG.NS","HEIDELBERG.NS","HEMIPROP.NS","HERANBA.NS","HERCULES.NS","HERITGFOOD.NS","HESTERBIO.NS","HEUBACHIND.NS","HFCL.NS","HITECH.NS","HIKAL.NS","HIL.NS","HSCL.NS","HIMATSEIDE.NS","HGS.NS","HCC.NS","HINDCOPPER.NS","HINDUSTAN.NS","HINDOILEXP.NS","HINDWARE.NS","POWERINDIA.NS","HLEGLAS.NS","HOTELLEELA.NS","HMAAGRO.NS","HOMEFIRST.NS","HONASA.NS","HONDAPOWER.NS","HUDCO.NS","HPAL.NS","HPL.NS","HUHTAMAKI.NS","ICRA.NS","IDEA.NS","IDFC.NS","IFBIND.NS","IFCI.NS","IFGLEXPOR.NS","IGPL.NS","IGARASHI.NS","IIFL.NS","IIFLSEC.NS","IKIO.NS","IMAGICAA.NS","INDIACEM.NS","INDIAGLYCO.NS","INDNIPPON.NS","IPL.NS","INDIASHLTR.NS","ITDC.NS","IBULHSGFIN.NS","IBREALEST.NS","INDIAMART.NS","IEX.NS","INDIANHUME.NS","IMFA.NS","INDIGOPNTS.NS","INDOAMIN.NS","ICIL.NS","INDORAMA.NS","INDOCO.NS","INDREMEDI.NS","INFIBEAM.NS","INFOBEAN.NS","INGERRAND.NS","INNOVACAP.NS","INOXGREEN.NS","INOXINDIA.NS","INOXWIND.NS","INSECTICID.NS","INTELLECT.NS","IOLCP.NS","IONEXCHANG.NS","IRB.NS","IRCON.NS","IRMENERGY.NS","ISGEC.NS","ITDCEM.NS","ITI.NS","JKUMAR.NS","JKTYRE.NS","JBCHEPHARM.NS","JKCEMENT.NS","JAGRAN.NS","JAGSNPHARM.NS","JAIBALAJI.NS","JAICORPLTD.NS","JISLJALEQS.NS","JPASSOCIAT.NS","JPPOWER.NS","J&KBANK.NS","JAMNAAUTO.NS","JAYBARMARU.NS","JAYAGROGN.NS","JAYNECOIND.NS","JBMA.NS","JINDRILL.NS","JINDALPOLY.NS","JINDALSAW.NS","JSL.NS","JINDWORLD.NS","JKLAKSHMI.NS","JKPAPER.NS","JMFINANCIL.NS","JCHAC.NS","JSWHL.NS","JTEKTINDIA.NS","JTLIND.NS","JUBLINDS.NS","JUBLINGREA.NS","JUBLPHARMA.NS","JLHL.NS","JWL.NS","JUSTDIAL.NS","JYOTHYLAB.NS","JYOTIRES.BO","KABRAEXTRU.NS","KAJARIACER.NS","KALPATPOWR.NS","KALYANKJIL.NS","KALYANIFRG.NS","KSL.NS","KAMAHOLD.NS","KAMDHENU.NS","KAMOPAINTS.NS","KANORICHEM.NS","KTKBANK.NS","KSCL.NS","KAYNES.NS","KDDL.NS","KEC.NS","KEI.NS","KELLTONTEC.NS","KENNAMET.NS","KESORAMIND.NS","KKCL.NS","RUSTOMJEE.NS","KFINTECH.NS","KHAICHEM.NS","KINGFA.NS","KIOCL.NS","KIRIINDUS.NS","KIRLOSBROS.NS","KIRLFER.NS","KIRLOSIND.NS","KIRLOSENG.NS","KIRLPNU.NS","KITEX.NS","KMCSHIL.BO","KNRCON.NS","KOKUYOCMLN.NS","KOLTEPATIL.NS","KOPRAN.NS","KOVAI.NS","KPIGREEN.NS","KPITTECH.NS","KPRMILL.NS","KRBL.NS","KIMS.NS","KRSNAA.NS","KSB.NS","KSOLVES.NS","KUANTUM.NS","LAOPALA.NS","LAXMIMACH.NS","LANCER.NS","LANDMARK.NS","LATENTVIEW.NS","LXCHEM.NS","LEMONTREE.NS","LGBBROSLTD.NS","LIKHITHA.NS","LINCPEN.NS","LINCOLN.NS","LLOYDSENGG.NS","LLOYDSENT.BO","LLOYDSME.NS","DAAWAT.NS","LUMAXTECH.NS","LUMAXIND.NS","MMFL.NS","MKPL.NS","MCLOUD.BO","MGL.NS","MTNL.NS","MAHSCOOTER.NS","MAHSEAMLES.NS","MHRIL.NS","MAHLIFE.NS","MAHLOG.NS","MANINDS.NS","MANINFRA.NS","MANGCHEFER.NS","MANAKSIA.NS","MANALIPETC.NS","MANAPPURAM.NS","MANGLMCEM.NS","MRPL.NS","MVGJL.NS","MANORAMA.NS","MARATHON.NS","MARKSANS.NS","MASFIN.NS","MASTEK.NS","MATRIMONY.NS","MAXESTATE.NS","MAYURUNIQ.NS","MAZDOCK.NS","MEDICAMEQ.NS","MEDPLUS.NS","MEGH.NS","MENONBE.NS","METROBRAND.NS","METROPOLIS.NS","MINDACORP.NS","MIRZAINT.NS","MIDHANI.NS","MISHTANN.NS","MMTC.NS","MOIL.NS","MOLDTKPAC.NS","MONARCH.NS","MONTECARLO.NS","MOREPENLAB.NS","MOSCHIP.NS","MSUMI.NS","MOTILALOFS.NS","MPSLTD.NS","BECTORFOOD.NS","MSTCLTD.NS","MTARTECH.NS","MUKANDLTD.NS","MCX.NS","MUTHOOTMF.NS","NACLIND.NS","NAGAFERT.NS","NAHARINV.NS","NAHARSPING.NS","NSIL.NS","NH.NS","NATCOPHARM.NS","NATIONALUM.NS","NFL.NS","NAVINFLUOR.NS","NAVKARCORP.NS","NAVNETEDUL.NS","NAZARA.NS","NBCC.NS","NCC.NS","NCLIND.NS","NELCAST.NS","NELCO.NS","NEOGEN.NS","NESCO.NS","NETWEB.NS","NETWORK18.NS","NEULANDLAB.NS","NDTV.NS","NEWGEN.NS","NGLFINE.NS","NIITMTS.NS","NIITLTD.NS","NIKHILADH.NS","NILKAMAL.NS","NITINSPIN.NS","NITTAGELA.BO","NLCINDIA.NS","NSLNISP.NS","NOCIL.NS","NOVARTIND.NS","NRBBEARING.NS","NUCLEUS.NS","NUVAMA.NS","OLECTRA.NS","OMAXE.NS","ONMOBILE.NS","ONWARDTEC.NS","OPTIEMUS.NS","ORIENTBELL.NS","ORIENTCEM.NS","ORIENTELEC.NS","GREENPOWER.NS","ORIENTPPR.NS","OAL.NS","OCCL.NS","ORIENTHOT.NS","OSWALGREEN.NS","PAISALO.NS","PANACEABIO.NS","PANAMAPET.NS","PARADEEP.NS","PARAGMILK.NS","PARA.NS","PARAS.NS","PATELENG.NS","PAUSHAKLTD.NS","PCJEWELLER.NS","PCBL.NS","PDSL.NS","PGIL.NS","PENIND.NS","PERMAGNET.NS","PFIZER.NS","PGEL.NS","PHOENIXLTD.NS","PILANIINVS.NS","PPLPHARMA.NS","PITTILAM.NS","PIXTRANS.NS","PNBGILTS.NS","PNBHOUSING.NS","PNCINFRA.NS","POKARNA.NS","POLYMED.NS","POLYPLEX.NS","POONAWALLA.NS","POWERMECH.NS","PRAJIND.NS","PRAKASHSTL.NS","DIAMONDYD.NS","PRAVEG.NS","PRECAM.NS","PRECWIRE.NS","PRESTIGE.NS","PRICOLLTD.NS","PFOCUS.NS","PRIMO.NS","PRINCEPIPE.NS","PRSMJOHNSN.NS","PRIVISCL.NS","PGHL.NS","PROTEAN.BO","PRUDENT.NS","PSPPROJECT.NS","PFS.NS","PTC.NS","PTCIL.BO","PSB.NS","PUNJABCHEM.NS","PURVA.NS","PVRINOX.NS","QUESS.NS","QUICKHEAL.NS","QUINT.NS","RRKABEL.NS","RSYSTEMS.NS","RACLGEAR.NS","RADIANT.NS","RADICO.NS","RAGHAVPRO.NS","RVNL.NS","RAILTEL.NS","RAIN.NS","RAINBOW.NS","RAJRATAN.NS","RALLIS.NS","RRWL.NS","RAMASTEEL.NS","RAMCOIND.NS","RAMCOSYS.NS","RKFORGE.NS","RAMKY.NS","RANEHOLDIN.NS","RML.NS","RCF.NS","RATEGAIN.NS","RATNAMANI.NS","RTNINDIA.NS","RTNPOWER.NS","RAYMOND.NS","RBLBANK.NS","REDINGTON.NS","REDTAPE.NS","REFEX.NS","RIIL.NS","RELINFRA.NS","RPOWER.NS","RELIGARE.NS","RENAISSANCE.NS","REPCOHOME.NS","REPRO.NS","RESPONIND.NS","RBA.NS","RHIM.NS","RICOAUTO.NS","RISHABHINS.NS","RITES.NS","ROLEXRINGS.NS","ROSSARI.NS","ROSSELLIND.NS","ROTOPUMPS.NS","ROUTE.NS","ROHL.NS","RPGLIFE.NS","RPSGVENT.NS","RSWM.NS","RUBYMILLS.NS","RUPA.NS","RUSHIL.NS","SCHAND.NS","SHK.NS","SJS.NS","SPAL.NS","SADHANANIQ.NS","SAFARI.NS","SAGCEM.NS","SAILKALAM.NS","SALASAR.NS","SAMHIHOTEL.NS","SANDHAR.NS","SANDUMA.NS","SANGAMIND.NS","SANGHIIND.NS","SANGHVIMOV.NS","SANMITINFRA.NS","SANOFI.NS","SANSERA.NS","SAPPHIRE.NS","SARDAEN.NS","SAREGAMA.NS","SASKEN.NS","SASTASUNDR.NS","SATINDLTD.NS","SATIA.NS","SATIN.NS","SOTL.NS","SBFC.NS","SCHNEIDER.NS","SEAMECLTD.NS","SENCO.NS","SEPC.NS","SEQUENT.NS","SESHAPAPER.NS","SGFIN.NS","SHAILY.NS","SHAKTIPUMP.NS","SHALBY.NS","SHALPAINTS.NS","SHANKARA.NS","SHANTIGEAR.NS","SHARDACROP.NS","SHARDAMOTR.NS","SHAREINDIA.NS","SFL.NS","SHILPAMED.NS","SCI.NS","SHIVACEM.NS","SBCL.NS","SHIVALIK.NS","SHOPERSTOP.NS","SHREDIGCEM.NS","SHREEPUSHK.NS","RENUKA.NS","SHREYAS.NS","SHRIRAMPPS.NS","SHYAMMETL.NS","SIGACHI.NS","SIGNA.NS","SIRCA.NS","SIS.NS","SIYSIL.NS","SKFINDIA.NS","SKIPPER.NS","SMCGLOBAL.NS","SMLISUZU.NS","SMSPHARMA.NS","SNOWMAN.NS","SOBHA.NS","SOLARA.NS","SDBL.NS","SOMANYCERA.NS","SONATSOFTW.NS","SOUTHBANK.NS","SPANDANA.NS","SPECIALITY.NS","SPENCERS.NS","SPICEJET.NS","SPORTKING.NS","SRHHYPOLTD.NS","STGOBANQ.NS","STARCEMENT.NS","STEELXIND.NS","SSWL.NS","STEELCAS.NS","SWSOLAR.NS","STERTOOLS.NS","STRTECH.NS","STOVEKRAFT.NS","STAR.NS","STYLAMIND.NS","STYRENIX.NS","SUBEXLTD.NS","SUBROS.NS","SUDARSCHEM.NS","SUKHJITS.NS","SULA.NS","SUMICHEM.NS","SUMMITSEC.NS","SPARC.NS","SUNCLAYLTD.NS","SUNDRMFAST.NS","SUNFLAG.NS","SUNTECK.NS","SUPRAJIT.NS","SUPPETRO.NS","SUPRIYA.NS","SURAJEST.NS","SURYAROSNI.NS","SURYODAY.NS","SUTLEJTEX.NS","SUVEN.NS","SUVENPHAR.NS","SUZLON.NS","SWANENERGY.NS","SWARAJENG.NS","SYMPHONY.NS","SYNCOM.NS","SYNGENE.NS","SYRMA.NS","TAJGVK.NS","TALBROAUTO.NS","TMB.NS","TNPL.NS","TNPETRO.NS","TANFACIND.NS","TANLA.NS","TARC.NS","TARSONS.NS","TASTYBITE.NS","TATACHEM.NS","TATAINVEST.NS","TTML.NS","TATVA.NS","TCIEXP.NS","TCNSBRANDS.NS","TCPLPACK.NS","TDPOWERSYS.NS","TEAMLEASE.NS","TECHNOE.NS","TIIL.NS","TEGA.NS","TEJASNET.NS","TEXRAIL.NS","TGVSL.NS","THANGAMAYL.NS","ANUP.NS","THEMISMED.NS","THERMAX.NS","TIRUMALCHM.NS","THOMASCOOK.NS","THYROCARE.NS","TI.NS","TIMETECHNO.NS","TIMEXWATCH.NS","TIMKEN.NS","TIPSINDLTD.NS","TITAGARH.NS","TFCILTD.NS","TRACXN.NS","TRIL.NS","TRANSIND.RE.NS","TRANSPEK.NS","TCI.NS","TRIDENT.NS","TRIVENI.NS","TRITURBINE.NS","TRU.NS","TTKHLTCARE.NS","TTKPRESTIG.NS","TVTODAY.NS","TV18BRDCST.NS","TVSELECT.NS","TVS.NS","TVSSRICHAK.NS","TVSSCS.NS","UDAICEMENT.NS","UFLEX.NS","UGARSUGAR.NS","UGROCAP.NS","UJJIVANSFB.NS","ULTRAMAR.NS","UNICHEMLAB.NS","UNIPARTS.NS","UNIVCABLES.NS","UDSERV.NS","USHAMART.NS","UTIAMC.NS","UTKARSHPB.NS","UTTAMSUGAR.NS","VGUARD.NS","VMART.NS","VSTTILLERS.NS","WABAG.NS","VADILALIND.NS","VAIBHAVGBL.NS","VAKRANGEE.NS","VALIANTORG.NS","DBREALTY.NS","VSSL.NS","VTL.NS","VARROC.NS","VASCONEQ.NS","VENKEYS.NS","VENUSPIPES.NS","VERANDA.NS","VESUVIUS.NS","VIDHIING.NS","VIJAYA.NS","VIKASLIFE.NS","VIMTALABS.NS","VINATIORGA.NS","VINDHYATEL.NS","VINYLINDIA.NS","VIPIND.NS","VISAKAIND.NS","VISHNU.NS","VISHNUPR.NS","VLSFINANCE.NS","VOLTAMP.NS","VRLLOG.NS","VSTIND.NS","WAAREE.NS","WARDINMOBI.NS","WELCORP.NS","WELENT.NS","WELSPUNLIV.NS","WELSPLSOL.NS","WENDT.NS","WSTCSTPAPR.NS","WESTLIFE.NS","WOCKPHARMA.NS","WONDERLA.NS","WPIL.NS","XCHANGING.NS","YASHO.NS","YATHARTH.NS","YATRA.NS","YUKEN.NS","ZAGGLE.NS","ZEEMEDIA.NS","ZENTEC.NS","ZENSARTECH.NS","ZFCVINDIA.NS","ZUARI.NS","ZYDUSWELL.NS"]
-          
+
 largecap_tickers = [
                 "ITC.NS", "JBCHEPHARM.BO", "JWL.BO", "JYOTHYLAB.BO", "KPRMILL.NS", "KAJARIACER.NS", "KEI.BO",
                 "LTTS.NS", "LTIM.NS", "MANKIND.NS", "MARICO.NS", "METROBRAND.BO", "MOTILALOFS.NS", "MPHASIS.NS",
@@ -359,7 +361,7 @@ def logout():
 # Main menu function
 def main_menu():
     st.subheader("Main Menu")
-    menu_options = [f"{st.session_state.username}'s Portfolio",f"{st.session_state.username}'s Watchlist", "Stock Screener",  "Stock Watch", "Technical Analysis", "Stock Prediction",
+    menu_options = [f"{st.session_state.username}'s Portfolio",f"{st.session_state.username}'s Watchlist", "Stock Screener",  "Stock Watch", "Stock Analysis", "Stock Prediction",
                     "Stock Comparison", "Market Stats","Markets", "My Account"]
     choice = st.selectbox("Select an option", menu_options)
     return choice
@@ -1643,736 +1645,819 @@ else:
 
 
        
-        elif choice == "Technical Analysis":
+        elif choice == "Stock Analysis":
             #'Technical Analysis' code---------------------------------------------------------------------------------------------------------------------------------
-            # Sidebar setup
-            st.sidebar.subheader("Interactive Charts")
+            submenu = st.sidebar.selectbox("Select Analysis Type", ["Technical", "Sentiment"])  
 
-            # Sidebar for user input
-            ticker = st.sidebar.text_input("Enter Stock Symbol", value='RVNL.NS')
-            start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime('2023-01-01'))
-            end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("today"))
+            
 
-            # Load stock data
-            @st.cache_data
-            def load_data(ticker, start, end):
-                data = yf.download(ticker, start=start, end=end)
-                data.reset_index(inplace=True)
-                return data
+            if submenu == "Technical":
+                # Sidebar setup
+                st.sidebar.subheader("Interactive Charts")
 
-            # Load index data
-            @st.cache_data
-            def load_index_data(ticker, start, end):
-                data = yf.download(ticker, start=start, end=end)
-                data.reset_index(inplace=True)
-                return data
+                # Sidebar for user input
+                ticker = st.sidebar.text_input("Enter Stock Symbol", value='RVNL.NS')
+                start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime('2023-01-01'))
+                end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("today"))
 
-            st.title('Stock Technical Analysis')
+                # Load stock data
+                @st.cache_data
+                def load_data(ticker, start, end):
+                    data = yf.download(ticker, start=start, end=end)
+                    data.reset_index(inplace=True)
+                    return data
 
-            index_ticker = "^NSEI"  # NIFTY 50 index ticker
+                # Load index data
+                @st.cache_data
+                def load_index_data(ticker, start, end):
+                    data = yf.download(ticker, start=start, end=end)
+                    data.reset_index(inplace=True)
+                    return data
 
-            # Load data
-            data_load_state = st.text('Loading data...')
-            data = load_data(ticker, start_date, end_date).copy()
-            index_data = load_index_data(index_ticker, start_date, end_date).copy()
-            data_load_state.text('Loading data...done!')
+                st.title('Stock Technical Analysis')
 
-            # Calculate technical indicators
-            def calculate_technical_indicators(df, index_df):
-                # Moving averages
-                df['10_SMA'] = ta.trend.sma_indicator(df['Close'], window=10)
-                df['20_SMA'] = ta.trend.sma_indicator(df['Close'], window=20)
-                df['10_EMA'] = ta.trend.ema_indicator(df['Close'], window=10)
-                df['20_EMA'] = ta.trend.ema_indicator(df['Close'], window=20)
-                df['10_WMA'] = ta.trend.wma_indicator(df['Close'], window=10)
-                df['20_WMA'] = ta.trend.wma_indicator(df['Close'], window=20)
+                index_ticker = "^NSEI"  # NIFTY 50 index ticker
 
-                # Volume Moving Averages
-                df['5_VMA'] = df['Volume'].rolling(window=5).mean()
-                df['10_VMA'] = df['Volume'].rolling(window=10).mean()
-                df['20_VMA'] = df['Volume'].rolling(window=20).mean()
+                # Load data
+                data_load_state = st.text('Loading data...')
+                data = load_data(ticker, start_date, end_date).copy()
+                index_data = load_index_data(index_ticker, start_date, end_date).copy()
+                data_load_state.text('Loading data...done!')
 
-                # Momentum Indicators
-                df['RSI'] = ta.momentum.rsi(df['Close'], window=14)
-                df['%K'] = ta.momentum.stoch(df['High'], df['Low'], df['Close'], window=14, smooth_window=3)
-                df['%D'] = ta.momentum.stoch_signal(df['High'], df['Low'], df['Close'], window=14, smooth_window=3)
-                df['MACD'] = ta.trend.macd(df['Close'])
-                df['MACD_Signal'] = ta.trend.macd_signal(df['Close'])
-                df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
+                # Calculate technical indicators
+                def calculate_technical_indicators(df, index_df):
+                    # Moving averages
+                    df['10_SMA'] = ta.trend.sma_indicator(df['Close'], window=10)
+                    df['20_SMA'] = ta.trend.sma_indicator(df['Close'], window=20)
+                    df['10_EMA'] = ta.trend.ema_indicator(df['Close'], window=10)
+                    df['20_EMA'] = ta.trend.ema_indicator(df['Close'], window=20)
+                    df['10_WMA'] = ta.trend.wma_indicator(df['Close'], window=10)
+                    df['20_WMA'] = ta.trend.wma_indicator(df['Close'], window=20)
 
-                # Volume Indicators
-                df['OBV'] = ta.volume.on_balance_volume(df['Close'], df['Volume'])
-                df['VWAP'] = ta.volume.volume_weighted_average_price(df['High'], df['Low'], df['Close'], df['Volume'], window=14)
-                df['A/D Line'] = ta.volume.acc_dist_index(df['High'], df['Low'], df['Close'], df['Volume'])
+                    # Volume Moving Averages
+                    df['5_VMA'] = df['Volume'].rolling(window=5).mean()
+                    df['10_VMA'] = df['Volume'].rolling(window=10).mean()
+                    df['20_VMA'] = df['Volume'].rolling(window=20).mean()
 
-                # Volatility Indicators
-                df['BB_High'], df['BB_Middle'], df['BB_Low'] = ta.volatility.bollinger_hband(df['Close']), ta.volatility.bollinger_mavg(df['Close']), ta.volatility.bollinger_lband(df['Close'])
-                df['ATR'] = ta.volatility.average_true_range(df['High'], df['Low'], df['Close'], window=14)
-                df['Std Dev'] = ta.volatility.bollinger_wband(df['Close'])
+                    # Momentum Indicators
+                    df['RSI'] = ta.momentum.rsi(df['Close'], window=14)
+                    df['%K'] = ta.momentum.stoch(df['High'], df['Low'], df['Close'], window=14, smooth_window=3)
+                    df['%D'] = ta.momentum.stoch_signal(df['High'], df['Low'], df['Close'], window=14, smooth_window=3)
+                    df['MACD'] = ta.trend.macd(df['Close'])
+                    df['MACD_Signal'] = ta.trend.macd_signal(df['Close'])
+                    df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
 
-                # Trend Indicators
-                df['ADX'] = ta.trend.adx(df['High'], df['Low'], df['Close'])
-                df['+DI'] = ta.trend.adx_pos(df['High'], df['Low'], df['Close'])
-                df['-DI'] = ta.trend.adx_neg(df['High'], df['Low'], df['Close'])
-                psar = pta.psar(df['High'], df['Low'], df['Close'])
-                df['Parabolic_SAR'] = psar['PSARl_0.02_0.2']
-                df['Ichimoku_a'] = ta.trend.ichimoku_a(df['High'], df['Low'])
-                df['Ichimoku_b'] = ta.trend.ichimoku_b(df['High'], df['Low'])
-                df['Ichimoku_base'] = ta.trend.ichimoku_base_line(df['High'], df['Low'])
-                df['Ichimoku_conv'] = ta.trend.ichimoku_conversion_line(df['High'], df['Low'])
+                    # Volume Indicators
+                    df['OBV'] = ta.volume.on_balance_volume(df['Close'], df['Volume'])
+                    df['VWAP'] = ta.volume.volume_weighted_average_price(df['High'], df['Low'], df['Close'], df['Volume'], window=14)
+                    df['A/D Line'] = ta.volume.acc_dist_index(df['High'], df['Low'], df['Close'], df['Volume'])
 
-                # Support and Resistance Levels
-                df = find_support_resistance(df)
-                df['Support_Trendline'] = calculate_trendline(df, kind='support')
-                df['Resistance_Trendline'] = calculate_trendline(df, kind='resistance')
-                df = pivot_points(df)
+                    # Volatility Indicators
+                    df['BB_High'], df['BB_Middle'], df['BB_Low'] = ta.volatility.bollinger_hband(df['Close']), ta.volatility.bollinger_mavg(df['Close']), ta.volatility.bollinger_lband(df['Close'])
+                    df['ATR'] = ta.volatility.average_true_range(df['High'], df['Low'], df['Close'], window=14)
+                    df['Std Dev'] = ta.volatility.bollinger_wband(df['Close'])
 
-                # Price Oscillators
-                df['ROC'] = ta.momentum.roc(df['Close'], window=12)
-                df['DPO'] = ta.trend.dpo(df['Close'], window=20)
-                df['Williams %R'] = ta.momentum.williams_r(df['High'], df['Low'], df['Close'], lbp=14)
+                    # Trend Indicators
+                    df['ADX'] = ta.trend.adx(df['High'], df['Low'], df['Close'])
+                    df['+DI'] = ta.trend.adx_pos(df['High'], df['Low'], df['Close'])
+                    df['-DI'] = ta.trend.adx_neg(df['High'], df['Low'], df['Close'])
+                    psar = pta.psar(df['High'], df['Low'], df['Close'])
+                    df['Parabolic_SAR'] = psar['PSARl_0.02_0.2']
+                    df['Ichimoku_a'] = ta.trend.ichimoku_a(df['High'], df['Low'])
+                    df['Ichimoku_b'] = ta.trend.ichimoku_b(df['High'], df['Low'])
+                    df['Ichimoku_base'] = ta.trend.ichimoku_base_line(df['High'], df['Low'])
+                    df['Ichimoku_conv'] = ta.trend.ichimoku_conversion_line(df['High'], df['Low'])
 
-                # Market Breadth Indicators
-                df['Advances'] = df['Close'].diff().apply(lambda x: 1 if x > 0 else 0)
-                df['Declines'] = df['Close'].diff().apply(lambda x: 1 if x < 0 else 0)
-                df['McClellan Oscillator'] = (df['Advances'] - df['Declines']).rolling(window=19).mean() - (df['Advances'] - df['Declines']).rolling(window=39).mean()
-                df['TRIN'] = (df['Advances'] / df['Declines']) / (df['Volume'][df['Advances'] > 0].sum() / df['Volume'][df['Declines'] > 0].sum())
-                df['Advance-Decline Line'] = df['Advances'].cumsum() - df['Declines'].cumsum()
+                    # Support and Resistance Levels
+                    df = find_support_resistance(df)
+                    df['Support_Trendline'] = calculate_trendline(df, kind='support')
+                    df['Resistance_Trendline'] = calculate_trendline(df, kind='resistance')
+                    df = pivot_points(df)
 
-                # Relative Performance Indicators
-                df['Price-to-Volume Ratio'] = df['Close'] / df['Volume']
-                df['Relative Strength Comparison'] = df['Close'] / index_df['Close']
-                df['Performance Relative to an Index'] = df['Close'].pct_change().cumsum() - index_df['Close'].pct_change().cumsum()
+                    # Price Oscillators
+                    df['ROC'] = ta.momentum.roc(df['Close'], window=12)
+                    df['DPO'] = ta.trend.dpo(df['Close'], window=20)
+                    df['Williams %R'] = ta.momentum.williams_r(df['High'], df['Low'], df['Close'], lbp=14)
 
-                return df
+                    # Market Breadth Indicators
+                    df['Advances'] = df['Close'].diff().apply(lambda x: 1 if x > 0 else 0)
+                    df['Declines'] = df['Close'].diff().apply(lambda x: 1 if x < 0 else 0)
+                    df['McClellan Oscillator'] = (df['Advances'] - df['Declines']).rolling(window=19).mean() - (df['Advances'] - df['Declines']).rolling(window=39).mean()
+                    df['TRIN'] = (df['Advances'] / df['Declines']) / (df['Volume'][df['Advances'] > 0].sum() / df['Volume'][df['Declines'] > 0].sum())
+                    df['Advance-Decline Line'] = df['Advances'].cumsum() - df['Declines'].cumsum()
 
-            # Identify Horizontal Support and Resistance
-            def find_support_resistance(df, window=20):
-                df['Support'] = df['Low'].rolling(window, center=True).min()
-                df['Resistance'] = df['High'].rolling(window, center=True).max()
-                return df
+                    # Relative Performance Indicators
+                    df['Price-to-Volume Ratio'] = df['Close'] / df['Volume']
+                    df['Relative Strength Comparison'] = df['Close'] / index_df['Close']
+                    df['Performance Relative to an Index'] = df['Close'].pct_change().cumsum() - index_df['Close'].pct_change().cumsum()
 
-            # Draw Trendlines
-            def calculate_trendline(df, kind='support'):
-                if kind == 'support':
-                    prices = df['Low']
-                elif kind == 'resistance':
-                    prices = df['High']
-                else:
-                    raise ValueError("kind must be either 'support' or 'resistance'")
+                    return df
 
-                indices = np.arange(len(prices))
-                slope, intercept, _, _, _ = linregress(indices, prices)
-                trendline = slope * indices + intercept
-                return trendline
+                # Identify Horizontal Support and Resistance
+                def find_support_resistance(df, window=20):
+                    df['Support'] = df['Low'].rolling(window, center=True).min()
+                    df['Resistance'] = df['High'].rolling(window, center=True).max()
+                    return df
 
-            # Calculate Pivot Points
-            def pivot_points(df):
-                df['Pivot'] = (df['High'].shift(1) + df['Low'].shift(1) + df['Close'].shift(1)) / 3
-                df['R1'] = 2 * df['Pivot'] - df['Low'].shift(1)
-                df['S1'] = 2 * df['Pivot'] - df['High'].shift(1)
-                df['R2'] = df['Pivot'] + (df['High'].shift(1) - df['Low'].shift(1))
-                df['S2'] = df['Pivot'] - (df['High'].shift(1) - df['Low'].shift(1))
-                return df
+                # Draw Trendlines
+                def calculate_trendline(df, kind='support'):
+                    if kind == 'support':
+                        prices = df['Low']
+                    elif kind == 'resistance':
+                        prices = df['High']
+                    else:
+                        raise ValueError("kind must be either 'support' or 'resistance'")
 
-            data = calculate_technical_indicators(data, index_data)
+                    indices = np.arange(len(prices))
+                    slope, intercept, _, _, _ = linregress(indices, prices)
+                    trendline = slope * indices + intercept
+                    return trendline
 
-            # Function to add range buttons to the plot
-            def add_range_buttons(fig):
-                fig.update_layout(
-                    xaxis=dict(
-                        rangeselector=dict(
-                            buttons=list([
-                                dict(count=7, label="7d", step="day", stepmode="backward"),
-                                dict(count=14, label="14d", step="day", stepmode="backward"),
-                                dict(count=1, label="1m", step="month", stepmode="backward"),
-                                dict(count=3, label="3m", step="month", stepmode="backward"),
-                                dict(count=6, label="6m", step="month", stepmode="backward"),
-                                dict(count=1, label="1y", step="year", stepmode="backward"),
-                                dict(step="all")
-                            ])
-                        ),
-                        rangeslider=dict(visible=True)
-                    )
-                )
+                # Calculate Pivot Points
+                def pivot_points(df):
+                    df['Pivot'] = (df['High'].shift(1) + df['Low'].shift(1) + df['Close'].shift(1)) / 3
+                    df['R1'] = 2 * df['Pivot'] - df['Low'].shift(1)
+                    df['S1'] = 2 * df['Pivot'] - df['High'].shift(1)
+                    df['R2'] = df['Pivot'] + (df['High'].shift(1) - df['Low'].shift(1))
+                    df['S2'] = df['Pivot'] - (df['High'].shift(1) - df['Low'].shift(1))
+                    return df
 
-            # Plotly visualization functions
-            def plot_indicator(df, indicator, title, yaxis_title='Price', secondary_y=False):
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
-                fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator, yaxis="y2" if secondary_y else "y1"))
-                
-                if secondary_y:
+                data = calculate_technical_indicators(data, index_data)
+
+                # Function to add range buttons to the plot
+                def add_range_buttons(fig):
                     fig.update_layout(
+                        xaxis=dict(
+                            rangeselector=dict(
+                                buttons=list([
+                                    dict(count=7, label="7d", step="day", stepmode="backward"),
+                                    dict(count=14, label="14d", step="day", stepmode="backward"),
+                                    dict(count=1, label="1m", step="month", stepmode="backward"),
+                                    dict(count=3, label="3m", step="month", stepmode="backward"),
+                                    dict(count=6, label="6m", step="month", stepmode="backward"),
+                                    dict(count=1, label="1y", step="year", stepmode="backward"),
+                                    dict(step="all")
+                                ])
+                            ),
+                            rangeslider=dict(visible=True)
+                        )
+                    )
+
+                # Plotly visualization functions
+                def plot_indicator(df, indicator, title, yaxis_title='Price', secondary_y=False):
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator, yaxis="y2" if secondary_y else "y1"))
+                    
+                    if secondary_y:
+                        fig.update_layout(
+                            yaxis2=dict(
+                                title=indicator,
+                                overlaying='y',
+                                side='right'
+                            )
+                        )
+                    
+                    fig.update_layout(title=title, xaxis_title='Date', yaxis_title=yaxis_title)
+                    add_range_buttons(fig)
+                    st.plotly_chart(fig)
+
+                def plot_moving_average(df, ma_type):
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    fig.add_trace(go.Bar(x=df['Date'], y=df['Volume'], name='Volume', marker_color='blue', opacity=0.5, yaxis='y2'))
+                    if ma_type == 'SMA':
+                        fig.add_trace(go.Scatter(x=df['Date'], y=df['10_SMA'], mode='lines', name='10_SMA'))
+                        fig.add_trace(go.Scatter(x=df['Date'], y=df['20_SMA'], mode='lines', name='20_SMA'))
+                    elif ma_type == 'EMA':
+                        fig.add_trace(go.Scatter(x=df['Date'], y=df['10_EMA'], mode='lines', name='10_EMA'))
+                        fig.add_trace(go.Scatter(x=df['Date'], y=df['20_EMA'], mode='lines', name='20_EMA'))
+                    elif ma_type == 'WMA':
+                        fig.add_trace(go.Scatter(x=df['Date'], y=df['10_WMA'], mode='lines', name='10_WMA'))
+                        fig.add_trace(go.Scatter(x=df['Date'], y=df['20_WMA'], mode='lines', name='20_WMA'))
+                    fig.update_layout(title=f'{ma_type} Moving Averages', xaxis_title='Date', yaxis_title='Price', yaxis2=dict(title='Volume', overlaying='y', side='right'))
+                    add_range_buttons(fig)
+                    st.plotly_chart(fig)
+
+                def plot_macd(df):
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['MACD'], mode='lines', name='MACD'))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['MACD_Signal'], mode='lines', name='MACD Signal'))
+
+                    # Plot MACD Histogram with different colors
+                    macd_hist_colors = []
+                    for i in range(1, len(df)):
+                        if df['MACD_Hist'].iloc[i] > 0:
+                            color = 'green' if df['MACD_Hist'].iloc[i] > df['MACD_Hist'].iloc[i - 1] else 'lightgreen'
+                        else:
+                            color = 'red' if df['MACD_Hist'].iloc[i] < df['MACD_Hist'].iloc[i - 1] else 'lightcoral'
+                        macd_hist_colors.append(color)
+
+                    fig.add_trace(go.Bar(x=df['Date'][1:], y=df['MACD_Hist'][1:], name='MACD Histogram', marker_color=macd_hist_colors, yaxis='y2'))
+
+                    fig.update_layout(
+                        title='MACD',
+                        xaxis_title='Date',
+                        yaxis_title='Price',
                         yaxis2=dict(
-                            title=indicator,
+                            title='MACD Histogram',
                             overlaying='y',
                             side='right'
                         )
                     )
-                
-                fig.update_layout(title=title, xaxis_title='Date', yaxis_title=yaxis_title)
-                add_range_buttons(fig)
-                st.plotly_chart(fig)
+                    add_range_buttons(fig)
+                    st.plotly_chart(fig)
 
-            def plot_moving_average(df, ma_type):
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
-                fig.add_trace(go.Bar(x=df['Date'], y=df['Volume'], name='Volume', marker_color='blue', opacity=0.5, yaxis='y2'))
-                if ma_type == 'SMA':
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['10_SMA'], mode='lines', name='10_SMA'))
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['20_SMA'], mode='lines', name='20_SMA'))
-                elif ma_type == 'EMA':
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['10_EMA'], mode='lines', name='10_EMA'))
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['20_EMA'], mode='lines', name='20_EMA'))
-                elif ma_type == 'WMA':
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['10_WMA'], mode='lines', name='10_WMA'))
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['20_WMA'], mode='lines', name='20_WMA'))
-                fig.update_layout(title=f'{ma_type} Moving Averages', xaxis_title='Date', yaxis_title='Price', yaxis2=dict(title='Volume', overlaying='y', side='right'))
-                add_range_buttons(fig)
-                st.plotly_chart(fig)
+                def plot_trendlines(df):
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
 
-            def plot_macd(df):
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['MACD'], mode='lines', name='MACD'))
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['MACD_Signal'], mode='lines', name='MACD Signal'))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Support_Trendline'], mode='lines', name='Support Trendline', line=dict(color='green', dash='dash')))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Resistance_Trendline'], mode='lines', name='Resistance Trendline', line=dict(color='red', dash='dash')))
 
-                # Plot MACD Histogram with different colors
-                macd_hist_colors = []
-                for i in range(1, len(df)):
-                    if df['MACD_Hist'].iloc[i] > 0:
-                        color = 'green' if df['MACD_Hist'].iloc[i] > df['MACD_Hist'].iloc[i - 1] else 'lightgreen'
+                    fig.update_layout(title='Trendlines', xaxis_title='Date', yaxis_title='Price')
+                    add_range_buttons(fig)
+                    st.plotly_chart(fig)
+
+                def plot_fibonacci_retracement(df):
+                    high = df['High'].max()
+                    low = df['Low'].min()
+
+                    diff = high - low
+                    levels = [high, high - 0.236 * diff, high - 0.382 * diff, high - 0.5 * diff, high - 0.618 * diff, low]
+
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+
+                    for level in levels:
+                        fig.add_trace(go.Scatter(x=[df['Date'].iloc[0], df['Date'].iloc[-1]],
+                                                y=[level, level],
+                                                mode='lines', name=f'Level {level}', line=dict(dash='dash')))
+
+                    fig.update_layout(title='Fibonacci Retracement Levels', xaxis_title='Date', yaxis_title='Price')
+                    add_range_buttons(fig)
+                    st.plotly_chart(fig)
+
+                def plot_gann_fan_lines(df):
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+
+                    # Adding Gann fan lines (simple example, for more advanced lines use a proper method)
+                    for i in range(1, 5):
+                        fig.add_trace(go.Scatter(x=[df['Date'].iloc[0], df['Date'].iloc[-1]],
+                                                y=[df['Close'].iloc[0], df['Close'].iloc[0] + i * (df['Close'].iloc[-1] - df['Close'].iloc[0]) / 4],
+                                                mode='lines', name=f'Gann Fan {i}', line=dict(dash='dash')))
+
+                    fig.update_layout(title='Gann Fan Lines', xaxis_title='Date', yaxis_title='Price')
+                    add_range_buttons(fig)
+                    st.plotly_chart(fig)
+
+                def plot_chart_patterns(df, pattern):
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+
+                    # Adding example chart patterns (simple example, for more advanced patterns use a proper method)
+                    pattern_data = detect_chart_patterns(df, pattern)
+                    if pattern_data:
+                        for pattern_info in pattern_data:
+                            fig.add_trace(go.Scatter(x=pattern_info['x'], y=pattern_info['y'], mode='lines+markers', name=pattern_info['name'], line=dict(color=pattern_info['color'])))
+
+                    fig.update_layout(title=f'{pattern}', xaxis_title='Date', yaxis_title='Price')
+                    st.plotly_chart(fig)
+
+                def detect_chart_patterns(df, pattern):
+                    patterns = []
+                    if pattern == 'Head and Shoulders':
+                        patterns = detect_head_and_shoulders(df)
+                    elif pattern == 'Double Tops and Bottoms':
+                        patterns = detect_double_tops_and_bottoms(df)
+                    elif pattern == 'Flags and Pennants':
+                        patterns = detect_flags_and_pennants(df)
+                    elif pattern == 'Triangles':
+                        patterns = detect_triangles(df)
+                    elif pattern == 'Cup and Handle':
+                        patterns = detect_cup_and_handle(df)
+                    return patterns
+
+                def detect_head_and_shoulders(df):
+                    patterns = []
+                    window = 20  # Sliding window size
+                    for i in range(window, len(df) - window):
+                        window_df = df.iloc[i - window:i + window]
+                        if len(window_df) < 3:  # Ensure there are enough data points
+                            continue
+                        max_high = window_df['High'].max()
+                        min_low = window_df['Low'].min()
+                        middle_idx = window_df['High'].idxmax()
+                        left_idx = window_df.iloc[:middle_idx]['High'].idxmax()
+                        right_idx = window_df.iloc[middle_idx + 1:]['High'].idxmax()
+
+                        if window_df['High'].iloc[left_idx] < max_high and window_df['High'].iloc[right_idx] < max_high and \
+                                window_df['Low'].iloc[middle_idx] > min_low:
+                            patterns.append({
+                                "x": [window_df['Date'].iloc[left_idx], window_df['Date'].iloc[middle_idx], window_df['Date'].iloc[right_idx]],
+                                "y": [window_df['High'].iloc[left_idx], window_df['High'].iloc[middle_idx], window_df['High'].iloc[right_idx]],
+                                "name": "Head and Shoulders",
+                                "color": "orange"
+                            })
+                    return patterns
+
+                def detect_double_tops_and_bottoms(df):
+                    patterns = []
+                    window = 20  # Sliding window size
+                    for i in range(window, len(df) - window):
+                        window_df = df.iloc[i - window:i + window]
+                        if len(window_df) < 3:  # Ensure there are enough data points
+                            continue
+                        max_high = window_df['High'].max()
+                        min_low = window_df['Low'].min()
+                        double_top = window_df['High'].value_counts().get(max_high, 0) > 1
+                        double_bottom = window_df['Low'].value_counts().get(min_low, 0) > 1
+
+                        if double_top:
+                            patterns.append({
+                                "x": [window_df['Date'].iloc[0], window_df['Date'].iloc[-1]],
+                                "y": [max_high, max_high],
+                                "name": "Double Top",
+                                "color": "red"
+                            })
+                        elif double_bottom:
+                            patterns.append({
+                                "x": [window_df['Date'].iloc[0], window_df['Date'].iloc[-1]],
+                                "y": [min_low, min_low],
+                                "name": "Double Bottom",
+                                "color": "green"
+                            })
+                    return patterns
+
+                def detect_flags_and_pennants(df):
+                    patterns = []
+                    window = 20  # Sliding window size
+                    for i in range(window, len(df) - window):
+                        window_df = df.iloc[i - window:i + window]
+                        if len(window_df) < 3:  # Ensure there are enough data points
+                            continue
+                        min_low = window_df['Low'].min()
+                        max_high = window_df['High'].max()
+                        flag_pattern = ((window_df['High'] - window_df['Low']) / window_df['Low']).mean() < 0.05
+
+                        if flag_pattern:
+                            patterns.append({
+                                "x": [window_df['Date'].iloc[0], window_df['Date'].iloc[-1]],
+                                "y": [min_low, max_high],
+                                "name": "Flag",
+                                "color": "purple"
+                            })
+                    return patterns
+
+                def detect_triangles(df):
+                    patterns = []
+                    window = 20  # Sliding window size
+                    for i in range(window, len(df) - window):
+                        window_df = df.iloc[i - window:i + window]
+                        if len(window_df) < 3:  # Ensure there are enough data points
+                            continue
+                        max_high = window_df['High'].max()
+                        min_low = window_df['Low'].min()
+                        triangle_pattern = np.all(np.diff(window_df['High']) < 0) and np.all(np.diff(window_df['Low']) > 0)
+
+                        if triangle_pattern:
+                            patterns.append({
+                                "x": [window_df['Date'].iloc[0], window_df['Date'].iloc[-1]],
+                                "y": [min_low, max_high],
+                                "name": "Triangle",
+                                "color": "blue"
+                            })
+                    return patterns
+
+                def detect_cup_and_handle(df):
+                    patterns = []
+                    window = 50  # Sliding window size
+                    for i in range(window, len(df) - window):
+                        window_df = df.iloc[i - window:i + window]
+                        if len(window_df) < 3:  # Ensure there are enough data points
+                            continue
+                        max_high = window_df['High'].max()
+                        min_low = window_df['Low'].min()
+                        cup_shape = ((window_df['High'] - window_df['Low']) / window_df['Low']).mean() < 0.1
+
+                        if cup_shape:
+                            patterns.append({
+                                "x": [window_df['Date'].iloc[0], window_df['Date'].iloc[len(window_df) // 2], window_df['Date'].iloc[-1]],
+                                "y": [max_high, min_low, max_high],
+                                "name": "Cup and Handle",
+                                "color": "brown"
+                            })
+                    return patterns
+
+                def plot_mcclellan_oscillator(df):
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['McClellan Oscillator'], mode='lines', name='McClellan Oscillator'))
+                    fig.update_layout(title='McClellan Oscillator', xaxis_title='Date', yaxis_title='Value')
+                    add_range_buttons(fig)
+                    st.plotly_chart(fig)
+
+                def plot_trin(df):
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['TRIN'], mode='lines', name='TRIN'))
+                    fig.update_layout(title='Arms Index (TRIN)', xaxis_title='Date', yaxis_title='Value')
+                    add_range_buttons(fig)
+                    st.plotly_chart(fig)
+
+                def get_signals(df):
+                    signals = []
+
+                    # Example logic for signals (these can be customized)
+                    if df['Close'].iloc[-1] > df['20_SMA'].iloc[-1]:
+                        signals.append(("Simple Moving Average (20_SMA)", "Hold", "Price is above the SMA."))
                     else:
-                        color = 'red' if df['MACD_Hist'].iloc[i] < df['MACD_Hist'].iloc[i - 1] else 'lightcoral'
-                    macd_hist_colors.append(color)
+                        signals.append(("Simple Moving Average (20_SMA)", "Sell", "Price crossed below the SMA."))
 
-                fig.add_trace(go.Bar(x=df['Date'][1:], y=df['MACD_Hist'][1:], name='MACD Histogram', marker_color=macd_hist_colors, yaxis='y2'))
+                    if df['Close'].iloc[-1] > df['20_EMA'].iloc[-1]:
+                        signals.append(("Exponential Moving Average (20_EMA)", "Hold", "Price is above the EMA."))
+                    else:
+                        signals.append(("Exponential Moving Average (20_EMA)", "Sell", "Price crossed below the EMA."))
 
-                fig.update_layout(
-                    title='MACD',
-                    xaxis_title='Date',
-                    yaxis_title='Price',
-                    yaxis2=dict(
-                        title='MACD Histogram',
-                        overlaying='y',
-                        side='right'
-                    )
-                )
-                add_range_buttons(fig)
-                st.plotly_chart(fig)
+                    if df['Close'].iloc[-1] > df['20_WMA'].iloc[-1]:
+                        signals.append(("Weighted Moving Average (20_WMA)", "Hold", "Price is above the WMA."))
+                    else:
+                        signals.append(("Weighted Moving Average (20_WMA)", "Sell", "Price crossed below the WMA."))
 
-            def plot_trendlines(df):
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    if df['RSI'].iloc[-1] < 30:
+                        signals.append(("Relative Strength Index (RSI)", "Buy", "RSI crosses below 30 (oversold)."))
+                    elif df['RSI'].iloc[-1] > 70:
+                        signals.append(("Relative Strength Index (RSI)", "Sell", "RSI crosses above 70 (overbought)."))
+                    else:
+                        signals.append(("Relative Strength Index (RSI)", "Hold", "RSI is between 30 and 70."))
 
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['Support_Trendline'], mode='lines', name='Support Trendline', line=dict(color='green', dash='dash')))
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['Resistance_Trendline'], mode='lines', name='Resistance Trendline', line=dict(color='red', dash='dash')))
+                    if df['MACD'].iloc[-1] > df['MACD_Signal'].iloc[-1]:
+                        signals.append(("Moving Average Convergence Divergence (MACD)", "Buy", "MACD line crosses above the signal line."))
+                    else:
+                        signals.append(("Moving Average Convergence Divergence (MACD)", "Sell", "MACD line crosses below the signal line."))
 
-                fig.update_layout(title='Trendlines', xaxis_title='Date', yaxis_title='Price')
-                add_range_buttons(fig)
-                st.plotly_chart(fig)
+                    if df['%K'].iloc[-1] < 20 and df['%D'].iloc[-1] < 20 and df['%K'].iloc[-1] > df['%D'].iloc[-1]:
+                        signals.append(("Stochastic Oscillator", "Buy", "%K line crosses above %D line and both are below 20."))
+                    elif df['%K'].iloc[-1] > 80 and df['%D'].iloc[-1] > 80 and df['%K'].iloc[-1] < df['%D'].iloc[-1]:
+                        signals.append(("Stochastic Oscillator", "Sell", "%K line crosses below %D line and both are above 80."))
+                    else:
+                        signals.append(("Stochastic Oscillator", "Hold", "No clear buy or sell signal."))
 
-            def plot_fibonacci_retracement(df):
-                high = df['High'].max()
-                low = df['Low'].min()
+                    if df['OBV'].diff().iloc[-1] > 0:
+                        signals.append(("On-Balance Volume (OBV)", "Buy", "OBV is increasing."))
+                    else:
+                        signals.append(("On-Balance Volume (OBV)", "Sell", "OBV is decreasing."))
 
-                diff = high - low
-                levels = [high, high - 0.236 * diff, high - 0.382 * diff, high - 0.5 * diff, high - 0.618 * diff, low]
+                    if df['Close'].iloc[-1] > df['VWAP'].iloc[-1]:
+                        signals.append(("Volume Weighted Average Price (VWAP)", "Buy", "Price crosses above the VWAP."))
+                    else:
+                        signals.append(("Volume Weighted Average Price (VWAP)", "Sell", "Price crosses below the VWAP."))
 
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    if df['A/D Line'].diff().iloc[-1] > 0:
+                        signals.append(("Accumulation/Distribution Line (A/D Line)", "Buy", "A/D Line is increasing."))
+                    else:
+                        signals.append(("Accumulation/Distribution Line (A/D Line)", "Sell", "A/D Line is decreasing."))
 
-                for level in levels:
-                    fig.add_trace(go.Scatter(x=[df['Date'].iloc[0], df['Date'].iloc[-1]],
-                                            y=[level, level],
-                                            mode='lines', name=f'Level {level}', line=dict(dash='dash')))
+                    if df['Close'].iloc[-1] < df['BB_Low'].iloc[-1]:
+                        signals.append(("Bollinger Bands", "Buy", "Price crosses below the lower band."))
+                    elif df['Close'].iloc[-1] > df['BB_High'].iloc[-1]:
+                        signals.append(("Bollinger Bands", "Sell", "Price crosses above the upper band."))
+                    else:
+                        signals.append(("Bollinger Bands", "Hold", "Price is within Bollinger Bands."))
 
-                fig.update_layout(title='Fibonacci Retracement Levels', xaxis_title='Date', yaxis_title='Price')
-                add_range_buttons(fig)
-                st.plotly_chart(fig)
+                    if df['ATR'].iloc[-1] > df['ATR'].rolling(window=14).mean().iloc[-1]:
+                        signals.append(("Average True Range (ATR)", "Buy", "ATR is increasing, indicating higher volatility."))
+                    else:
+                        signals.append(("Average True Range (ATR)", "Sell", "ATR is decreasing, indicating lower volatility."))
 
-            def plot_gann_fan_lines(df):
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    if df['Std Dev'].iloc[-1] > df['Close'].rolling(window=20).std().iloc[-1]:
+                        signals.append(("Standard Deviation", "Buy", "Price is below the mean minus 2 standard deviations."))
+                    else:
+                        signals.append(("Standard Deviation", "Sell", "Price is above the mean plus 2 standard deviations."))
 
-                # Adding Gann fan lines (simple example, for more advanced lines use a proper method)
-                for i in range(1, 5):
-                    fig.add_trace(go.Scatter(x=[df['Date'].iloc[0], df['Date'].iloc[-1]],
-                                            y=[df['Close'].iloc[0], df['Close'].iloc[0] + i * (df['Close'].iloc[-1] - df['Close'].iloc[0]) / 4],
-                                            mode='lines', name=f'Gann Fan {i}', line=dict(dash='dash')))
+                    if df['Parabolic_SAR'].iloc[-1] < df['Close'].iloc[-1]:
+                        signals.append(("Parabolic SAR (Stop and Reverse)", "Buy", "Price crosses above the SAR."))
+                    else:
+                        signals.append(("Parabolic SAR (Stop and Reverse)", "Sell", "Price crosses below the SAR."))
 
-                fig.update_layout(title='Gann Fan Lines', xaxis_title='Date', yaxis_title='Price')
-                add_range_buttons(fig)
-                st.plotly_chart(fig)
+                    if df['ROC'].iloc[-1] > 0:
+                        signals.append(("Price Rate of Change (ROC)", "Buy", "ROC crosses above zero."))
+                    else:
+                        signals.append(("Price Rate of Change (ROC)", "Sell", "ROC crosses below zero."))
 
-            def plot_chart_patterns(df, pattern):
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    if df['DPO'].iloc[-1] > 0:
+                        signals.append(("Detrended Price Oscillator (DPO)", "Buy", "DPO crosses above zero."))
+                    else:
+                        signals.append(("Detrended Price Oscillator (DPO)", "Sell", "DPO crosses below zero."))
 
-                # Adding example chart patterns (simple example, for more advanced patterns use a proper method)
-                pattern_data = detect_chart_patterns(df, pattern)
-                if pattern_data:
-                    for pattern_info in pattern_data:
-                        fig.add_trace(go.Scatter(x=pattern_info['x'], y=pattern_info['y'], mode='lines+markers', name=pattern_info['name'], line=dict(color=pattern_info['color'])))
+                    if df['Williams %R'].iloc[-1] < -80:
+                        signals.append(("Williams %R", "Buy", "Williams %R crosses above -80 (indicating oversold)."))
+                    elif df['Williams %R'].iloc[-1] > -20:
+                        signals.append(("Williams %R", "Sell", "Williams %R crosses below -20 (indicating overbought)."))
+                    else:
+                        signals.append(("Williams %R", "Hold", "Williams %R is between -80 and -20."))
 
-                fig.update_layout(title=f'{pattern}', xaxis_title='Date', yaxis_title='Price')
-                st.plotly_chart(fig)
+                    if df['Close'].iloc[-1] > df['Pivot'].iloc[-1]:
+                        signals.append(("Pivot Points", "Buy", "Price crosses above the pivot point."))
+                    else:
+                        signals.append(("Pivot Points", "Sell", "Price crosses below the pivot point."))
 
-            def detect_chart_patterns(df, pattern):
-                patterns = []
-                if pattern == 'Head and Shoulders':
-                    patterns = detect_head_and_shoulders(df)
-                elif pattern == 'Double Tops and Bottoms':
-                    patterns = detect_double_tops_and_bottoms(df)
-                elif pattern == 'Flags and Pennants':
-                    patterns = detect_flags_and_pennants(df)
-                elif pattern == 'Triangles':
-                    patterns = detect_triangles(df)
-                elif pattern == 'Cup and Handle':
-                    patterns = detect_cup_and_handle(df)
-                return patterns
+                    high = df['High'].max()
+                    low = df['Low'].min()
+                    diff = high - low
+                    fib_levels = [high, high - 0.236 * diff, high - 0.382 * diff, high - 0.5 * diff, high - 0.618 * diff, low]
+                    for level in fib_levels:
+                        if df['Close'].iloc[-1] > level:
+                            signals.append(("Fibonacci Retracement Levels", "Buy", "Price crosses above a Fibonacci retracement level."))
+                            break
+                        elif df['Close'].iloc[-1] < level:
+                            signals.append(("Fibonacci Retracement Levels", "Sell", "Price crosses below a Fibonacci retracement level."))
+                            break
 
-            def detect_head_and_shoulders(df):
-                patterns = []
-                window = 20  # Sliding window size
-                for i in range(window, len(df) - window):
-                    window_df = df.iloc[i - window:i + window]
-                    if len(window_df) < 3:  # Ensure there are enough data points
-                        continue
-                    max_high = window_df['High'].max()
-                    min_low = window_df['Low'].min()
-                    middle_idx = window_df['High'].idxmax()
-                    left_idx = window_df.iloc[:middle_idx]['High'].idxmax()
-                    right_idx = window_df.iloc[middle_idx + 1:]['High'].idxmax()
+                    gann_fan_line = [df['Close'].iloc[0] + i * (df['Close'].iloc[-1] - df['Close'].iloc[0]) / 4 for i in range(1, 5)]
+                    for line in gann_fan_line:
+                        if df['Close'].iloc[-1] > line:
+                            signals.append(("Gann Fan Lines", "Buy", "Price crosses above a Gann fan line."))
+                            break
+                        elif df['Close'].iloc[-1] < line:
+                            signals.append(("Gann Fan Lines", "Sell", "Price crosses below a Gann fan line."))
+                            break
 
-                    if window_df['High'].iloc[left_idx] < max_high and window_df['High'].iloc[right_idx] < max_high and \
-                            window_df['Low'].iloc[middle_idx] > min_low:
-                        patterns.append({
-                            "x": [window_df['Date'].iloc[left_idx], window_df['Date'].iloc[middle_idx], window_df['Date'].iloc[right_idx]],
-                            "y": [window_df['High'].iloc[left_idx], window_df['High'].iloc[middle_idx], window_df['High'].iloc[right_idx]],
-                            "name": "Head and Shoulders",
-                            "color": "orange"
-                        })
-                return patterns
+                    if df['McClellan Oscillator'].iloc[-1] > 0:
+                        signals.append(("McClellan Oscillator", "Buy", "Oscillator crosses above zero."))
+                    else:
+                        signals.append(("McClellan Oscillator", "Sell", "Oscillator crosses below zero."))
 
-            def detect_double_tops_and_bottoms(df):
-                patterns = []
-                window = 20  # Sliding window size
-                for i in range(window, len(df) - window):
-                    window_df = df.iloc[i - window:i + window]
-                    if len(window_df) < 3:  # Ensure there are enough data points
-                        continue
-                    max_high = window_df['High'].max()
-                    min_low = window_df['Low'].min()
-                    double_top = window_df['High'].value_counts().get(max_high, 0) > 1
-                    double_bottom = window_df['Low'].value_counts().get(min_low, 0) > 1
+                    if df['TRIN'].iloc[-1] < 1:
+                        signals.append(("Arms Index (TRIN)", "Buy", "TRIN below 1.0 (more advancing volume)."))
+                    else:
+                        signals.append(("Arms Index (TRIN)", "Sell", "TRIN above 1.0 (more declining volume)."))
 
-                    if double_top:
-                        patterns.append({
-                            "x": [window_df['Date'].iloc[0], window_df['Date'].iloc[-1]],
-                            "y": [max_high, max_high],
-                            "name": "Double Top",
-                            "color": "red"
-                        })
-                    elif double_bottom:
-                        patterns.append({
-                            "x": [window_df['Date'].iloc[0], window_df['Date'].iloc[-1]],
-                            "y": [min_low, min_low],
-                            "name": "Double Bottom",
-                            "color": "green"
-                        })
-                return patterns
+                    # Chart Patterns
+                    patterns = detect_chart_patterns(df, 'Summary')
+                    signals.extend(patterns)
 
-            def detect_flags_and_pennants(df):
-                patterns = []
-                window = 20  # Sliding window size
-                for i in range(window, len(df) - window):
-                    window_df = df.iloc[i - window:i + window]
-                    if len(window_df) < 3:  # Ensure there are enough data points
-                        continue
-                    min_low = window_df['Low'].min()
-                    max_high = window_df['High'].max()
-                    flag_pattern = ((window_df['High'] - window_df['Low']) / window_df['Low']).mean() < 0.05
+                    # Additional Indicators
+                    if df['Ichimoku_a'].iloc[-1] > df['Ichimoku_b'].iloc[-1]:
+                        signals.append(("Ichimoku Cloud", "Buy", "Ichimoku conversion line above baseline."))
+                    else:
+                        signals.append(("Ichimoku Cloud", "Sell", "Ichimoku conversion line below baseline."))
 
-                    if flag_pattern:
-                        patterns.append({
-                            "x": [window_df['Date'].iloc[0], window_df['Date'].iloc[-1]],
-                            "y": [min_low, max_high],
-                            "name": "Flag",
-                            "color": "purple"
-                        })
-                return patterns
+                    if df['Relative Strength Comparison'].iloc[-1] > 1:
+                        signals.append(("Relative Strength Comparison", "Buy", "Stock outperforms index."))
+                    else:
+                        signals.append(("Relative Strength Comparison", "Sell", "Stock underperforms index."))
 
-            def detect_triangles(df):
-                patterns = []
-                window = 20  # Sliding window size
-                for i in range(window, len(df) - window):
-                    window_df = df.iloc[i - window:i + window]
-                    if len(window_df) < 3:  # Ensure there are enough data points
-                        continue
-                    max_high = window_df['High'].max()
-                    min_low = window_df['Low'].min()
-                    triangle_pattern = np.all(np.diff(window_df['High']) < 0) and np.all(np.diff(window_df['Low']) > 0)
+                    if df['Performance Relative to an Index'].iloc[-1] > 0:
+                        signals.append(("Performance Relative to an Index", "Buy", "Stock outperforms index over time."))
+                    else:
+                        signals.append(("Performance Relative to an Index", "Sell", "Stock underperforms index over time."))
 
-                    if triangle_pattern:
-                        patterns.append({
-                            "x": [window_df['Date'].iloc[0], window_df['Date'].iloc[-1]],
-                            "y": [min_low, max_high],
-                            "name": "Triangle",
-                            "color": "blue"
-                        })
-                return patterns
+                    if df['Advance-Decline Line'].diff().iloc[-1] > 0:
+                        signals.append(("Advance-Decline Line", "Buy", "Advances exceed declines."))
+                    else:
+                        signals.append(("Advance-Decline Line", "Sell", "Declines exceed advances."))
 
-            def detect_cup_and_handle(df):
-                patterns = []
-                window = 50  # Sliding window size
-                for i in range(window, len(df) - window):
-                    window_df = df.iloc[i - window:i + window]
-                    if len(window_df) < 3:  # Ensure there are enough data points
-                        continue
-                    max_high = window_df['High'].max()
-                    min_low = window_df['Low'].min()
-                    cup_shape = ((window_df['High'] - window_df['Low']) / window_df['Low']).mean() < 0.1
+                    if df['Price-to-Volume Ratio'].iloc[-1] > df['Price-to-Volume Ratio'].rolling(window=14).mean().iloc[-1]:
+                        signals.append(("Price-to-Volume Ratio", "Buy", "Price-to-Volume ratio increasing."))
+                    else:
+                        signals.append(("Price-to-Volume Ratio", "Sell", "Price-to-Volume ratio decreasing."))
 
-                    if cup_shape:
-                        patterns.append({
-                            "x": [window_df['Date'].iloc[0], window_df['Date'].iloc[len(window_df) // 2], window_df['Date'].iloc[-1]],
-                            "y": [max_high, min_low, max_high],
-                            "name": "Cup and Handle",
-                            "color": "brown"
-                        })
-                return patterns
+                    return signals
 
-            def plot_mcclellan_oscillator(df):
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['McClellan Oscillator'], mode='lines', name='McClellan Oscillator'))
-                fig.update_layout(title='McClellan Oscillator', xaxis_title='Date', yaxis_title='Value')
-                add_range_buttons(fig)
-                st.plotly_chart(fig)
+                signals = get_signals(data)
 
-            def plot_trin(df):
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['TRIN'], mode='lines', name='TRIN'))
-                fig.update_layout(title='Arms Index (TRIN)', xaxis_title='Date', yaxis_title='Value')
-                add_range_buttons(fig)
-                st.plotly_chart(fig)
+                # Sidebar for technical indicators
+                st.sidebar.header('Technical Indicators')
+                indicator_category = st.sidebar.radio('Select Indicator Category', [
+                    'Moving Averages', 'Momentum Indicators', 'Volume Indicators', 'Volatility Indicators', 'Trend Indicators',
+                    'Support and Resistance Levels', 'Price Oscillators', 'Market Breadth Indicators', 'Chart Patterns', 'Relative Performance Indicators', 'Summary'
+                ])
 
-            def get_signals(df):
-                signals = []
-
-                # Example logic for signals (these can be customized)
-                if df['Close'].iloc[-1] > df['20_SMA'].iloc[-1]:
-                    signals.append(("Simple Moving Average (20_SMA)", "Hold", "Price is above the SMA."))
+                # Display technical indicators
+                st.subheader('Technical Indicators')
+                if indicator_category != 'Summary':
+                    if indicator_category == 'Moving Averages':
+                        indicators = st.selectbox("Select Moving Average", ['SMA', 'EMA', 'WMA'])
+                        plot_moving_average(data, indicators)
+                    elif indicator_category == 'Momentum Indicators':
+                        indicators = st.selectbox("Select Momentum Indicator", ['RSI', 'Stochastic Oscillator', 'MACD'])
+                        if indicators == 'RSI':
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['RSI'], mode='lines', name='RSI'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=[70] * len(data), mode='lines', name='RSI 70', line=dict(color='red', dash='dash')))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=[30] * len(data), mode='lines', name='RSI 30', line=dict(color='green', dash='dash')))
+                            fig.update_layout(title='Relative Strength Index (RSI)', xaxis_title='Date', yaxis_title='Value')
+                            add_range_buttons(fig)
+                            st.plotly_chart(fig)
+                        elif indicators == 'Stochastic Oscillator':
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['%K'], mode='lines', name='%K'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['%D'], mode='lines', name='%D'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=[80] * len(data), mode='lines', name='%K 80', line=dict(color='red', dash='dash')))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=[20] * len(data), mode='lines', name='%K 20', line=dict(color='green', dash='dash')))
+                            fig.update_layout(title='Stochastic Oscillator', xaxis_title='Date', yaxis_title='Value')
+                            add_range_buttons(fig)
+                            st.plotly_chart(fig)
+                        elif indicators == 'MACD':
+                            plot_macd(data)
+                    elif indicator_category == 'Volume Indicators':
+                        indicators = st.selectbox("Select Volume Indicator", ['OBV', 'VWAP', 'A/D Line', 'Volume Moving Averages'])
+                        if indicators == 'OBV':
+                            plot_indicator(data, 'OBV', 'On-Balance Volume (OBV)')
+                        elif indicators == 'VWAP':
+                            plot_indicator(data, 'VWAP', 'Volume Weighted Average Price (VWAP)')
+                        elif indicators == 'A/D Line':
+                            plot_indicator(data, 'A/D Line', 'Accumulation/Distribution Line')
+                        elif indicators == 'Volume Moving Averages':
+                            fig = go.Figure()
+                            fig.add_trace(go.Bar(x=data['Date'], y=data['Volume'], name='Volume', marker_color='blue', opacity=0.5))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['5_VMA'], mode='lines', name='5_VMA'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['10_VMA'], mode='lines', name='10_VMA'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['20_VMA'], mode='lines', name='20_VMA'))
+                            fig.update_layout(title='Volume Moving Averages', xaxis_title='Date', yaxis_title='Volume')
+                            add_range_buttons(fig)
+                            st.plotly_chart(fig)
+                    elif indicator_category == 'Volatility Indicators':
+                        indicators = st.selectbox("Select Volatility Indicator", ['Bollinger Bands', 'ATR', 'Standard Deviation'])
+                        if indicators == 'Bollinger Bands':
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_High'], mode='lines', name='BB High'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_Middle'], mode='lines', name='BB Middle'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_Low'], mode='lines', name='BB Low'))
+                            fig.update_layout(title='Bollinger Bands', xaxis_title='Date', yaxis_title='Price')
+                            add_range_buttons(fig)
+                            st.plotly_chart(fig)
+                        elif indicators == 'ATR':
+                            plot_indicator(data, 'ATR', 'Average True Range (ATR)')
+                        elif indicators == 'Standard Deviation':
+                            plot_indicator(data, 'Std Dev', 'Standard Deviation')
+                    elif indicator_category == 'Trend Indicators':
+                        indicators = st.selectbox("Select Trend Indicator", ['Trendlines', 'Parabolic SAR', 'Ichimoku Cloud', 'ADX'])
+                        if indicators == 'Trendlines':
+                            plot_trendlines(data)
+                        elif indicators == 'Parabolic SAR':
+                            plot_indicator(data, 'Parabolic_SAR', 'Parabolic SAR')
+                        elif indicators == 'Ichimoku Cloud':
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_a'], mode='lines', name='Ichimoku A'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_b'], mode='lines', name='Ichimoku B'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_base'], mode='lines', name='Ichimoku Base Line'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_conv'], mode='lines', name='Ichimoku Conversion Line'))
+                            fig.update_layout(title='Ichimoku Cloud', xaxis_title='Date', yaxis_title='Value')
+                            add_range_buttons(fig)
+                            st.plotly_chart(fig)
+                        elif indicators == 'ADX':
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['ADX'], mode='lines', name='ADX'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['+DI'], mode='lines', name='+DI'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['-DI'], mode='lines', name='-DI'))
+                            fig.update_layout(title='Average Directional Index (ADX)', xaxis_title='Date', yaxis_title='Value')
+                            add_range_buttons(fig)
+                            st.plotly_chart(fig)
+                    elif indicator_category == 'Support and Resistance Levels':
+                        indicators = st.selectbox("Select Support and Resistance Level", ['Pivot Points', 'Fibonacci Retracement Levels', 'Gann Fan Lines'])
+                        if indicators == 'Pivot Points':
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Pivot'], mode='lines', name='Pivot'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['R1'], mode='lines', name='R1'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['S1'], mode='lines', name='S1'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['R2'], mode='lines', name='R2'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['S2'], mode='lines', name='S2'))
+                            fig.update_layout(title='Pivot Points', xaxis_title='Date', yaxis_title='Price')
+                            add_range_buttons(fig)
+                            st.plotly_chart(fig)
+                        elif indicators == 'Fibonacci Retracement Levels':
+                            plot_fibonacci_retracement(data)
+                        elif indicators == 'Gann Fan Lines':
+                            plot_gann_fan_lines(data)
+                    elif indicator_category == 'Price Oscillators':
+                        indicators = st.selectbox("Select Price Oscillator", ['ROC', 'DPO', 'Williams %R'])
+                        if indicators == 'ROC':
+                            plot_indicator(data, 'ROC', 'Rate of Change (ROC)')
+                        elif indicators == 'DPO':
+                            plot_indicator(data, 'DPO', 'Detrended Price Oscillator (DPO)')
+                        elif indicators == 'Williams %R':
+                            plot_indicator(data, 'Williams %R', 'Williams %R')
+                    elif indicator_category == 'Market Breadth Indicators':
+                        indicators = st.selectbox("Select Market Breadth Indicator", ['Advance-Decline Line', 'McClellan Oscillator', 'TRIN'])
+                        if indicators == 'Advance-Decline Line':
+                            plot_indicator(data, 'Advance-Decline Line', 'Advance-Decline Line')
+                        elif indicators == 'McClellan Oscillator':
+                            plot_mcclellan_oscillator(data)
+                        elif indicators == 'TRIN':
+                            plot_trin(data)
+                    elif indicator_category == 'Chart Patterns':
+                        indicators = st.selectbox("Select Chart Pattern", ['Head and Shoulders', 'Double Tops and Bottoms', 'Flags and Pennants', 'Triangles', 'Cup and Handle'])
+                        if indicators == 'Head and Shoulders':
+                            plot_chart_patterns(data, 'Head and Shoulders')
+                        elif indicators == 'Double Tops and Bottoms':
+                            plot_chart_patterns(data, 'Double Tops and Bottoms')
+                        elif indicators == 'Flags and Pennants':
+                            plot_chart_patterns(data, 'Flags and Pennants')
+                        elif indicators == 'Triangles':
+                            plot_chart_patterns(data, 'Triangles')
+                        elif indicators == 'Cup and Handle':
+                            plot_chart_patterns(data, 'Cup and Handle')
+                    elif indicator_category == 'Relative Performance Indicators':
+                        indicators = st.selectbox("Select Relative Performance Indicator", ['Price-to-Volume Ratio', 'Relative Strength Comparison', 'Performance Relative to an Index'])
+                        if indicators == 'Price-to-Volume Ratio':
+                            plot_indicator(data, 'Price-to-Volume Ratio', 'Price-to-Volume Ratio', secondary_y=True)
+                        elif indicators == 'Relative Strength Comparison':
+                            plot_indicator(data, 'Relative Strength Comparison', 'Relative Strength Comparison')
+                        elif indicators == 'Performance Relative to an Index':
+                            plot_indicator(data, 'Performance Relative to an Index', 'Performance Relative to an Index')
                 else:
-                    signals.append(("Simple Moving Average (20_SMA)", "Sell", "Price crossed below the SMA."))
-
-                if df['Close'].iloc[-1] > df['20_EMA'].iloc[-1]:
-                    signals.append(("Exponential Moving Average (20_EMA)", "Hold", "Price is above the EMA."))
-                else:
-                    signals.append(("Exponential Moving Average (20_EMA)", "Sell", "Price crossed below the EMA."))
-
-                if df['Close'].iloc[-1] > df['20_WMA'].iloc[-1]:
-                    signals.append(("Weighted Moving Average (20_WMA)", "Hold", "Price is above the WMA."))
-                else:
-                    signals.append(("Weighted Moving Average (20_WMA)", "Sell", "Price crossed below the WMA."))
-
-                if df['RSI'].iloc[-1] < 30:
-                    signals.append(("Relative Strength Index (RSI)", "Buy", "RSI crosses below 30 (oversold)."))
-                elif df['RSI'].iloc[-1] > 70:
-                    signals.append(("Relative Strength Index (RSI)", "Sell", "RSI crosses above 70 (overbought)."))
-                else:
-                    signals.append(("Relative Strength Index (RSI)", "Hold", "RSI is between 30 and 70."))
-
-                if df['MACD'].iloc[-1] > df['MACD_Signal'].iloc[-1]:
-                    signals.append(("Moving Average Convergence Divergence (MACD)", "Buy", "MACD line crosses above the signal line."))
-                else:
-                    signals.append(("Moving Average Convergence Divergence (MACD)", "Sell", "MACD line crosses below the signal line."))
-
-                if df['%K'].iloc[-1] < 20 and df['%D'].iloc[-1] < 20 and df['%K'].iloc[-1] > df['%D'].iloc[-1]:
-                    signals.append(("Stochastic Oscillator", "Buy", "%K line crosses above %D line and both are below 20."))
-                elif df['%K'].iloc[-1] > 80 and df['%D'].iloc[-1] > 80 and df['%K'].iloc[-1] < df['%D'].iloc[-1]:
-                    signals.append(("Stochastic Oscillator", "Sell", "%K line crosses below %D line and both are above 80."))
-                else:
-                    signals.append(("Stochastic Oscillator", "Hold", "No clear buy or sell signal."))
-
-                if df['OBV'].diff().iloc[-1] > 0:
-                    signals.append(("On-Balance Volume (OBV)", "Buy", "OBV is increasing."))
-                else:
-                    signals.append(("On-Balance Volume (OBV)", "Sell", "OBV is decreasing."))
-
-                if df['Close'].iloc[-1] > df['VWAP'].iloc[-1]:
-                    signals.append(("Volume Weighted Average Price (VWAP)", "Buy", "Price crosses above the VWAP."))
-                else:
-                    signals.append(("Volume Weighted Average Price (VWAP)", "Sell", "Price crosses below the VWAP."))
-
-                if df['A/D Line'].diff().iloc[-1] > 0:
-                    signals.append(("Accumulation/Distribution Line (A/D Line)", "Buy", "A/D Line is increasing."))
-                else:
-                    signals.append(("Accumulation/Distribution Line (A/D Line)", "Sell", "A/D Line is decreasing."))
-
-                if df['Close'].iloc[-1] < df['BB_Low'].iloc[-1]:
-                    signals.append(("Bollinger Bands", "Buy", "Price crosses below the lower band."))
-                elif df['Close'].iloc[-1] > df['BB_High'].iloc[-1]:
-                    signals.append(("Bollinger Bands", "Sell", "Price crosses above the upper band."))
-                else:
-                    signals.append(("Bollinger Bands", "Hold", "Price is within Bollinger Bands."))
-
-                if df['ATR'].iloc[-1] > df['ATR'].rolling(window=14).mean().iloc[-1]:
-                    signals.append(("Average True Range (ATR)", "Buy", "ATR is increasing, indicating higher volatility."))
-                else:
-                    signals.append(("Average True Range (ATR)", "Sell", "ATR is decreasing, indicating lower volatility."))
-
-                if df['Std Dev'].iloc[-1] > df['Close'].rolling(window=20).std().iloc[-1]:
-                    signals.append(("Standard Deviation", "Buy", "Price is below the mean minus 2 standard deviations."))
-                else:
-                    signals.append(("Standard Deviation", "Sell", "Price is above the mean plus 2 standard deviations."))
-
-                if df['Parabolic_SAR'].iloc[-1] < df['Close'].iloc[-1]:
-                    signals.append(("Parabolic SAR (Stop and Reverse)", "Buy", "Price crosses above the SAR."))
-                else:
-                    signals.append(("Parabolic SAR (Stop and Reverse)", "Sell", "Price crosses below the SAR."))
-
-                if df['ROC'].iloc[-1] > 0:
-                    signals.append(("Price Rate of Change (ROC)", "Buy", "ROC crosses above zero."))
-                else:
-                    signals.append(("Price Rate of Change (ROC)", "Sell", "ROC crosses below zero."))
-
-                if df['DPO'].iloc[-1] > 0:
-                    signals.append(("Detrended Price Oscillator (DPO)", "Buy", "DPO crosses above zero."))
-                else:
-                    signals.append(("Detrended Price Oscillator (DPO)", "Sell", "DPO crosses below zero."))
-
-                if df['Williams %R'].iloc[-1] < -80:
-                    signals.append(("Williams %R", "Buy", "Williams %R crosses above -80 (indicating oversold)."))
-                elif df['Williams %R'].iloc[-1] > -20:
-                    signals.append(("Williams %R", "Sell", "Williams %R crosses below -20 (indicating overbought)."))
-                else:
-                    signals.append(("Williams %R", "Hold", "Williams %R is between -80 and -20."))
-
-                if df['Close'].iloc[-1] > df['Pivot'].iloc[-1]:
-                    signals.append(("Pivot Points", "Buy", "Price crosses above the pivot point."))
-                else:
-                    signals.append(("Pivot Points", "Sell", "Price crosses below the pivot point."))
-
-                high = df['High'].max()
-                low = df['Low'].min()
-                diff = high - low
-                fib_levels = [high, high - 0.236 * diff, high - 0.382 * diff, high - 0.5 * diff, high - 0.618 * diff, low]
-                for level in fib_levels:
-                    if df['Close'].iloc[-1] > level:
-                        signals.append(("Fibonacci Retracement Levels", "Buy", "Price crosses above a Fibonacci retracement level."))
-                        break
-                    elif df['Close'].iloc[-1] < level:
-                        signals.append(("Fibonacci Retracement Levels", "Sell", "Price crosses below a Fibonacci retracement level."))
-                        break
-
-                gann_fan_line = [df['Close'].iloc[0] + i * (df['Close'].iloc[-1] - df['Close'].iloc[0]) / 4 for i in range(1, 5)]
-                for line in gann_fan_line:
-                    if df['Close'].iloc[-1] > line:
-                        signals.append(("Gann Fan Lines", "Buy", "Price crosses above a Gann fan line."))
-                        break
-                    elif df['Close'].iloc[-1] < line:
-                        signals.append(("Gann Fan Lines", "Sell", "Price crosses below a Gann fan line."))
-                        break
-
-                if df['McClellan Oscillator'].iloc[-1] > 0:
-                    signals.append(("McClellan Oscillator", "Buy", "Oscillator crosses above zero."))
-                else:
-                    signals.append(("McClellan Oscillator", "Sell", "Oscillator crosses below zero."))
-
-                if df['TRIN'].iloc[-1] < 1:
-                    signals.append(("Arms Index (TRIN)", "Buy", "TRIN below 1.0 (more advancing volume)."))
-                else:
-                    signals.append(("Arms Index (TRIN)", "Sell", "TRIN above 1.0 (more declining volume)."))
-
-                # Chart Patterns
-                patterns = detect_chart_patterns(df, 'Summary')
-                signals.extend(patterns)
-
-                # Additional Indicators
-                if df['Ichimoku_a'].iloc[-1] > df['Ichimoku_b'].iloc[-1]:
-                    signals.append(("Ichimoku Cloud", "Buy", "Ichimoku conversion line above baseline."))
-                else:
-                    signals.append(("Ichimoku Cloud", "Sell", "Ichimoku conversion line below baseline."))
-
-                if df['Relative Strength Comparison'].iloc[-1] > 1:
-                    signals.append(("Relative Strength Comparison", "Buy", "Stock outperforms index."))
-                else:
-                    signals.append(("Relative Strength Comparison", "Sell", "Stock underperforms index."))
-
-                if df['Performance Relative to an Index'].iloc[-1] > 0:
-                    signals.append(("Performance Relative to an Index", "Buy", "Stock outperforms index over time."))
-                else:
-                    signals.append(("Performance Relative to an Index", "Sell", "Stock underperforms index over time."))
-
-                if df['Advance-Decline Line'].diff().iloc[-1] > 0:
-                    signals.append(("Advance-Decline Line", "Buy", "Advances exceed declines."))
-                else:
-                    signals.append(("Advance-Decline Line", "Sell", "Declines exceed advances."))
-
-                if df['Price-to-Volume Ratio'].iloc[-1] > df['Price-to-Volume Ratio'].rolling(window=14).mean().iloc[-1]:
-                    signals.append(("Price-to-Volume Ratio", "Buy", "Price-to-Volume ratio increasing."))
-                else:
-                    signals.append(("Price-to-Volume Ratio", "Sell", "Price-to-Volume ratio decreasing."))
-
-                return signals
-
-            signals = get_signals(data)
-
-            # Sidebar for technical indicators
-            st.sidebar.header('Technical Indicators')
-            indicator_category = st.sidebar.radio('Select Indicator Category', [
-                'Moving Averages', 'Momentum Indicators', 'Volume Indicators', 'Volatility Indicators', 'Trend Indicators',
-                'Support and Resistance Levels', 'Price Oscillators', 'Market Breadth Indicators', 'Chart Patterns', 'Relative Performance Indicators', 'Summary'
-            ])
-
-            # Display technical indicators
-            st.subheader('Technical Indicators')
-            if indicator_category != 'Summary':
-                if indicator_category == 'Moving Averages':
-                    indicators = st.selectbox("Select Moving Average", ['SMA', 'EMA', 'WMA'])
-                    plot_moving_average(data, indicators)
-                elif indicator_category == 'Momentum Indicators':
-                    indicators = st.selectbox("Select Momentum Indicator", ['RSI', 'Stochastic Oscillator', 'MACD'])
-                    if indicators == 'RSI':
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['RSI'], mode='lines', name='RSI'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=[70] * len(data), mode='lines', name='RSI 70', line=dict(color='red', dash='dash')))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=[30] * len(data), mode='lines', name='RSI 30', line=dict(color='green', dash='dash')))
-                        fig.update_layout(title='Relative Strength Index (RSI)', xaxis_title='Date', yaxis_title='Value')
-                        add_range_buttons(fig)
-                        st.plotly_chart(fig)
-                    elif indicators == 'Stochastic Oscillator':
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['%K'], mode='lines', name='%K'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['%D'], mode='lines', name='%D'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=[80] * len(data), mode='lines', name='%K 80', line=dict(color='red', dash='dash')))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=[20] * len(data), mode='lines', name='%K 20', line=dict(color='green', dash='dash')))
-                        fig.update_layout(title='Stochastic Oscillator', xaxis_title='Date', yaxis_title='Value')
-                        add_range_buttons(fig)
-                        st.plotly_chart(fig)
-                    elif indicators == 'MACD':
-                        plot_macd(data)
-                elif indicator_category == 'Volume Indicators':
-                    indicators = st.selectbox("Select Volume Indicator", ['OBV', 'VWAP', 'A/D Line', 'Volume Moving Averages'])
-                    if indicators == 'OBV':
-                        plot_indicator(data, 'OBV', 'On-Balance Volume (OBV)')
-                    elif indicators == 'VWAP':
-                        plot_indicator(data, 'VWAP', 'Volume Weighted Average Price (VWAP)')
-                    elif indicators == 'A/D Line':
-                        plot_indicator(data, 'A/D Line', 'Accumulation/Distribution Line')
-                    elif indicators == 'Volume Moving Averages':
-                        fig = go.Figure()
-                        fig.add_trace(go.Bar(x=data['Date'], y=data['Volume'], name='Volume', marker_color='blue', opacity=0.5))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['5_VMA'], mode='lines', name='5_VMA'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['10_VMA'], mode='lines', name='10_VMA'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['20_VMA'], mode='lines', name='20_VMA'))
-                        fig.update_layout(title='Volume Moving Averages', xaxis_title='Date', yaxis_title='Volume')
-                        add_range_buttons(fig)
-                        st.plotly_chart(fig)
-                elif indicator_category == 'Volatility Indicators':
-                    indicators = st.selectbox("Select Volatility Indicator", ['Bollinger Bands', 'ATR', 'Standard Deviation'])
-                    if indicators == 'Bollinger Bands':
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_High'], mode='lines', name='BB High'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_Middle'], mode='lines', name='BB Middle'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_Low'], mode='lines', name='BB Low'))
-                        fig.update_layout(title='Bollinger Bands', xaxis_title='Date', yaxis_title='Price')
-                        add_range_buttons(fig)
-                        st.plotly_chart(fig)
-                    elif indicators == 'ATR':
-                        plot_indicator(data, 'ATR', 'Average True Range (ATR)')
-                    elif indicators == 'Standard Deviation':
-                        plot_indicator(data, 'Std Dev', 'Standard Deviation')
-                elif indicator_category == 'Trend Indicators':
-                    indicators = st.selectbox("Select Trend Indicator", ['Trendlines', 'Parabolic SAR', 'Ichimoku Cloud', 'ADX'])
-                    if indicators == 'Trendlines':
-                        plot_trendlines(data)
-                    elif indicators == 'Parabolic SAR':
-                        plot_indicator(data, 'Parabolic_SAR', 'Parabolic SAR')
-                    elif indicators == 'Ichimoku Cloud':
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_a'], mode='lines', name='Ichimoku A'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_b'], mode='lines', name='Ichimoku B'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_base'], mode='lines', name='Ichimoku Base Line'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_conv'], mode='lines', name='Ichimoku Conversion Line'))
-                        fig.update_layout(title='Ichimoku Cloud', xaxis_title='Date', yaxis_title='Value')
-                        add_range_buttons(fig)
-                        st.plotly_chart(fig)
-                    elif indicators == 'ADX':
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['ADX'], mode='lines', name='ADX'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['+DI'], mode='lines', name='+DI'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['-DI'], mode='lines', name='-DI'))
-                        fig.update_layout(title='Average Directional Index (ADX)', xaxis_title='Date', yaxis_title='Value')
-                        add_range_buttons(fig)
-                        st.plotly_chart(fig)
-                elif indicator_category == 'Support and Resistance Levels':
-                    indicators = st.selectbox("Select Support and Resistance Level", ['Pivot Points', 'Fibonacci Retracement Levels', 'Gann Fan Lines'])
-                    if indicators == 'Pivot Points':
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['Pivot'], mode='lines', name='Pivot'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['R1'], mode='lines', name='R1'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['S1'], mode='lines', name='S1'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['R2'], mode='lines', name='R2'))
-                        fig.add_trace(go.Scatter(x=data['Date'], y=data['S2'], mode='lines', name='S2'))
-                        fig.update_layout(title='Pivot Points', xaxis_title='Date', yaxis_title='Price')
-                        add_range_buttons(fig)
-                        st.plotly_chart(fig)
-                    elif indicators == 'Fibonacci Retracement Levels':
-                        plot_fibonacci_retracement(data)
-                    elif indicators == 'Gann Fan Lines':
-                        plot_gann_fan_lines(data)
-                elif indicator_category == 'Price Oscillators':
-                    indicators = st.selectbox("Select Price Oscillator", ['ROC', 'DPO', 'Williams %R'])
-                    if indicators == 'ROC':
-                        plot_indicator(data, 'ROC', 'Rate of Change (ROC)')
-                    elif indicators == 'DPO':
-                        plot_indicator(data, 'DPO', 'Detrended Price Oscillator (DPO)')
-                    elif indicators == 'Williams %R':
-                        plot_indicator(data, 'Williams %R', 'Williams %R')
-                elif indicator_category == 'Market Breadth Indicators':
-                    indicators = st.selectbox("Select Market Breadth Indicator", ['Advance-Decline Line', 'McClellan Oscillator', 'TRIN'])
-                    if indicators == 'Advance-Decline Line':
-                        plot_indicator(data, 'Advance-Decline Line', 'Advance-Decline Line')
-                    elif indicators == 'McClellan Oscillator':
-                        plot_mcclellan_oscillator(data)
-                    elif indicators == 'TRIN':
-                        plot_trin(data)
-                elif indicator_category == 'Chart Patterns':
-                    indicators = st.selectbox("Select Chart Pattern", ['Head and Shoulders', 'Double Tops and Bottoms', 'Flags and Pennants', 'Triangles', 'Cup and Handle'])
-                    if indicators == 'Head and Shoulders':
-                        plot_chart_patterns(data, 'Head and Shoulders')
-                    elif indicators == 'Double Tops and Bottoms':
-                        plot_chart_patterns(data, 'Double Tops and Bottoms')
-                    elif indicators == 'Flags and Pennants':
-                        plot_chart_patterns(data, 'Flags and Pennants')
-                    elif indicators == 'Triangles':
-                        plot_chart_patterns(data, 'Triangles')
-                    elif indicators == 'Cup and Handle':
-                        plot_chart_patterns(data, 'Cup and Handle')
-                elif indicator_category == 'Relative Performance Indicators':
-                    indicators = st.selectbox("Select Relative Performance Indicator", ['Price-to-Volume Ratio', 'Relative Strength Comparison', 'Performance Relative to an Index'])
-                    if indicators == 'Price-to-Volume Ratio':
-                        plot_indicator(data, 'Price-to-Volume Ratio', 'Price-to-Volume Ratio', secondary_y=True)
-                    elif indicators == 'Relative Strength Comparison':
-                        plot_indicator(data, 'Relative Strength Comparison', 'Relative Strength Comparison')
-                    elif indicators == 'Performance Relative to an Index':
-                        plot_indicator(data, 'Performance Relative to an Index', 'Performance Relative to an Index')
+                    # Display signals in a dataframe with improved visualization
+                    st.subheader('Technical Indicator Signals')
+                    signals_df = pd.DataFrame(signals, columns=['Technical Indicator', 'Signal', 'Reason'])
+                    st.dataframe(signals_df.style.applymap(lambda x: 'background-color: lightgreen' if 'Buy' in x else 'background-color: lightcoral' if 'Sell' in x else '', subset=['Signal']))
             else:
-                # Display signals in a dataframe with improved visualization
-                st.subheader('Technical Indicator Signals')
-                signals_df = pd.DataFrame(signals, columns=['Technical Indicator', 'Signal', 'Reason'])
-                st.dataframe(signals_df.style.applymap(lambda x: 'background-color: lightgreen' if 'Buy' in x else 'background-color: lightcoral' if 'Sell' in x else '', subset=['Signal']))
+                
+                # Initialize NewsApiClient with your API key
+                newsapi = NewsApiClient(api_key='252b2075083945dfbed8945ddc240a2b')
+                analyzer = SentimentIntensityAnalyzer()
 
-         
+                def fetch_news(ticker):
+                    # Fetch news articles related to the ticker
+                    all_articles = newsapi.get_everything(q=ticker,
+                                                        language='en',
+                                                        sort_by='publishedAt',
+                                                        page_size=10,
+                                                        sources='the-times-of-india, financial-express, the-hindu, bloomberg, cnbc')
+                    articles = []
+                    for article in all_articles['articles']:
+                        articles.append({
+                            'title': article['title'],
+                            'description': article['description'],
+                            'url': article['url'],
+                            'publishedAt': article['publishedAt']
+                        })
+                    return articles
+
+                def perform_sentiment_analysis(articles):
+                    sentiments = []
+                    for article in articles:
+                        if article['description']:
+                            score = analyzer.polarity_scores(article['description'])
+                            sentiment = score['compound']
+                            sentiments.append(sentiment)
+                        else:
+                            sentiments.append(0)
+                    return sentiments
+
+                def make_recommendation(sentiments):
+                    avg_sentiment = sum(sentiments) / len(sentiments)
+                    if avg_sentiment > 0.1:
+                        return "Based on the sentiment analysis, it is recommended to BUY the stock."
+                    elif avg_sentiment < -0.1:
+                        return "Based on the sentiment analysis, it is recommended to NOT BUY the stock."
+                    else:
+                        return "Based on the sentiment analysis, it is recommended to HOLD OFF on any action."
+
+                st.title("Stock News Sentiment Analysis")
+                ticker = st.text_input("Enter the Company Name:")
+
+                if ticker:
+                    with st.spinner("Fetching news..."):
+                        articles = fetch_news(ticker)
+                    
+                    if articles:
+                        with st.spinner("Performing sentiment analysis..."):
+                            sentiments = perform_sentiment_analysis(articles)
+                        
+                        df = pd.DataFrame({
+                            'Title': [article['title'] for article in articles],
+                            'Description': [article['description'] for article in articles],
+                            'URL': [article['url'] for article in articles],
+                            'Published At': [article['publishedAt'] for article in articles],
+                            'Sentiment': sentiments
+                        })
+                        
+                        st.write("Recent News Articles:")
+                        for i, row in df.iterrows():
+                            st.write(f"**Article {i+1}:** {row['Title']}")
+                            st.write(f"**Published At:** {row['Published At']}")
+                            st.write(f"**Description:** {row['Description']}")
+                            st.write(f"**URL:** {row['URL']}")
+                            st.write(f"**Sentiment Score:** {row['Sentiment']:.2f}")
+                            st.write("---")
+                        
+                        st.write("Sentiment Analysis Summary:")
+                        st.bar_chart(df['Sentiment'])
+
+                        recommendation = make_recommendation(sentiments)
+                        st.write("Investment Recommendation:")
+                        st.write(recommendation)
+                    else:
+                        st.write("No news articles found for this ticker.")
+
         elif choice == "Stock Prediction":
             # Your existing 'Stock Price Forecasting' code-----------------------------------------------------------------------------------------------------------------------
 
@@ -2696,10 +2781,6 @@ else:
                 # Display forecasted prices
                 st.write("Forecasted Prices for the next {} days:".format(forecast_period))
                 st.dataframe(forecasted_df)
-
-
-                        
-
 
 
         elif choice == "Stock Watch":
@@ -3057,13 +3138,6 @@ else:
 
             elif submenu == "Candlestick Patterns":
                 st.subheader("Candlestick Patterns")
-
-             
-
-
-
-
-        
 
 
         elif choice == "Market Stats":
@@ -3894,3 +3968,4 @@ else:
                     signals = get_signals(data)
                     signals_df = pd.DataFrame(signals, columns=['Technical Indicator', 'Signal', 'Reason'])
                     st.dataframe(signals_df.style.applymap(lambda x: 'background-color: lightgreen' if 'Buy' in x else 'background-color: lightcoral' if 'Sell' in x else '', subset=['Signal']))
+
