@@ -2379,6 +2379,8 @@ else:
             st.sidebar.subheader("Prediction")
 
             submenu = st.sidebar.selectbox("Select Option", ["Trend", "Price"])  
+            # Default ticker
+            default_ticker = ["rvnl.ns"]
             tickers = st.sidebar.multiselect("Enter Stock Symbols", options=bse_largecap+bse_midcap+bse_smallcap)
             time_period = st.sidebar.selectbox("Select Time Period", options=["6mo", "1y", "5y"], index=0)
 
