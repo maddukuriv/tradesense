@@ -30,7 +30,7 @@ import plotly.express as px
 
 
 from scipy.signal import find_peaks, cwt, ricker, hilbert
-from hurst import compute_Hc
+
 from scipy.stats import zscore
 
 from scipy.stats import zscore
