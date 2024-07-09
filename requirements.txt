@@ -115,3 +115,4 @@ wrapt==1.16.0
 yfinance==0.2.40
 zipp==3.19.0
 pmdarima
+newsapi
