@@ -28,7 +28,7 @@ import smtplib
 import mplfinance as mpf
 import plotly.express as px
 from scipy.signal import find_peaks, cwt, ricker, hilbert
-import nolds
+from hurst import compute_Hc
 from scipy.stats import zscore
 
 
@@ -2441,7 +2441,7 @@ else:
                 def calculate_hurst(df):
                     if len(df) < 100:
                         return np.nan
-                    H = nolds.hurst_rs(df['Close'])
+                    H, _, _ = compute_Hc(df['Close'], kind='price')
                     return H
 
                 def calculate_wavelet(df):
@@ -2456,7 +2456,7 @@ else:
                     return amplitude_envelope, instantaneous_phase
 
                 # Streamlit UI
-                st.title("Multi-Stock Cycle Detection and Analysis")
+                st.title("Stock Cycle Detection and Analysis")
 
                 results = []
 
@@ -2557,7 +2557,6 @@ else:
 
             else:
                 pass
-
         elif choice == "Stock Watch":
             # Your existing 'Stock Watch' code----------------------------------------------------------------------------------------------------------------------------------
             st.sidebar.subheader("Strategies")
