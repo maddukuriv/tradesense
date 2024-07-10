@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 import ta
 from scipy.signal import find_peaks, cwt, ricker, hilbert
-from hurst import compute_Hc
+import nolds
 from scipy.stats import zscore
 
 # Sidebar for user input
@@ -80,7 +80,7 @@ if submenu == "Trend":
     def calculate_hurst(df):
         if len(df) < 100:
             return np.nan
-        H, _, _ = compute_Hc(df['Close'], kind='price')
+        H = nolds.hurst_rs(df['Close'])
         return H
 
     def calculate_wavelet(df):
