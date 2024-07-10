@@ -30,7 +30,9 @@ import plotly.express as px
 from pmdarima import auto_arima
 from scipy.signal import find_peaks, cwt, ricker, hilbert
 from scipy.stats import zscore
-from newsapi import NewsApiClient
+from newsapi.newsapi_client import NewsApiClient
+
+
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 
