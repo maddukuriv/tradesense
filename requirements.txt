@@ -114,5 +114,5 @@ Werkzeug==3.0.3
 wrapt==1.16.0
 yfinance==0.2.40
 zipp==3.19.0
-pmdarima
-newsapi
+pmdarima==2.0.3
+newsapi-python==0.2.7
