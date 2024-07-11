@@ -998,6 +998,14 @@ else:
             def create_figure(data, indicators, title):
                 fig = go.Figure()
 
+                # Add candlestick chart
+                fig.add_trace(go.Candlestick(x=data.index,
+                                 open=data['Open'],
+                                 high=data['High'],
+                                 low=data['Low'],
+                                 close=data['Close'],
+                                 name='Candlesticks'))
+
                 fig.update_layout(
                     title=title, 
                     xaxis_title='Date', 
@@ -1423,9 +1431,8 @@ else:
             #'Technical Analysis' code---------------------------------------------------------------------------------------------------------------------------------
             submenu = st.sidebar.selectbox("Select Analysis Type", ["Technical", "Sentiment"])  
 
-            
-
             if submenu == "Technical":
+
                 # Sidebar setup
                 st.sidebar.subheader("Interactive Charts")
 
@@ -1495,8 +1502,8 @@ else:
                     df['ADX'] = ta.trend.adx(df['High'], df['Low'], df['Close'])
                     df['+DI'] = ta.trend.adx_pos(df['High'], df['Low'], df['Close'])
                     df['-DI'] = ta.trend.adx_neg(df['High'], df['Low'], df['Close'])
-                    psar = pta.psar(df['High'], df['Low'], df['Close'])
-                    df['Parabolic_SAR'] = psar['PSARl_0.02_0.2']
+                    psar = PSARIndicator(df['High'], df['Low'], df['Close'])
+                    df['Parabolic_SAR'] = psar.psar()
                     df['Ichimoku_a'] = ta.trend.ichimoku_a(df['High'], df['Low'])
                     df['Ichimoku_b'] = ta.trend.ichimoku_b(df['High'], df['Low'])
                     df['Ichimoku_base'] = ta.trend.ichimoku_base_line(df['High'], df['Low'])
@@ -1578,9 +1585,23 @@ else:
                     )
 
                 # Plotly visualization functions
+                def plot_candlestick_chart(df, title):
+                    fig = go.Figure(data=[go.Candlestick(x=df['Date'],
+                                                        open=df['Open'],
+                                                        high=df['High'],
+                                                        low=df['Low'],
+                                                        close=df['Close'],
+                                                        name='Candlesticks')])
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close Price', line=dict(color='blue')))
+                    fig.update_layout(title=title, xaxis_title='Date', yaxis_title='Price')
+                    add_range_buttons(fig)
+                    st.plotly_chart(fig)
+
                 def plot_indicator(df, indicator, title, yaxis_title='Price', secondary_y=False):
                     fig = go.Figure()
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    
+                    fig.add_trace(go.Candlestick(x=df['Date'], open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name='Candlesticks'))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close', line=dict(color='blue')))
                     fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator, yaxis="y2" if secondary_y else "y1"))
                     
                     if secondary_y:
@@ -1598,8 +1619,9 @@ else:
 
                 def plot_moving_average(df, ma_type):
                     fig = go.Figure()
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    fig.add_trace(go.Candlestick(x=df['Date'], open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name='Candlesticks'))
                     fig.add_trace(go.Bar(x=df['Date'], y=df['Volume'], name='Volume', marker_color='blue', opacity=0.5, yaxis='y2'))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close', line=dict(color='blue')))
                     if ma_type == 'SMA':
                         fig.add_trace(go.Scatter(x=df['Date'], y=df['10_SMA'], mode='lines', name='10_SMA'))
                         fig.add_trace(go.Scatter(x=df['Date'], y=df['20_SMA'], mode='lines', name='20_SMA'))
@@ -1615,7 +1637,8 @@ else:
 
                 def plot_macd(df):
                     fig = go.Figure()
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    fig.add_trace(go.Candlestick(x=df['Date'], open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name='Candlesticks'))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close', line=dict(color='blue')))
                     fig.add_trace(go.Scatter(x=df['Date'], y=df['MACD'], mode='lines', name='MACD'))
                     fig.add_trace(go.Scatter(x=df['Date'], y=df['MACD_Signal'], mode='lines', name='MACD Signal'))
 
@@ -1645,11 +1668,10 @@ else:
 
                 def plot_trendlines(df):
                     fig = go.Figure()
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
-
+                    fig.add_trace(go.Candlestick(x=df['Date'], open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name='Candlesticks'))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close', line=dict(color='blue')))
                     fig.add_trace(go.Scatter(x=df['Date'], y=df['Support_Trendline'], mode='lines', name='Support Trendline', line=dict(color='green', dash='dash')))
                     fig.add_trace(go.Scatter(x=df['Date'], y=df['Resistance_Trendline'], mode='lines', name='Resistance Trendline', line=dict(color='red', dash='dash')))
-
                     fig.update_layout(title='Trendlines', xaxis_title='Date', yaxis_title='Price')
                     add_range_buttons(fig)
                     st.plotly_chart(fig)
@@ -1662,7 +1684,8 @@ else:
                     levels = [high, high - 0.236 * diff, high - 0.382 * diff, high - 0.5 * diff, high - 0.618 * diff, low]
 
                     fig = go.Figure()
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    fig.add_trace(go.Candlestick(x=df['Date'], open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name='Candlesticks'))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close', line=dict(color='blue')))
 
                     for level in levels:
                         fig.add_trace(go.Scatter(x=[df['Date'].iloc[0], df['Date'].iloc[-1]],
@@ -1675,7 +1698,8 @@ else:
 
                 def plot_gann_fan_lines(df):
                     fig = go.Figure()
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    fig.add_trace(go.Candlestick(x=df['Date'], open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name='Candlesticks'))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close', line=dict(color='blue')))
 
                     # Adding Gann fan lines (simple example, for more advanced lines use a proper method)
                     for i in range(1, 5):
@@ -1689,7 +1713,8 @@ else:
 
                 def plot_chart_patterns(df, pattern):
                     fig = go.Figure()
-                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close'))
+                    fig.add_trace(go.Candlestick(x=df['Date'], open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name='Candlesticks'))
+                    fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Close', line=dict(color='blue')))
 
                     # Adding example chart patterns (simple example, for more advanced patterns use a proper method)
                     pattern_data = detect_chart_patterns(df, pattern)
@@ -1804,6 +1829,7 @@ else:
                                 "color": "blue"
                             })
                     return patterns
+
 
                 def detect_cup_and_handle(df):
                     patterns = []
@@ -2018,7 +2044,8 @@ else:
                         indicators = st.selectbox("Select Momentum Indicator", ['RSI', 'Stochastic Oscillator', 'MACD'])
                         if indicators == 'RSI':
                             fig = go.Figure()
-                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Candlestick(x=data['Date'], open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'], name='Candlesticks'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close', line=dict(color='blue')))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['RSI'], mode='lines', name='RSI'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=[70] * len(data), mode='lines', name='RSI 70', line=dict(color='red', dash='dash')))
                             fig.add_trace(go.Scatter(x=data['Date'], y=[30] * len(data), mode='lines', name='RSI 30', line=dict(color='green', dash='dash')))
@@ -2027,7 +2054,8 @@ else:
                             st.plotly_chart(fig)
                         elif indicators == 'Stochastic Oscillator':
                             fig = go.Figure()
-                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Candlestick(x=data['Date'], open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'], name='Candlesticks'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close', line=dict(color='blue')))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['%K'], mode='lines', name='%K'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['%D'], mode='lines', name='%D'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=[80] * len(data), mode='lines', name='%K 80', line=dict(color='red', dash='dash')))
@@ -2047,7 +2075,9 @@ else:
                             plot_indicator(data, 'A/D Line', 'Accumulation/Distribution Line')
                         elif indicators == 'Volume Moving Averages':
                             fig = go.Figure()
+                            fig.add_trace(go.Candlestick(x=data['Date'], open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'], name='Candlesticks'))
                             fig.add_trace(go.Bar(x=data['Date'], y=data['Volume'], name='Volume', marker_color='blue', opacity=0.5))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close', line=dict(color='blue')))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['5_VMA'], mode='lines', name='5_VMA'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['10_VMA'], mode='lines', name='10_VMA'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['20_VMA'], mode='lines', name='20_VMA'))
@@ -2058,7 +2088,8 @@ else:
                         indicators = st.selectbox("Select Volatility Indicator", ['Bollinger Bands', 'ATR', 'Standard Deviation'])
                         if indicators == 'Bollinger Bands':
                             fig = go.Figure()
-                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Candlestick(x=data['Date'], open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'], name='Candlesticks'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close', line=dict(color='blue')))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_High'], mode='lines', name='BB High'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_Middle'], mode='lines', name='BB Middle'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['BB_Low'], mode='lines', name='BB Low'))
@@ -2077,7 +2108,8 @@ else:
                             plot_indicator(data, 'Parabolic_SAR', 'Parabolic SAR')
                         elif indicators == 'Ichimoku Cloud':
                             fig = go.Figure()
-                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Candlestick(x=data['Date'], open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'], name='Candlesticks'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close', line=dict(color='blue')))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_a'], mode='lines', name='Ichimoku A'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_b'], mode='lines', name='Ichimoku B'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['Ichimoku_base'], mode='lines', name='Ichimoku Base Line'))
@@ -2087,7 +2119,8 @@ else:
                             st.plotly_chart(fig)
                         elif indicators == 'ADX':
                             fig = go.Figure()
-                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Candlestick(x=data['Date'], open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'], name='Candlesticks'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close', line=dict(color='blue')))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['ADX'], mode='lines', name='ADX'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['+DI'], mode='lines', name='+DI'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['-DI'], mode='lines', name='-DI'))
@@ -2098,7 +2131,8 @@ else:
                         indicators = st.selectbox("Select Support and Resistance Level", ['Pivot Points', 'Fibonacci Retracement Levels', 'Gann Fan Lines'])
                         if indicators == 'Pivot Points':
                             fig = go.Figure()
-                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close'))
+                            fig.add_trace(go.Candlestick(x=data['Date'], open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'], name='Candlesticks'))
+                            fig.add_trace(go.Scatter(x=data['Date'], y=data['Close'], mode='lines', name='Close', line=dict(color='blue')))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['Pivot'], mode='lines', name='Pivot'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['R1'], mode='lines', name='R1'))
                             fig.add_trace(go.Scatter(x=data['Date'], y=data['S1'], mode='lines', name='S1'))
@@ -2152,6 +2186,7 @@ else:
                     st.subheader('Technical Indicator Signals')
                     signals_df = pd.DataFrame(signals, columns=['Technical Indicator', 'Signal', 'Reason'])
                     st.dataframe(signals_df.style.applymap(lambda x: 'background-color: lightgreen' if 'Buy' in x else 'background-color: lightcoral' if 'Sell' in x else '', subset=['Signal']))
+                
             else:
                 
                 # Initialize NewsApiClient with your API key
