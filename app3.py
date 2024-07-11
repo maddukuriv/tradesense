@@ -22,6 +22,7 @@ import pandas_ta as pta
 import numpy as np
 import plotly.graph_objs as go
 import ta
+from ta.trend import PSARIndicator
 from scipy.stats import linregress
 from functools import lru_cache
 import smtplib
