@@ -500,7 +500,7 @@ else:
             my_account()
         elif choice == f"{st.session_state.username}'s Watchlist":
             # 'watchlist' code ---------------------------------------------------------------------------------------------------------------------------------------------------------------
-            st.header(f"{st.session_state.username}'s Watchlist")
+            #st.header(f"{st.session_state.username}'s Watchlist")
             user_id = session.query(User.id).filter_by(email=st.session_state.email).first()[0]
             watchlist = session.query(Watchlist).filter_by(user_id=user_id).all()
 
