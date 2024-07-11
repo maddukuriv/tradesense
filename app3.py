@@ -608,16 +608,22 @@ else:
             with col3:
                 bought_price = st.number_input("Bought Price per Share", min_value=0.0, step=0.01)
             if st.button("Add to Portfolio"):
-                if not session.query(Portfolio).filter_by(user_id=user_id, ticker=new_ticker).first():
-                    new_portfolio_entry = Portfolio(user_id=user_id, ticker=new_ticker, shares=shares,
-                                                    bought_price=bought_price)
-                    session.add(new_portfolio_entry)
-                    session.commit()
-                    st.success(f"{new_ticker} added to your portfolio!")
-                    # Refresh portfolio data
-                    portfolio = session.query(Portfolio).filter_by(user_id=user_id).all()
-                else:
-                    st.warning(f"{new_ticker} is already in your portfolio.")
+                try:
+                    current_data = yf.download(new_ticker, period='1d')
+                    if current_data.empty:
+                        raise ValueError("Ticker not found")
+                    
+                    if not session.query(Portfolio).filter_by(user_id=user_id, ticker=new_ticker).first():
+                        new_portfolio_entry = Portfolio(user_id=user_id, ticker=new_ticker, shares=shares, bought_price=bought_price)
+                        session.add(new_portfolio_entry)
+                        session.commit()
+                        st.success(f"{new_ticker} added to your portfolio!")
+                        # Refresh portfolio data
+                        portfolio = session.query(Portfolio).filter_by(user_id=user_id).all()
+                    else:
+                        st.warning(f"{new_ticker} is already in your portfolio.")
+                except Exception as e:
+                    st.error(f"Error adding ticker: {e}")
 
             # Display portfolio
             if portfolio:
@@ -625,25 +631,31 @@ else:
                 invested_values = []
                 current_values = []
                 for entry in portfolio:
-                    current_data = yf.download(entry.ticker, period='1d')
-                    last_price = current_data['Close'].iloc[-1]
-                    invested_value = entry.shares * entry.bought_price
-                    current_value = entry.shares * last_price
-                    p_l = current_value - invested_value
-                    p_l_percent = (p_l / invested_value) * 100
-                    portfolio_data.append({
-                        "Ticker": entry.ticker,
-                        "Shares": entry.shares,
-                        "Bought Price": entry.bought_price,
-                        "Invested Value": invested_value,
-                        "Last Traded Price": last_price,
-                        "Current Value": current_value,
-                        "P&L (%)": p_l_percent
-                    })
-                    invested_values.append(invested_value)
-                    current_values.append(current_value)
+                    try:
+                        current_data = yf.download(entry.ticker, period='1d')
+                        if current_data.empty:
+                            raise ValueError(f"Ticker {entry.ticker} not found")
+                        
+                        last_price = current_data['Close'].iloc[-1]
+                        invested_value = entry.shares * entry.bought_price
+                        current_value = entry.shares * last_price
+                        p_l = current_value - invested_value
+                        p_l_percent = (p_l / invested_value) * 100
+                        portfolio_data.append({
+                            "Ticker": entry.ticker,
+                            "Shares": entry.shares,
+                            "Bought Price": entry.bought_price,
+                            "Invested Value": invested_value,
+                            "Last Traded Price": last_price,
+                            "Current Value": current_value,
+                            "P&L (%)": p_l_percent
+                        })
+                        invested_values.append(invested_value)
+                        current_values.append(current_value)
+                    except Exception as e:
+                        st.error(f"Error retrieving data for {entry.ticker}: {e}")
+
                 portfolio_df = pd.DataFrame(portfolio_data)
-                
                 
                 st.write("Your Portfolio:")
                 st.dataframe(portfolio_df)
@@ -662,14 +674,12 @@ else:
                     st.plotly_chart(fig)
 
                 with col2:
-  
                     # Generate histogram for sum of Invested Value and Current Value
                     total_invested_value = sum(invested_values)
                     total_current_value = sum(current_values)
                     fig = go.Figure()
                     fig.add_trace(go.Bar(x=['Total Invested Value', 'Total Current Value'], y=[total_invested_value, total_current_value]))
-                    fig.update_layout(title_text='Profit/Loss',
-                                xaxis_title='Value', yaxis_title='Sum')
+                    fig.update_layout(title_text='Profit/Loss', xaxis_title='Value', yaxis_title='Sum')
                     st.plotly_chart(fig)
 
                 # Option to remove stock from portfolio
