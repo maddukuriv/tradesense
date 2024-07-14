@@ -2713,12 +2713,13 @@ else:
                 return df
 
             # Calculate exponential moving averages
-            def calculate_ema(data, short_window, long_window):
+            def calculate_ema(data, short_window=10, long_window=20):
                 data['Short_EMA'] = data['Close'].ewm(span=short_window, adjust=False).mean()
                 data['Long_EMA'] = data['Close'].ewm(span=long_window, adjust=False).mean()
                 return data
 
-            # Check if 50-day EMA crossed above 200-day EMA in the last 5 days
+
+            # Check if 10-day EMA crossed above 20-day EMA in the last 5 days
             def check_moving_average_crossover(data):
                 recent_data = data[-5:]
                 for i in range(1, len(recent_data)):
@@ -2906,7 +2907,7 @@ else:
             st.title("Stock Analysis Based on Selected Strategy")
 
             if submenu == "Moving Average":
-                st.write("Stocks with 50-day EMA crossing above 200-day EMA in the last 5 days:")
+                st.write("Stocks with 10-day EMA crossing above 20-day EMA in the last 5 days:")
                 st.dataframe(df_moving_average_signal)
 
             elif submenu == "MACD":
