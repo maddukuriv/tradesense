@@ -1053,7 +1053,7 @@ else:
             @st.cache_data(ttl=3600)
             def calculate_indicators(df):
                 # Calculate Moving Averages
-                df['5_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=5).wma()
+                df['10_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=10).wma()
                 df['20_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=20).wma()
                 df['50_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=50).wma()
 
@@ -1141,7 +1141,7 @@ else:
                             'RSI': df['RSI'].iloc[-1],
                             'ADX': df['ADX'].iloc[-1],
                             'Close': df['Close'].iloc[-1],
-                            '5_MA': df['5_MA'].iloc[-1],
+                            '10_MA': df['10_MA'].iloc[-1],
                             '20_MA': df['20_MA'].iloc[-1],
                             'Bollinger_High': df['Bollinger_High'].iloc[-1],
                             'Bollinger_Low': df['Bollinger_Low'].iloc[-1],
@@ -1188,7 +1188,8 @@ else:
             # Define first set of conditions
             first_conditions = [
                 ('MACD', '>', 'MACD_Signal'),
-                ('Parabolic_SAR', '<', 'Close')
+                ('10_MA', '>', '20_MA'),
+
 
             ]
 
@@ -1311,7 +1312,7 @@ else:
 
                         indicators = st.multiselect(
                             "Select Indicators",
-                            ['Close', '20_MA', '50_MA', '200_MA', 'MACD', 'MACD_Signal', 'MACD_Histogram', 'RSI', 'Buy_Signal', 'Sell_Signal', 'ADX',
+                            ['Close', '20_MA', '10_MA', '50_MA', 'MACD', 'MACD_Signal', 'MACD_Histogram', 'RSI', 'Buy_Signal', 'Sell_Signal', 'ADX',
                             'Parabolic_SAR', 'Bollinger_High', 'Bollinger_Low', 'Bollinger_Middle', 'ATR'],
                             default=['Close', 'Buy_Signal', 'Sell_Signal']
                         )
@@ -1335,7 +1336,7 @@ else:
 
                         fig = create_figure(df.set_index('Date'), indicators, f"Trend Analysis for {selected_stock}")
 
-                        colors = {'Close': 'blue', '20_MA': 'orange', '50_MA': 'green', '200_MA': 'red', 'MACD': 'purple',
+                        colors = {'Close': 'blue', '20_MA': 'orange', '10_MA': 'green', '50_MA': 'red', 'MACD': 'purple',
                                 'MACD_Signal': 'brown', 'RSI': 'pink', 'Buy_Signal': 'green', 'Sell_Signal': 'red', 'ADX': 'magenta',
                                 'Parabolic_SAR': 'yellow', 'Bollinger_High': 'black', 'Bollinger_Low': 'cyan',
                                 'Bollinger_Middle': 'grey', 'ATR': 'darkblue'}
@@ -1397,7 +1398,7 @@ else:
                         st.subheader("Support & Resistance Levels")
                         sr_indicators = st.multiselect(
                             "Select Indicators",
-                            ['Close', '20_MA', '50_MA', '200_MA', 'Support', 'Resistance', 'Support_Trendline',
+                            ['Close', '20_MA', '50_MA', '10_MA', 'Support', 'Resistance', 'Support_Trendline',
                             'Resistance_Trendline', 'Pivot', 'R1', 'S1', 'R2', 'S2'],
                             default=['Close', 'Support', 'Resistance']
                         )
