@@ -1198,7 +1198,7 @@ else:
 
             # Filter stocks in an uptrend with high volume and positive DPO
             second_query_df = first_query_df[
-                (first_query_df['RSI'] < 67) & (first_query_df['RSI'] > 45) & 
+                (first_query_df['RSI'] < 67) & (first_query_df['RSI'] > 30) & 
                 (first_query_df['ADX'] > 25) & (first_query_df['MACD'] > 0)
             ]
 
@@ -1428,7 +1428,6 @@ else:
                         st.plotly_chart(fig)
 
 
-       
         elif choice == "Stock Analysis":
             #'Technical Analysis' code---------------------------------------------------------------------------------------------------------------------------------
             submenu = st.sidebar.selectbox("Select Analysis Type", ["Technical", "Sentiment"])  
