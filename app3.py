@@ -1189,7 +1189,8 @@ else:
             first_conditions = [
                 ('MACD', '>', 'MACD_Signal'),
                 ('10_MA', '>', '20_MA'),
-                ('Parabolic_SAR', '<', 'Close')
+                ('Parabolic_SAR', '<', 'Close'),
+                ('VWAP', '>', 'Close')
 
 
             ]
