@@ -2956,7 +2956,6 @@ else:
         elif choice == "Market Stats":
         # 'Market Stats' code -------------------------------------------------------------------------------------------    
 
-
             # Function to get stock data and calculate moving averages
             @st.cache_data
             def get_stock_data(ticker_symbol, start_date, end_date):
@@ -3065,10 +3064,11 @@ else:
                     data = get_stock_data(ticker, START, END)
                     fig = create_figure(data, ['Close', 'MA_15', 'MA_50'], f"{ticker} Stock Prices")
                     st.plotly_chart(fig)
+
             # Top Gainers and Losers
             elif tile_selection == "Top Gainers and Losers":
                 st.subheader("Top Gainers and Losers")
-                
+
                 ticker_group = st.selectbox("Select Ticker Group", ["Large Cap", "Mid Cap", "Small Cap"])
                 if ticker_group == "Large Cap":
                     tickers = bse_largecap
@@ -3076,118 +3076,34 @@ else:
                     tickers = bse_midcap
                 else:
                     tickers = bse_smallcap
-                
+
                 # Fetch data for different periods
-                data_daily = fetch_data(tickers, period='1d', interval='1m')
-                data_weekly = fetch_data(tickers, period='5d', interval='1d')
-                data_monthly = fetch_data(tickers, period='1mo', interval='1d')
-                data_2months = fetch_data(tickers, period='60d', interval='1d')
-                data_3months = fetch_data(tickers, period='3mo', interval='1d')
-                data_6months = fetch_data(tickers, period='6mo', interval='1d')
-                data_1year = fetch_data(tickers, period='1y', interval='1d')
-                data_2years = fetch_data(tickers, period='2y', interval='1d')
-                data_5years = fetch_data(tickers, period='5y', interval='1d')
+                periods = {
+                    'Daily': ('1d', '1m'),
+                    'Weekly': ('5d', '1d'),
+                    'Monthly': ('1mo', '1d'),
+                    
+                    '3 Months': ('3mo', '1d'),
+                    '6 Months': ('6mo', '1d'),
+                    '1 Year': ('1y', '1d'),
+                    '2 Years': ('2y', '1d'),
+                    '5 Years': ('5y', '1d')
+                }
 
-                # Clean and prepare data
-                data_daily.dropna(axis=1, how='all', inplace=True)
-                data_weekly.dropna(axis=1, how='all', inplace=True)
-                data_monthly.dropna(axis=1, how='all', inplace=True)
-                data_2months.dropna(axis=1, how='all', inplace=True)
-                data_3months.dropna(axis=1, how='all', inplace=True)
-                data_6months.dropna(axis=1, how='all', inplace=True)
-                data_1year.dropna(axis=1, how='all', inplace=True)
-                data_2years.dropna(axis=1, how='all', inplace=True)
-                data_5years.dropna(axis=1, how='all', inplace=True)
-                
-                data_daily.fillna(method='ffill', inplace=True)
-                data_weekly.fillna(method='ffill', inplace=True)
-                data_monthly.fillna(method='ffill', inplace=True)
-                data_2months.fillna(method='ffill', inplace=True)
-                data_3months.fillna(method='ffill', inplace=True)
-                data_6months.fillna(method='ffill', inplace=True)
-                data_1year.fillna(method='ffill', inplace=True)
-                data_2years.fillna(method='ffill', inplace=True)
-                data_5years.fillna(method='ffill', inplace=True)
-                
-                data_daily.fillna(method='bfill', inplace=True)
-                data_weekly.fillna(method='bfill', inplace=True)
-                data_monthly.fillna(method='bfill', inplace=True)
-                data_2months.fillna(method='bfill', inplace=True)
-                data_3months.fillna(method='bfill', inplace=True)
-                data_6months.fillna(method='bfill', inplace=True)
-                data_1year.fillna(method='bfill', inplace=True)
-                data_2years.fillna(method='bfill', inplace=True)
-                data_5years.fillna(method='bfill', inplace=True)
-
-                # Calculate changes
-                def calculate_change(data):
-                    if len(data) > 0:
-                        change = data.iloc[-1] - data.iloc[0]
-                        percent_change = (change / data.iloc[0]) * 100
-                        return pd.DataFrame({'Ticker': data.columns, 'Last Traded Price': data.iloc[-1].values, '% Change': percent_change.values})
-                    else:
-                        return pd.DataFrame(columns=['Ticker', 'Last Traded Price', '% Change'])
-
-                df_daily = calculate_change(data_daily)
-                df_weekly = calculate_change(data_weekly)
-                df_monthly = calculate_change(data_monthly)
-                df_2months = calculate_change(data_2months)
-                df_3months = calculate_change(data_3months)
-                df_6months = calculate_change(data_6months)
-                df_1year = calculate_change(data_1year)
-                df_2years = calculate_change(data_2years)
-                df_5years = calculate_change(data_5years)
-
-
-
-                # Round off the % Change values and sort
-                def sort_and_round(df):
-                    df['% Change'] = df['% Change'].round(2)
-                    return df.sort_values(by='% Change', ascending=False)
-                
-                df_daily_sorted = sort_and_round(df_daily)
-                df_weekly_sorted = sort_and_round(df_weekly)
-                df_monthly_sorted = sort_and_round(df_monthly)
-                df_2months_sorted = sort_and_round(df_2months)
-                df_3months_sorted = sort_and_round(df_3months)
-                df_6months_sorted = sort_and_round(df_6months)
-                df_1year_sorted = sort_and_round(df_1year)
-                df_2years_sorted = sort_and_round(df_2years)
-                df_5years_sorted = sort_and_round(df_5years)
+                period_data_frames = {}
+                for period_name, (p, i) in periods.items():
+                    data = fetch_data(tickers, period=p, interval=i).pct_change().dropna(how='all') * 100
+                    period_data_frames[period_name] = data.apply(lambda x: x[-1] - x[0])
 
                 # Dropdown menu to select the period
-                bar_chart_option = st.selectbox('Select to view:', ['Daily Gainers/Losers', 'Weekly Gainers/Losers', 'Monthly Gainers/Losers',
-                                                                    '2 Months Gainers/Losers', '3 Months Gainers/Losers', '6 Months Gainers/Losers',
-                                                                    '1 Year Gainers/Losers', '2 Years Gainers/Losers', '5 Years Gainers/Losers'])
+                bar_chart_option = st.selectbox('Select to view:', list(period_data_frames.keys()))
 
                 # Display the selected bar chart
-                if bar_chart_option == 'Daily Gainers/Losers':
-                    fig = px.bar(df_daily_sorted, x='Ticker', y='% Change', title='Daily Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
-                    st.plotly_chart(fig)
-                elif bar_chart_option == 'Weekly Gainers/Losers':
-                    fig = px.bar(df_weekly_sorted, x='Ticker', y='% Change', title='Weekly Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
-                    st.plotly_chart(fig)
-                elif bar_chart_option == 'Monthly Gainers/Losers':
-                    fig = px.bar(df_monthly_sorted, x='Ticker', y='% Change', title='Monthly Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
-                    st.plotly_chart(fig)
-                elif bar_chart_option == '2 Months Gainers/Losers':
-                    fig = px.bar(df_2months_sorted, x='Ticker', y='% Change', title='2 Months Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
-                    st.plotly_chart(fig)
-                elif bar_chart_option == '3 Months Gainers/Losers':
-                    fig = px.bar(df_3months_sorted, x='Ticker', y='% Change', title='3 Months Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
-                    st.plotly_chart(fig)
-                elif bar_chart_option == '6 Months Gainers/Losers':
-                    fig = px.bar(df_6months_sorted, x='Ticker', y='% Change', title='6 Months Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
-                    st.plotly_chart(fig)
-                elif bar_chart_option == '1 Year Gainers/Losers':
-                    fig = px.bar(df_1year_sorted, x='Ticker', y='% Change', title='1 Year Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
-                    st.plotly_chart(fig)
-                elif bar_chart_option == '2 Years Gainers/Losers':
-                    fig = px.bar(df_2years_sorted, x='Ticker', y='% Change', title='2 Years Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
-                    st.plotly_chart(fig)
-                elif bar_chart_option == '5 Years Gainers/Losers':
-                    fig = px.bar(df_5years_sorted, x='Ticker', y='% Change', title='5 Years Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
-                    st.plotly_chart(fig)
+                df_sorted = period_data_frames[bar_chart_option].sort_values(ascending=False).reset_index()
+                df_sorted.columns = ['Ticker', '% Change']
+                fig = px.bar(df_sorted, x='Ticker', y='% Change', title=f'{bar_chart_option} Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
+                st.plotly_chart(fig)
+
             # Volume Chart
             elif tile_selection == "Volume Chart":
                 st.subheader("Volume Chart")
@@ -3281,7 +3197,7 @@ else:
                             color_continuous_scale=px.colors.diverging.RdYlGn)
                 st.plotly_chart(fig)
 
-            
+ 
 
         elif choice == "Stock Comparison":
             #'Stock Comparison' code---------------------------------------------------------------------------------------------------------------------------------
