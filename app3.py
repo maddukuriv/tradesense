@@ -2626,30 +2626,28 @@ else:
                 data['MACD_histogram'] = data['MACD'] - data['MACD_signal']
                 return data
 
-            # Function to calculate RSI
-            def calculate_rsi(data, period=14):
-                rsi_indicator = ta.momentum.RSIIndicator(close=data['Close'], window=period)
-                data['RSI'] = rsi_indicator.rsi()
-                return data
-
-            # Function to calculate ADX and related values
-            def calculate_adx(data, period=14):
-                adx_indicator = ta.trend.ADXIndicator(high=data['High'], low=data['Low'], close=data['Close'], window=period)
-                data['ADX'] = adx_indicator.adx()
-                data['+DI'] = adx_indicator.adx_pos()
-                data['-DI'] = adx_indicator.adx_neg()
-                return data
-
             # Function to check MACD < MACD signal
             def check_macd_signal(data):
                 return data['MACD'].iloc[-1] < data['MACD_signal'].iloc[-1]
 
-            # Function to check the second criteria
-            def check_negative_histogram_and_price(data):
-                histogram_increasing = (data['MACD_histogram'].iloc[-3] <= data['MACD_histogram'].iloc[-2] <= data['MACD_histogram'].iloc[-1])
-                histogram_negative = data['MACD_histogram'].iloc[-1] < 0
+            # Function to check the MACD histogram criteria
+            def check_macd_histogram(data):
+                macd_histogram_decreasing = (data['MACD_histogram'].iloc[-1] < data['MACD_histogram'].iloc[-2] < data['MACD_histogram'].iloc[-3])
+                macd_histogram_positive_third_day = data['MACD_histogram'].iloc[-3] > 0
+                return macd_histogram_decreasing, macd_histogram_positive_third_day
+
+            # Function to check price increasing for at least the last 4 days
+            def check_price_increasing(data):
                 price_increasing = (data['Close'].iloc[-1] >= data['Close'].iloc[-2] >= data['Close'].iloc[-3] >= data['Close'].iloc[-4])
-                return histogram_increasing, histogram_negative, price_increasing
+                return price_increasing
+
+            # Combine all checks
+            def filter_stocks(data):
+                macd_signal_check = check_macd_signal(data)
+                macd_histogram_decreasing, macd_histogram_positive_third_day = check_macd_histogram(data)
+                price_increasing_check = check_price_increasing(data)
+                
+                return macd_signal_check and macd_histogram_decreasing and macd_histogram_positive_third_day and price_increasing_check
 
             # Function to fetch and process stock data
             @st.cache_data(ttl=3600)
@@ -2803,7 +2801,7 @@ else:
                 return False
 
             macd_signal_list = []
-            negative_histogram_tickers = []
+            filtered_stocks = []
             moving_average_tickers = []
             bollinger_low_cross_tickers = []
             rsi_tickers = []
@@ -2824,13 +2822,8 @@ else:
                 data = calculate_indicators(data)
                 if submenu == "MACD":
                     data = calculate_macd(data)
-                    data = calculate_rsi(data)
-                    data = calculate_adx(data)
-                    if check_macd_signal(data):
-                        macd_signal_list.append(ticker)
-                    histogram_increasing, histogram_negative, price_increasing = check_negative_histogram_and_price(data)
-                    if histogram_increasing and histogram_negative and price_increasing:
-                        negative_histogram_tickers.append(ticker)
+                    if filter_stocks(data):
+                        filtered_stocks.append(ticker)
                 elif submenu == "Moving Average":
                     data = calculate_ema(data, short_window=50, long_window=200)
                     if check_moving_average_crossover(data):
@@ -2894,8 +2887,7 @@ else:
                 return pd.DataFrame(technical_data)
 
             # Generate dataframes for the selected strategies
-            df_macd_signal = fetch_latest_data(macd_signal_list)
-            df_negative_histogram = fetch_latest_data(negative_histogram_tickers)
+            df_filtered_stocks = fetch_latest_data(filtered_stocks)
             df_moving_average_signal = fetch_latest_data(moving_average_tickers)
             df_bollinger_low_cross_signal = fetch_latest_data(bollinger_low_cross_tickers)
             df_rsi_signal = fetch_latest_data(rsi_tickers)
@@ -2912,8 +2904,8 @@ else:
                 st.dataframe(df_moving_average_signal)
 
             elif submenu == "MACD":
-                st.write("Stocks with Negative MACD Histogram Increasing and Price Increasing for 3 Consecutive Days:")
-                st.dataframe(df_negative_histogram)
+                st.write("Stocks with MACD Histogram decreasing for last 2 days consecutively and positive on the 3rd day:")
+                st.dataframe(df_filtered_stocks)
 
             elif submenu == "Bollinger Bands":
                 st.write("Stocks with price crossing below Bollinger Low in the last 5 days:")
@@ -2950,6 +2942,7 @@ else:
 
             elif submenu == "Candlestick Patterns":
                 st.subheader("Candlestick Patterns")
+
 
 
         elif choice == "Market Stats":
