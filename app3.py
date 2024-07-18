@@ -44,34 +44,6 @@ bse_midcap = ["3MINDIA.BO","AARTIIND.BO","ABBOTINDIA.BO","ACC.BO","ABCAPITAL.BO"
 bse_smallcap = ["360ONE.NS","3IINFOTECH.NS","5PAISA.NS","63MOONS.NS","AARTIDRUGS.NS","AARTIPHARM.NS","AAVAS.NS","AHL.NS","ACCELYA.NS","ACE.NS","ADFFOODS.NS","ABSLAMC.NS","AVL.BO","ADORWELD.NS","ADVENZYMES.NS","AEGISCHEM.NS","AEROFLEX.NS","AETHER.NS","AFFLE.NS","AGARIND.NS","AGIGREEN.NS","ATFL.NS","AGSTRA.NS","AHLUCONT.NS","AIAENG.NS","AJMERA.NS","AKZOINDIA.NS","ALEMBICLTD.NS","APLLTD.NS","ALICON.NS","ALKYLAMINE.NS","ACLGATI.NS","ALLCARGO.NS","ATL.NS","ALLSEC.NS","ALOKINDS.NS","AMARAJABAT.NS","AMBER.NS","AMBIKCO.NS","AMIORG.NS","ANANDRATHI.NS","ANANTRAJ.NS","ANDHRAPAP.NS","ANDHRAPET.NS","ANDREWYU.NS","ANGELONE.NS","AWHCL.NS","ANURAS.NS","APARINDS.NS","APCOTEXIND.NS","APOLLO.NS","APOLLOPIPE.NS","APOLLOTYRE.NS","APTECHT.NS","APTUS.NS","ARCHIECHEM.NS","ARIHANTCAP.NS","ARIHANTSUP.NS","ARMANFIN.NS","ARTEMISMED.NS","ARVINDFASN.NS","ARVIND.NS","ARVSMART.NS","ASAHIINDIA.NS","ASHAPURMIN.NS","ASHIANA.NS","ASHOKA.NS","ASIANTILES.NS","ASKAUTOLTD.NS","ASALCBR.NS","ASTEC.NS","ASTERDM.NS","ASTRAMICRO.NS","ASTRAZEN.NS","ATULAUTO.NS","ATUL.NS","AURIONPRO.NS","AIIL.BO","AUTOAXLES.NS","ASAL.NS","AVADHSUGAR.NS","AVALON.NS","AVANTEL.NS","AVANTIFEED.NS","AVTNPL.NS","AXISCADES.NS","AZAD.NS","BLKASHYAP.NS","BAJAJCON.NS","BAJAJELEC.NS","BAJAJHCARE.NS","BAJAJHIND.NS","BALAMINES.NS","BALMLAWRIE.NS","BLIL.BO","BALRAMCHIN.NS","BALUFORGE.BO","BANCOINDIA.NS","MAHABANK.NS","BANARISUG.NS","BARBEQUE.NS","BASF.NS","BATAINDIA.NS","BCLIND.NS","BLAL.NS","BEML.NS","BESTAGRO.NS","BFINVEST.NS","BFUTILITIE.NS","BHAGERIA.NS","BHAGCHEM.NS","BEPL.NS","BHARATBIJ.NS","BDL.NS","BHARATWIRE.NS","BIGBLOC.NS","BIKAJI.NS","BIRLACORPN.NS","BSOFT.NS","BLACKBOX.NS","BLACKROSE.NS","BLISSGVS.NS","BLS.NS","BLUEDART.NS","BLUEJET.NS","BLUESTARCO.NS","BODALCHEM.NS","BOMDYEING.NS","BOROLTD.NS","BORORENEW.NS","BRIGADE.NS","BUTTERFLY.NS","CEINFO.NS","CAMLINFINE.NS","CAMPUS.NS","CANFINHOME.NS","CANTABIL.NS","CAPACITE.NS","CAPLIPOINT.NS","CGCL.NS","CARBORUNIV.NS","CARERATING.NS","CARTRADE.NS","CARYSIL.NS","CCL.NS","CEATLTD.NS","CELLO.NS","CENTRALBK.NS","CENTRUM.NS","CENTUM.NS","CENTENKA.NS","CENTURYPLY.NS","CENTURYTEX.NS","CERA.NS","CESC.NS","CHALET.NS","CLSEL.NS","CHAMBLFERT.NS","CHEMCON.NS","CHEMPLASTS.NS","CHENNPETRO.NS","CHEVIOT.NS","CHOICEIN.NS","CHOLAHOLD.NS","CIEINDIA.NS","CIGNITITEC.NS","CUB.NS","CMSINFO.NS","COCHINSHIP.NS","COFFEEDAY.NS","COFORGE.NS","CAMS.NS","CONCORDBIO.NS","CONFIPET.NS","CONTROLPR.NS","COSMOFIRST.NS","CRAFTSMAN.NS","CREDITACC.NS","MUFTI.BO","CRESSANDA.NS","CSBBANK.NS","CYIENTDLM.NS","CYIENT.NS","DLINKINDIA.NS","DALMIASUG.NS","DATAPATTNS.NS","DATAMATICS.NS","DBCORP.NS","DCBBANK.NS","DCMSHRIRAM.NS","DCW.NS","DCXINDIA.NS","DDEVPLASTIK.BO","DECCANCE.NS","DEEPINDS.NS","DEEPAKFERT.NS","DELTACORP.NS","DEN.NS","DEVYANI.NS","DHAMPURBIO.NS","DHAMPURSUG.NS","DHANI.NS","DHANUKA.NS","DHARAMSI.NS","DCGL.NS","DHUNINV.NS","DBL.NS","DISHTV.NS","DISHMAN.NS","DIVGI.NS","DIXON.NS","DODLA.NS","DOLLAR.NS","DOMS.NS","LALPATHLAB.NS","DREAMFOLKS.NS","DREDGECORP.NS","DWARKESH.NS","DYNAMATECH.NS","EASEMYTRIP.NS","ECLERX.NS","EDELWEISS.NS","EIDPARRY.NS","EIHAHOTELS.NS","EIHOTEL.NS","EKIEGS.NS","ELECON.NS","EMIL.NS","ELECTCAST.NS","ELGIEQUIP.NS","ELIN.NS","ELPROINTL.NS","EMAMIPAP.NS","EMSLIMITED.NS","EMUDHRA.NS","ENGINERSIN.NS","ENIL.NS","EPIGRAL.NS","EPL.NS","EQUITASBNK.NS","ERIS.NS","ESABINDIA.NS","ESAFSFB.NS","ESCORTS.NS","ESTER.NS","ETHOSLTD.NS","EUREKAFORBE.BO","EVEREADY.NS","EVERESTIND.NS","EKC.NS","EXCELINDUS.NS","EXPLEOSOL.NS","FAIRCHEM.NS","FAZETHREE.NS","FDC.NS","FEDFINA.NS","FMGOETZE.NS","FIEMIND.NS","FILATEX.NS","FINEORG.NS","FCL.NS","FINOPB.NS","FINCABLES.NS","FINPIPE.NS","FSL.NS","FIVESTAR.NS","FLAIR.NS","FOODSIN.NS","FORCEMOT.NS","FORTIS.NS","FOSECOIND.NS","FUSION.NS","GMBREW.NS","GNA.NS","GRINFRA.NS","GABRIEL.NS","GALAXYSURF.NS","GALLANTT.NS","GANDHAR.NS","GANDHITUBE.NS","GANESHBENZ.NS","GANESHHOUC.NS","GANECOS.NS","GRSE.NS","GARFILA.NS","GARFIBRES.NS","GDL.NS","GEPIL.NS","GET&D.NS","GENESYS.NS","GENSOL.NS","GENUSPOWER.NS","GEOJITFSL.NS","GFLLIMITED.NS","GHCL.NS","GHCLTEXTIL.NS","GICHSGFIN.NS","GLENMARK.NS","MEDANTA.NS","GSURF.NS","GLOBUSSPR.NS","GMMPFAUDLR.NS","GMRINFRA.NS","GOFASHION.NS","GOCLCORP.NS","GPIL.NS","GODFRYPHLP.NS","GODREJAGRO.NS","GOKEX.NS","GOKUL.NS","GOLDIAM.NS","GOODLUCK.NS","GOODYEAR.NS","GRANULES.NS","GRAPHITE.NS","GRAUWEIL.NS","GRAVITA.NS","GESHIP.NS","GREAVESCOT.NS","GREENLAM.NS","GREENPANEL.NS","GREENPLY.NS","GRINDWELL.NS","GRMOVER.NS","GTLINFRA.NS","GTPL.NS","GUFICBIO.NS","GUJALKALI.NS","GAEL.NS","GIPCL.NS","GMDCLTD.NS","GNFC.NS","GPPL.NS","GSFC.NS","GSPL.NS","GUJTHEMIS.NS","GULFOILLUB.NS","GULPOLY.NS","HGINFRA.NS","HAPPSTMNDS.NS","HAPPYFORGE.NS","HARDWYN.NS","HARIOMPIPE.NS","HARSHAENG.NS","HATHWAY.NS","HATSUN.NS","HAWKINCOOK.BO","HBLPOWER.NS","HCG.NS","HEG.NS","HEIDELBERG.NS","HEMIPROP.NS","HERANBA.NS","HERCULES.NS","HERITGFOOD.NS","HESTERBIO.NS","HEUBACHIND.NS","HFCL.NS","HITECH.NS","HIKAL.NS","HIL.NS","HSCL.NS","HIMATSEIDE.NS","HGS.NS","HCC.NS","HINDCOPPER.NS","HINDUSTAN.NS","HINDOILEXP.NS","HINDWARE.NS","POWERINDIA.NS","HLEGLAS.NS","HOTELLEELA.NS","HMAAGRO.NS","HOMEFIRST.NS","HONASA.NS","HONDAPOWER.NS","HUDCO.NS","HPAL.NS","HPL.NS","HUHTAMAKI.NS","ICRA.NS","IDEA.NS","IDFC.NS","IFBIND.NS","IFCI.NS","IFGLEXPOR.NS","IGPL.NS","IGARASHI.NS","IIFL.NS","IIFLSEC.NS","IKIO.NS","IMAGICAA.NS","INDIACEM.NS","INDIAGLYCO.NS","INDNIPPON.NS","IPL.NS","INDIASHLTR.NS","ITDC.NS","IBULHSGFIN.NS","IBREALEST.NS","INDIAMART.NS","IEX.NS","INDIANHUME.NS","IMFA.NS","INDIGOPNTS.NS","INDOAMIN.NS","ICIL.NS","INDORAMA.NS","INDOCO.NS","INDREMEDI.NS","INFIBEAM.NS","INFOBEAN.NS","INGERRAND.NS","INNOVACAP.NS","INOXGREEN.NS","INOXINDIA.NS","INOXWIND.NS","INSECTICID.NS","INTELLECT.NS","IOLCP.NS","IONEXCHANG.NS","IRB.NS","IRCON.NS","IRMENERGY.NS","ISGEC.NS","ITDCEM.NS","ITI.NS","JKUMAR.NS","JKTYRE.NS","JBCHEPHARM.NS","JKCEMENT.NS","JAGRAN.NS","JAGSNPHARM.NS","JAIBALAJI.NS","JAICORPLTD.NS","JISLJALEQS.NS","JPASSOCIAT.NS","JPPOWER.NS","J&KBANK.NS","JAMNAAUTO.NS","JAYBARMARU.NS","JAYAGROGN.NS","JAYNECOIND.NS","JBMA.NS","JINDRILL.NS","JINDALPOLY.NS","JINDALSAW.NS","JSL.NS","JINDWORLD.NS","JKLAKSHMI.NS","JKPAPER.NS","JMFINANCIL.NS","JCHAC.NS","JSWHL.NS","JTEKTINDIA.NS","JTLIND.NS","JUBLINDS.NS","JUBLINGREA.NS","JUBLPHARMA.NS","JLHL.NS","JWL.NS","JUSTDIAL.NS","JYOTHYLAB.NS","JYOTIRES.BO","KABRAEXTRU.NS","KAJARIACER.NS","KALPATPOWR.NS","KALYANKJIL.NS","KALYANIFRG.NS","KSL.NS","KAMAHOLD.NS","KAMDHENU.NS","KAMOPAINTS.NS","KANORICHEM.NS","KTKBANK.NS","KSCL.NS","KAYNES.NS","KDDL.NS","KEC.NS","KEI.NS","KELLTONTEC.NS","KENNAMET.NS","KESORAMIND.NS","KKCL.NS","RUSTOMJEE.NS","KFINTECH.NS","KHAICHEM.NS","KINGFA.NS","KIOCL.NS","KIRIINDUS.NS","KIRLOSBROS.NS","KIRLFER.NS","KIRLOSIND.NS","KIRLOSENG.NS","KIRLPNU.NS","KITEX.NS","KMCSHIL.BO","KNRCON.NS","KOKUYOCMLN.NS","KOLTEPATIL.NS","KOPRAN.NS","KOVAI.NS","KPIGREEN.NS","KPITTECH.NS","KPRMILL.NS","KRBL.NS","KIMS.NS","KRSNAA.NS","KSB.NS","KSOLVES.NS","KUANTUM.NS","LAOPALA.NS","LAXMIMACH.NS","LANCER.NS","LANDMARK.NS","LATENTVIEW.NS","LXCHEM.NS","LEMONTREE.NS","LGBBROSLTD.NS","LIKHITHA.NS","LINCPEN.NS","LINCOLN.NS","LLOYDSENGG.NS","LLOYDSENT.BO","LLOYDSME.NS","DAAWAT.NS","LUMAXTECH.NS","LUMAXIND.NS","MMFL.NS","MKPL.NS","MCLOUD.BO","MGL.NS","MTNL.NS","MAHSCOOTER.NS","MAHSEAMLES.NS","MHRIL.NS","MAHLIFE.NS","MAHLOG.NS","MANINDS.NS","MANINFRA.NS","MANGCHEFER.NS","MANAKSIA.NS","MANALIPETC.NS","MANAPPURAM.NS","MANGLMCEM.NS","MRPL.NS","MVGJL.NS","MANORAMA.NS","MARATHON.NS","MARKSANS.NS","MASFIN.NS","MASTEK.NS","MATRIMONY.NS","MAXESTATE.NS","MAYURUNIQ.NS","MAZDOCK.NS","MEDICAMEQ.NS","MEDPLUS.NS","MEGH.NS","MENONBE.NS","METROBRAND.NS","METROPOLIS.NS","MINDACORP.NS","MIRZAINT.NS","MIDHANI.NS","MISHTANN.NS","MMTC.NS","MOIL.NS","MOLDTKPAC.NS","MONARCH.NS","MONTECARLO.NS","MOREPENLAB.NS","MOSCHIP.NS","MSUMI.NS","MOTILALOFS.NS","MPSLTD.NS","BECTORFOOD.NS","MSTCLTD.NS","MTARTECH.NS","MUKANDLTD.NS","MCX.NS","MUTHOOTMF.NS","NACLIND.NS","NAGAFERT.NS","NAHARINV.NS","NAHARSPING.NS","NSIL.NS","NH.NS","NATCOPHARM.NS","NATIONALUM.NS","NFL.NS","NAVINFLUOR.NS","NAVKARCORP.NS","NAVNETEDUL.NS","NAZARA.NS","NBCC.NS","NCC.NS","NCLIND.NS","NELCAST.NS","NELCO.NS","NEOGEN.NS","NESCO.NS","NETWEB.NS","NETWORK18.NS","NEULANDLAB.NS","NDTV.NS","NEWGEN.NS","NGLFINE.NS","NIITMTS.NS","NIITLTD.NS","NIKHILADH.NS","NILKAMAL.NS","NITINSPIN.NS","NITTAGELA.BO","NLCINDIA.NS","NSLNISP.NS","NOCIL.NS","NOVARTIND.NS","NRBBEARING.NS","NUCLEUS.NS","NUVAMA.NS","OLECTRA.NS","OMAXE.NS","ONMOBILE.NS","ONWARDTEC.NS","OPTIEMUS.NS","ORIENTBELL.NS","ORIENTCEM.NS","ORIENTELEC.NS","GREENPOWER.NS","ORIENTPPR.NS","OAL.NS","OCCL.NS","ORIENTHOT.NS","OSWALGREEN.NS","PAISALO.NS","PANACEABIO.NS","PANAMAPET.NS","PARADEEP.NS","PARAGMILK.NS","PARA.NS","PARAS.NS","PATELENG.NS","PAUSHAKLTD.NS","PCJEWELLER.NS","PCBL.NS","PDSL.NS","PGIL.NS","PENIND.NS","PERMAGNET.NS","PFIZER.NS","PGEL.NS","PHOENIXLTD.NS","PILANIINVS.NS","PPLPHARMA.NS","PITTIENG.NS","PIXTRANS.NS","PNBGILTS.NS","PNBHOUSING.NS","PNCINFRA.NS","POKARNA.NS","POLYMED.NS","POLYPLEX.NS","POONAWALLA.NS","POWERMECH.NS","PRAJIND.NS","PRAKASHSTL.NS","DIAMONDYD.NS","PRAVEG.NS","PRECAM.NS","PRECWIRE.NS","PRESTIGE.NS","PRICOLLTD.NS","PFOCUS.NS","PRIMO.NS","PRINCEPIPE.NS","PRSMJOHNSN.NS","PRIVISCL.NS","PGHL.NS","PROTEAN.BO","PRUDENT.NS","PSPPROJECT.NS","PFS.NS","PTC.NS","PTCIL.BO","PSB.NS","PUNJABCHEM.NS","PURVA.NS","PVRINOX.NS","QUESS.NS","QUICKHEAL.NS","QUINT.NS","RRKABEL.NS","RSYSTEMS.NS","RACLGEAR.NS","RADIANT.NS","RADICO.NS","RAGHAVPRO.NS","RVNL.NS","RAILTEL.NS","RAIN.NS","RAINBOW.NS","RAJRATAN.NS","RALLIS.NS","RRWL.NS","RAMASTEEL.NS","RAMCOIND.NS","RAMCOSYS.NS","RKFORGE.NS","RAMKY.NS","RANEHOLDIN.NS","RML.NS","RCF.NS","RATEGAIN.NS","RATNAMANI.NS","RTNINDIA.NS","RTNPOWER.NS","RAYMOND.NS","RBLBANK.NS","REDINGTON.NS","REDTAPE.NS","REFEX.NS","RIIL.NS","RELINFRA.NS","RPOWER.NS","RELIGARE.NS","RENAISSANCE.NS","REPCOHOME.NS","REPRO.NS","RESPONIND.NS","RBA.NS","RHIM.NS","RICOAUTO.NS","RISHABHINS.NS","RITES.NS","ROLEXRINGS.NS","ROSSARI.NS","ROSSELLIND.NS","ROTOPUMPS.NS","ROUTE.NS","ROHL.NS","RPGLIFE.NS","RPSGVENT.NS","RSWM.NS","RUBYMILLS.NS","RUPA.NS","RUSHIL.NS","SCHAND.NS","SHK.NS","SJS.NS","SPAL.NS","SADHANANIQ.NS","SAFARI.NS","SAGCEM.NS","SAILKALAM.NS","SALASAR.NS","SAMHIHOTEL.NS","SANDHAR.NS","SANDUMA.NS","SANGAMIND.NS","SANGHIIND.NS","SANGHVIMOV.NS","SANMITINFRA.NS","SANOFI.NS","SANSERA.NS","SAPPHIRE.NS","SARDAEN.NS","SAREGAMA.NS","SASKEN.NS","SASTASUNDR.NS","SATINDLTD.NS","SATIA.NS","SATIN.NS","SOTL.NS","SBFC.NS","SCHNEIDER.NS","SEAMECLTD.NS","SENCO.NS","SEPC.NS","SEQUENT.NS","SESHAPAPER.NS","SGFIN.NS","SHAILY.NS","SHAKTIPUMP.NS","SHALBY.NS","SHALPAINTS.NS","SHANKARA.NS","SHANTIGEAR.NS","SHARDACROP.NS","SHARDAMOTR.NS","SHAREINDIA.NS","SFL.NS","SHILPAMED.NS","SCI.NS","SHIVACEM.NS","SBCL.NS","SHIVALIK.NS","SHOPERSTOP.NS","SHREDIGCEM.NS","SHREEPUSHK.NS","RENUKA.NS","SHREYAS.NS","SHRIRAMPPS.NS","SHYAMMETL.NS","SIGACHI.NS","SIGNA.NS","SIRCA.NS","SIS.NS","SIYSIL.NS","SKFINDIA.NS","SKIPPER.NS","SMCGLOBAL.NS","SMLISUZU.NS","SMSPHARMA.NS","SNOWMAN.NS","SOBHA.NS","SOLARA.NS","SDBL.NS","SOMANYCERA.NS","SONATSOFTW.NS","SOUTHBANK.NS","SPANDANA.NS","SPECIALITY.NS","SPENCERS.NS","SPICEJET.NS","SPORTKING.NS","SRHHYPOLTD.NS","STGOBANQ.NS","STARCEMENT.NS","STEELXIND.NS","SSWL.NS","STEELCAS.NS","SWSOLAR.NS","STERTOOLS.NS","STRTECH.NS","STOVEKRAFT.NS","STAR.NS","STYLAMIND.NS","STYRENIX.NS","SUBEXLTD.NS","SUBROS.NS","SUDARSCHEM.NS","SUKHJITS.NS","SULA.NS","SUMICHEM.NS","SUMMITSEC.NS","SPARC.NS","SUNCLAYLTD.NS","SUNDRMFAST.NS","SUNFLAG.NS","SUNTECK.NS","SUPRAJIT.NS","SUPPETRO.NS","SUPRIYA.NS","SURAJEST.NS","SURYAROSNI.NS","SURYODAY.NS","SUTLEJTEX.NS","SUVEN.NS","SUVENPHAR.NS","SUZLON.NS","SWANENERGY.NS","SWARAJENG.NS","SYMPHONY.NS","SYNCOM.NS","SYNGENE.NS","SYRMA.NS","TAJGVK.NS","TALBROAUTO.NS","TMB.NS","TNPL.NS","TNPETRO.NS","TANFACIND.NS","TANLA.NS","TARC.NS","TARSONS.NS","TASTYBITE.NS","TATACHEM.NS","TATAINVEST.NS","TTML.NS","TATVA.NS","TCIEXP.NS","TCNSBRANDS.NS","TCPLPACK.NS","TDPOWERSYS.NS","TEAMLEASE.NS","TECHNOE.NS","TIIL.NS","TEGA.NS","TEJASNET.NS","TEXRAIL.NS","TGVSL.NS","THANGAMAYL.NS","ANUP.NS","THEMISMED.NS","THERMAX.NS","TIRUMALCHM.NS","THOMASCOOK.NS","THYROCARE.NS","TI.NS","TIMETECHNO.NS","TIMEX.NS","TIMKEN.NS","TIPSINDLTD.NS","TITAGARH.NS","TFCILTD.NS","TRACXN.NS","TRIL.NS","TRANSIND.RE.NS","TRANSPEK.NS","TCI.NS","TRIDENT.NS","TRIVENI.NS","TRITURBINE.NS","TRU.NS","TTKHLTCARE.NS","TTKPRESTIG.NS","TVTODAY.NS","TV18BRDCST.NS","TVSELECT.NS","TVS.NS","TVSSRICHAK.NS","TVSSCS.NS","UDAICEMENT.NS","UFLEX.NS","UGARSUGAR.NS","UGROCAP.NS","UJJIVANSFB.NS","ULTRAMAR.NS","UNICHEMLAB.NS","UNIPARTS.NS","UNIVCABLES.NS","UDSERV.NS","USHAMART.NS","UTIAMC.NS","UTKARSHPB.NS","UTTAMSUGAR.NS","VGUARD.NS","VMART.NS","VSTTILLERS.NS","WABAG.NS","VADILALIND.NS","VAIBHAVGBL.NS","VAKRANGEE.NS","VALIANTORG.NS","DBREALTY.NS","VSSL.NS","VTL.NS","VARROC.NS","VASCONEQ.NS","VENKEYS.NS","VENUSPIPES.NS","VERANDA.NS","VESUVIUS.NS","VIDHIING.NS","VIJAYA.NS","VIKASLIFE.NS","VIMTALABS.NS","VINATIORGA.NS","VINDHYATEL.NS","VINYLINDIA.NS","VIPIND.NS","VISAKAIND.NS","VISHNU.NS","VISHNUPR.NS","VLSFINANCE.NS","VOLTAMP.NS","VRLLOG.NS","VSTIND.NS","WAAREE.NS","WARDINMOBI.NS","WELCORP.NS","WELENT.NS","WELSPUNLIV.NS","WELSPLSOL.NS","WENDT.NS","WSTCSTPAPR.NS","WESTLIFE.NS","WOCKPHARMA.NS","WONDERLA.NS","WPIL.BO","XCHANGING.NS","YASHO.NS","YATHARTH.NS","YATRA.NS","YUKEN.NS","ZAGGLE.NS","ZEEMEDIA.NS","ZENTEC.NS","ZENSARTECH.NS","ZFCVINDIA.NS","ZUARI.NS","ZYDUSWELL.NS"]
 
 
-largecap_tickers = [
-                "ITC.NS", "JBCHEPHARM.BO", "JWL.BO", "JYOTHYLAB.BO", "KPRMILL.NS", "KAJARIACER.NS", "KEI.BO",
-                "LTTS.NS", "LTIM.NS", "MANKIND.NS", "MARICO.NS", "METROBRAND.BO", "MOTILALOFS.NS", "MPHASIS.NS",
-                "MUTHOOTFIN.NS", "NH.NS", "NAVINFLUOR.NS", "NAM-INDIA.BO", "NMDC.NS", "OFSS.NS", "PGHH.NS",
-                "PIIND.NS", "PAGEIND.NS", "PERSISTENT.NS", "PETRONET.NS", "PFIZER.NS", "PIDILITIND.NS",
-                "POLYMED.NS", "POLYCAB.NS", "RRKABEL.NS", "RVNL.NS", "RATNAMANI.NS", "RITES.NS", "SANOFI.NS",
-                "SCHAEFFLER.NS", "SKFINDIA.NS", "SOLARINDS.NS", "SONACOMS.NS", "SUMICHEM.NS", "SUNTV.NS",
-                "SUNDRMFAST.NS", "SUPREMEIND.BO", "TATAELXSI.NS", "TATATECH.NS", "TCS.NS", "TECHM.NS", "TIMKEN.NS",
-                "TITAN.NS", "TRITURBINE.NS", "TIINDIA.NS", "UNITDSPR.BO", "VGUARD.NS", "MANYAVAR.NS",
-                "VINATIORGA.NS", "WIPRO.NS", "ZYDUSLIFE.NS", "CUMMINSIND.NS", "CYIENT.NS", "DATAPATTNS.NS", "DEEPAKNTR.NS",
-                "DIVISLAB.NS", "LALPATHLAB.NS", "RDY", "ELGIEQUIP.NS", "EMAMILTD.NS", "FIVESTAR.BO", "GRINFRA.NS",
-                "GILLETTE.NS", "GLAXO.NS", "GODFRYPHLP.NS", "GRINDWELL.NS", "HAVELLS.NS", "HCLTECH.NS", "HAL.BO",
-                "HONAUT.BO", "IRCTC.NS", "ISEC.BO", "INFY.NS", "IPCALAB.BO", "ABBOTINDIA.NS", "ADANIPOWER.NS",
-                "AFFLE.BO", "AIAENG.BO", "AJANTPHARM.BO", "APLLTD.BO", "ALKEM.BO", "ARE&M.NS", "ANANDRATHI.BO",
-                "APARINDS.BO", "ASIANPAINT.NS", "ASTRAL.NS", "ASTRAZEN.NS", "BAJFINANCE.NS", "BASF.NS", "BAYERCROP.BO",
-                "BERGEPAINT.BO", "BDL.NS", "BEL.NS", "BSOFT.BO", "CDSL.NS", "CAMS.NS", "CARBORUNIV.BO", "CASTROLIND.NS",
-                "CHAMBLFERT.BO", "COALINDIA.NS", "COFORGE.BO", "COLPAL.NS", "CONCORDBIO.BO", "COROMANDEL.BO", "CREDITACC.BO"
-            ]
-
-midcap_tickers = [
-                "PNCINFRA.NS", "INDIASHLTR.NS", "RAYMOND.NS", "KAMAHOLD.BO", "BENGALASM.BO", "CHOICEIN.NS",
-                "GRAVITA.NS", "HGINFRA.NS", "JKPAPER.NS", "MTARTECH.NS", "HAPPSTMNDS.NS", "SARDAEN.NS",
-                "WELENT.NS", "LTFOODS.NS", "GESHIP.NS", "SHRIPISTON.NS", "SHAREINDIA.NS", "CYIENTDLM.NS", "VTL.NS",
-                "EASEMYTRIP.NS", "LLOYDSME.NS", "ROUTE.NS", "VAIBHAVGBL.NS", "GOKEX.NS", "USHAMART.NS", "EIDPARRY.NS",
-                "KIRLOSBROS.NS", "MANINFRA.NS", "CMSINFO.NS", "RALLIS.NS", "GHCL.NS", "NEULANDLAB.NS", "SPLPETRO.NS",
-                "MARKSANS.NS", "NAVINFLUOR.NS", "ELECON.NS", "TANLA.NS", "KFINTECH.NS", "TIPSINDLTD.NS", "ACI.NS",
-                "SURYAROSNI.NS", "GPIL.NS", "GMDCLTD.NS", "MAHSEAMLES.NS", "TDPOWERSYS.NS", "TECHNOE.NS", "JLHL.NS"
-            ]
 
 ftse100_tickers = [
             "III.L", "ADM.L", "AAF.L", "AAL.L", "ANTO.L", "AHT.L", "ABF.L", "AZN.L",
@@ -995,34 +967,73 @@ else:
         elif choice == "Stock Screener":
             # 'Stock Screener' code--------------------------------------------------------------------------------------------------------------------------------------------------------
             st.sidebar.subheader("Indices")
-            submenu = st.sidebar.radio("Select Option", ["MAD-LargeCap", "MAD-MidCap", "BSE-LargeCap","BSE-MidCap","BSE-SmallCap","FTSE100","S&P500"])
+            submenu = st.sidebar.radio("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap", "FTSE100", "S&P500"])
+
+            # Set up the start and end date inputs
+            START = st.sidebar.date_input('Start Date', pd.to_datetime("2023-06-01"))
+            END = st.sidebar.date_input('End Date', pd.to_datetime("today"))
 
             # Function to create Plotly figure
             def create_figure(data, indicators, title):
                 fig = go.Figure()
 
                 # Add candlestick chart
-                fig.add_trace(go.Candlestick(x=data.index,
-                                 open=data['Open'],
-                                 high=data['High'],
-                                 low=data['Low'],
-                                 close=data['Close'],
-                                 name='Candlesticks'))
+                fig.add_trace(go.Candlestick(
+                    x=data.index,
+                    open=data['Open'],
+                    high=data['High'],
+                    low=data['Low'],
+                    close=data['Close'],
+                    name='Candlesticks'))
+
+                # Add other indicators to the figure
+                colors = {'Close': 'blue', '20_MA': 'orange', '10_MA': 'green', '50_MA': 'red', 'MACD': 'purple',
+                        'MACD_Signal': 'brown', 'RSI': 'pink', 'Buy_Signal': 'green', 'Sell_Signal': 'red', 'ADX': 'magenta',
+                        'Parabolic_SAR': 'yellow', 'Bollinger_High': 'black', 'Bollinger_Low': 'cyan',
+                        'Bollinger_Middle': 'grey', 'ATR': 'darkblue'}
+
+                for indicator in indicators:
+                    if indicator == 'Buy_Signal':
+                        fig.add_trace(
+                            go.Scatter(x=data[data[indicator] == 1].index,
+                                    y=data[data[indicator] == 1]['Close'], mode='markers', name='Buy Signal',
+                                    marker=dict(color='green', symbol='triangle-up')))
+                    elif indicator == 'Sell_Signal':
+                        fig.add_trace(
+                            go.Scatter(x=data[data[indicator] == 1].index,
+                                    y=data[data[indicator] == 1]['Close'], mode='markers', name='Sell Signal',
+                                    marker=dict(color='red', symbol='triangle-down')))
+                    elif indicator == 'MACD_Histogram':
+                        fig.add_trace(
+                            go.Bar(x=data.index, y=data[indicator], name=indicator, marker_color='gray'))
+                    else:
+                        fig.add_trace(
+                            go.Scatter(x=data.index, y=data[indicator], mode='lines', name=indicator,
+                                    line=dict(color=colors.get(indicator, 'black'))))
 
                 fig.update_layout(
-                    title=title, 
-                    xaxis_title='Date', 
+                    title=title,
+                    xaxis_title='Date',
                     yaxis_title='Price',
-                    xaxis_rangeslider_visible=True,
+                    xaxis=dict(
+                        rangeselector=dict(
+                            buttons=list([
+                                dict(count=7, label="7d", step="day", stepmode="backward"),
+                                dict(count=14, label="14d", step="day", stepmode="backward"),
+                                dict(count=1, label="1m", step="month", stepmode="backward"),
+                                dict(count=3, label="3m", step="month", stepmode="backward"),
+                                dict(count=6, label="6m", step="month", stepmode="backward"),
+                                dict(count=1, label="1y", step="year", stepmode="backward"),
+                                dict(step="all")
+                            ])
+                        ),
+                        rangeslider=dict(visible=True),
+                        type='date'
+                    ),
                     plot_bgcolor='dark grey',
                     paper_bgcolor='white',
                     font=dict(color='black'),
                     hovermode='x',
-                    xaxis=dict(
-                        rangeselector=dict(),
-                        rangeslider=dict(visible=True),
-                        type='date'
-                    ),
                     yaxis=dict(fixedrange=False),
                     updatemenus=[dict(
                         type="buttons",
@@ -1036,11 +1047,11 @@ else:
 
             # Function to fetch and process stock data
             @st.cache_data(ttl=3600)
-            def get_stock_data(ticker_symbols, period):
+            def get_stock_data(ticker_symbols, START, END):
                 try:
                     stock_data = {}
                     for ticker_symbol in ticker_symbols:
-                        df = yf.download(ticker_symbol, period=period)
+                        df = yf.download(ticker_symbol, START, END, interval='1d')
                         if not df.empty:
                             df.interpolate(method='linear', inplace=True)
                             df = calculate_indicators(df)
@@ -1158,15 +1169,8 @@ else:
                 return pd.DataFrame(results)
 
             # Determine tickers based on submenu selection
-            if submenu == "MAD-LargeCap":
-                st.subheader("MAD-LargeCap")
-                tickers = largecap_tickers
-            elif submenu == "MAD-MidCap":
-                st.subheader("MAD-MidCap")
-                tickers = midcap_tickers
-
-            elif submenu == "BSE-LargeCap":
-                st.subheader("MAD-LargeCap")
+            if submenu == "BSE-LargeCap":
+                st.subheader("BSE-LargeCap")
                 tickers = bse_largecap
 
             elif submenu == "BSE-MidCap":
@@ -1183,17 +1187,14 @@ else:
                 st.subheader("S&P500")
                 tickers = sp500_tickers
 
-            
             # Fetch data and calculate indicators for each stock
-            stock_data = get_stock_data(tickers, period='6mo')
+            stock_data = get_stock_data(tickers, START, END)
 
             # Define first set of conditions
             first_conditions = [
                 ('MACD', '>', 'MACD_Signal'),
                 ('10_MA', '>', '20_MA'),
                 ('Parabolic_SAR', '<', 'Close')
-
-
             ]
 
             # Query stocks based on the first set of conditions
@@ -1201,8 +1202,7 @@ else:
 
             # Filter stocks in an uptrend with high volume and positive DPO
             second_query_df = first_query_df[
-                (first_query_df['RSI'] < 67) & (first_query_df['RSI'] > 30) & 
-                (first_query_df['ADX'] > 25) & (first_query_df['MACD'] > 0)
+                (first_query_df['RSI'] < 70) & (first_query_df['RSI'] > 30) & (first_query_df['MACD'] > 0)
             ]
 
             st.write("Stocks in an uptrend with high volume and positive DPO:")
@@ -1211,29 +1211,17 @@ else:
             # Dropdown for analysis type
             col1, col2 = st.columns(2)
 
-            # Set up the start and end date inputs
             with col1:
                 selected_stock = st.selectbox("Select Stock", second_query_df['Ticker'].tolist())
 
             with col2:
                 analysis_type = st.selectbox("Select Analysis Type", ["Trend Analysis", "Volume Analysis", "Support & Resistance Levels"])
 
-            # Create two columns
-            col1, col2 = st.columns(2)
-
-            # Set up the start and end date inputs
-            with col1:
-                START = st.date_input('Start Date', pd.to_datetime("2023-06-01"))
-
-            with col2:
-                END = st.date_input('End Date', pd.to_datetime("today"))
-
             # If a stock is selected, plot its data with the selected indicators
             if selected_stock:
                 @st.cache_data(ttl=3600)
                 def load_data(ticker, start, end):
                     df = yf.download(ticker, start=start, end=end)
-                    df.reset_index(inplace=True)
                     return df
 
                 df = load_data(selected_stock, START, END)
@@ -1319,49 +1307,8 @@ else:
                             'Parabolic_SAR', 'Bollinger_High', 'Bollinger_Low', 'Bollinger_Middle', 'ATR'],
                             default=['Close', 'Buy_Signal', 'Sell_Signal']
                         )
-                        timeframe = st.radio(
-                            "Select Timeframe",
-                            ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
-                            index=2,
-                            horizontal=True
-                        )
 
-                        if timeframe == '15 days':
-                            df = df[-15:]
-                        elif timeframe == '30 days':
-                            df = df[-30:]
-                        elif timeframe == '90 days':
-                            df = df[-90:]
-                        elif timeframe == '180 days':
-                            df = df[-180:]
-                        elif timeframe == '1 year':
-                            df = df[-365:]
-
-                        fig = create_figure(df.set_index('Date'), indicators, f"Trend Analysis for {selected_stock}")
-
-                        colors = {'Close': 'blue', '20_MA': 'orange', '10_MA': 'green', '50_MA': 'red', 'MACD': 'purple',
-                                'MACD_Signal': 'brown', 'RSI': 'pink', 'Buy_Signal': 'green', 'Sell_Signal': 'red', 'ADX': 'magenta',
-                                'Parabolic_SAR': 'yellow', 'Bollinger_High': 'black', 'Bollinger_Low': 'cyan',
-                                'Bollinger_Middle': 'grey', 'ATR': 'darkblue'}
-
-                        for indicator in indicators:
-                            if indicator == 'Buy_Signal':
-                                fig.add_trace(
-                                    go.Scatter(x=df[df[indicator] == 1]['Date'],
-                                            y=df[df[indicator] == 1]['Close'], mode='markers', name='Buy Signal',
-                                            marker=dict(color='green', symbol='triangle-up')))
-                            elif indicator == 'Sell_Signal':
-                                fig.add_trace(
-                                    go.Scatter(x=df[df[indicator] == 1]['Date'],
-                                            y=df[df[indicator] == 1]['Close'], mode='markers', name='Sell Signal',
-                                            marker=dict(color='red', symbol='triangle-down')))
-                            elif indicator == 'MACD_Histogram':
-                                fig.add_trace(
-                                    go.Bar(x=df['Date'], y=df[indicator], name=indicator, marker_color='gray'))
-                            else:
-                                fig.add_trace(
-                                    go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator,
-                                            line=dict(color=colors.get(indicator, 'black'))))
+                        fig = create_figure(df, indicators, f"Trend Analysis for {selected_stock}")
 
                         st.plotly_chart(fig)
 
@@ -1369,31 +1316,11 @@ else:
                         st.subheader("Volume Analysis")
                         volume_indicators = st.multiselect(
                             "Select Volume Indicators",
-                            ['Close','Volume', 'Volume_MA_20', 'Volume_MA_10', 'Volume_MA_5', 'OBV', 'VWAP', 'A/D Line'],
-                            default=['Close','VWAP']
-                        )
-                        volume_timeframe = st.radio(
-                            "Select Timeframe",
-                            ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
-                            index=2,
-                            horizontal=True
+                            ['Close', 'Volume', 'Volume_MA_20', 'Volume_MA_10', 'Volume_MA_5', 'OBV', 'VWAP', 'A/D Line'],
+                            default=['Close', 'VWAP']
                         )
 
-                        if volume_timeframe == '15 days':
-                            df = df[-15:]
-                        elif volume_timeframe == '30 days':
-                            df = df[-30:]
-                        elif volume_timeframe == '90 days':
-                            df = df[-90:]
-                        elif volume_timeframe == '180 days':
-                            df = df[-180:]
-                        elif volume_timeframe == '1 year':
-                            df = df[-365:]
-
-                        fig = create_figure(df.set_index('Date'), volume_indicators, f"Volume Analysis for {selected_stock}")
-
-                        for indicator in volume_indicators:
-                            fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator))
+                        fig = create_figure(df, volume_indicators, f"Volume Analysis for {selected_stock}")
 
                         st.plotly_chart(fig)
 
@@ -1405,30 +1332,11 @@ else:
                             'Resistance_Trendline', 'Pivot', 'R1', 'S1', 'R2', 'S2'],
                             default=['Close', 'Support', 'Resistance']
                         )
-                        sr_timeframe = st.radio(
-                            "Select Timeframe",
-                            ['15 days', '30 days', '90 days', '180 days', '1 year', 'All'],
-                            index=2,
-                            horizontal=True
-                        )
 
-                        if sr_timeframe == '15 days':
-                            df = df[-15:]
-                        elif sr_timeframe == '30 days':
-                            df = df[-30:]
-                        elif sr_timeframe == '90 days':
-                            df = df[-90:]
-                        elif sr_timeframe == '180 days':
-                            df = df[-180:]
-                        elif sr_timeframe == '1 year':
-                            df = df[-365:]
-
-                        fig = create_figure(df.set_index('Date'), sr_indicators, f"Support & Resistance Levels for {selected_stock}")
-
-                        for indicator in sr_indicators:
-                            fig.add_trace(go.Scatter(x=df['Date'], y=df[indicator], mode='lines', name=indicator))
+                        fig = create_figure(df, sr_indicators, f"Support & Resistance Levels for {selected_stock}")
 
                         st.plotly_chart(fig)
+
 
 
         elif choice == "Stock Analysis":
