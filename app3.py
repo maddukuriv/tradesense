@@ -668,7 +668,6 @@ else:
                 st.write("Your portfolio is empty.")
 
         elif choice == "Markets":
-        
                 #'Markets' code-------------------------------------------------------------------------------------------------------------------------------------------------------
                 # Function to download data and calculate moving averages with caching
                 @lru_cache(maxsize=32)
@@ -1193,8 +1192,7 @@ else:
             # Define first set of conditions
             first_conditions = [
                 ('MACD', '>', 'MACD_Signal'),
-                ('10_MA', '>', '20_MA'),
-                ('Parabolic_SAR', '<', 'Close')
+                ('10_MA', '>', '20_MA')
             ]
 
             # Query stocks based on the first set of conditions
@@ -2516,11 +2514,7 @@ else:
             ticker_category = st.sidebar.selectbox("Select Ticker Category", ["MAD-LargeCap", "MAD-MidCap","BSE-LargeCap","BSE-MidCap","BSE-SmallCap"])
 
             # Set tickers based on selected category
-            if ticker_category == "MAD-LargeCap":
-                tickers = largecap_tickers
-            elif ticker_category == "MAD-MidCap":
-                tickers = midcap_tickers
-            elif ticker_category == "BSE-LargeCap":
+            if ticker_category == "BSE-LargeCap":
                 tickers = bse_largecap
             elif ticker_category == "BSE-MidCap":
                 tickers = bse_midcap
