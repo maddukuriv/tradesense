@@ -115,7 +115,7 @@ sp500_tickers = [
 
 
 # Set wide mode as default layout
-st.set_page_config(layout="wide", page_title="TradeSense", page_icon="📈")
+st.set_page_config(layout="wide", page_title="TradeSense", page_icon="📈",initial_sidebar_state="expanded")
 
 # Load environment variables from .env file
 load_dotenv()
