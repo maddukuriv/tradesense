@@ -1074,7 +1074,7 @@ else:
                 rsi = ta.momentum.RSIIndicator(df['Close'])
                 df['RSI'] = rsi.rsi()
 
-                bollinger = ta.volatility.BollingerBands(df['Close'])
+                bollinger = ta.volatility.BBANDS(df['Close'])
                 df['Bollinger_High'] = bollinger.bollinger_hband()
                 df['Bollinger_Low'] = bollinger.bollinger_lband()
                 df['Bollinger_Middle'] = bollinger.bollinger_mavg()
@@ -1271,7 +1271,7 @@ else:
 
             if selected_stock:
                 visualize_stock(selected_stock)
-                    
+                                
 
 
 
