@@ -43,6 +43,8 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from ta.trend import EMAIndicator, MACD, ADXIndicator
 from ta.momentum import RSIIndicator
 from ta.volatility import BollingerBands
+from ta.trend import ADXIndicator
+from ta.momentum import RSIIndicator
 
 # List of stock tickers
 bse_largecap = ["ABB.BO","ADANIENSOL.BO","ADANIENT.BO","ADANIGREEN.BO","ADANIPORTS.BO","ADANIPOWER.BO","ATGL.NS","AWL.NS","AMBUJACEM.BO","APOLLOHOSP.BO","ASIANPAINT.BO","DMART.BO","AXISBANK.BO","BAJAJ-AUTO.BO","BAJFINANCE.BO","BAJAJFINSV.BO","BAJAJHLDNG.BO","BANDHANBNK.BO","BANKBARODA.BO","BERGEPAINT.BO","BEL.BO","BPCL.BO","BHARTIARTL.BO","BOSCHLTD.BO","BRITANNIA.BO","CHOLAFIN.BO","CIPLA.BO","COALINDIA.BO","DABUR.BO","DIVISLAB.BO","DLF.BO","DRREDDY.BO","EICHERMOT.BO","NYKAA.NS","GAIL.BO","GODREJCP.BO","GRASIM.BO","HAVELLS.BO","HCLTECH.BO","HDFCAMC.BO","HDFCBANK.BO","HDFCLIFE.BO","HEROMOTOCO.BO","HINDALCO.BO","HAL.BO","HINDUNILVR.BO","HINDZINC.BO","ICICIBANK.BO","ICICIGI.BO","ICICIPRULI.BO","IOC.BO","INDUSTOWER.BO","INDUSINDBK.BO","NAUKRI.BO","INFY.BO","INDIGO.BO","ITC.BO","JIOFIN.NS","JSWSTEEL.BO","KOTAKBANK.BO","LT.BO","LICI.NS","LTIM.BO","M&M.BO","MANKIND.NS","MARICO.BO","MARUTI.BO","NESTLEIND.BO","NTPC.BO","ONGC.BO","PAYTM.NS","PIDILITIND.BO","POWERGRID.BO","PNB.BO","RELIANCE.BO","SBICARD.BO","SBILIFE.BO","SHREECEM.BO","SIEMENS.BO","SRF.BO","SBIN.BO","SUNPHARMA.BO","TCS.BO","TATACONSUM.BO","TATAMOTORS.BO","TATAMTRDVR.BO","TATAPOWER.BO","TATASTEEL.BO","TECHM.BO","TITAN.BO","ULTRACEMCO.BO","UNITDSPR.BO","UPL.BO","VBL.BO","VEDL.BO","WIPRO.BO","ZOMATO.BO","ZYDUSLIFE.NS"]
@@ -371,18 +373,13 @@ with st.sidebar:
             forgot_password()
         choice = None
 
-########################### Main content area #####################################
+######################################################### Main content area ######################################################################
 
-
-    
 if not st.session_state.logged_in:
     # dashboard code-------------------------------------------------------------------------------------------------------
 
-
     st.title("TradeSense")
     st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
-
-
 
     # Function to get stock data and calculate moving averages
     @st.cache_data
@@ -460,10 +457,8 @@ if not st.session_state.logged_in:
 
     with col1:
         stock_symbols = {
-            "BSE Sensex": "^BSESN",
+           
             "BSE 500": "BSE-500.BO",
-            "BSE MidCap": "^BSEMD",
-            "BSE SmallCap": "^BSESMLCAP",
             "NIFTY 50": "^NSEI",
             "S&P 500": "^GSPC",
             "FTSE 100": "^FTSE",
@@ -990,8 +985,10 @@ else:
 
         elif choice == "Stock Screener":
    
-            # 'Stock Screener' code
+         
+            
 
+            # 'Stock Screener' code
             st.sidebar.subheader("Stock Screener")
 
             # Dropdown for selecting ticker category
@@ -1094,34 +1091,15 @@ else:
                 df['MACD'] = df['12_day_EMA'] - df['26_day_EMA']
                 df['MACD_signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
                 df['MACD_hist'] = df['MACD'] - df['MACD_signal']
-
-                delta = df['Close'].diff(1)
-                gain = delta.where(delta > 0, 0)
-                loss = -delta.where(delta < 0, 0)
-                avg_gain = gain.rolling(window=14).mean()
-                avg_loss = loss.rolling(window=14).mean()
-                rs = avg_gain / avg_loss
-                df['RSI'] = 100 - (100 / (1 + rs))
-
-                low_14 = df['Low'].rolling(window=14).min()
-                high_14 = df['High'].rolling(window=14).max()
-                df['Stochastic_%K'] = 100 * (df['Close'] - low_14) / (high_14 - low_14)
-                df['Stochastic_%D'] = df['Stochastic_%K'].rolling(window=3).mean()
-
-                df['OBV'] = (np.sign(df['Close'].diff()) * df['Volume']).fillna(0).cumsum()
-
-                clv = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low'])
-                df['A/D_line'] = (clv * df['Volume']).fillna(0).cumsum()
-
-                df['VWAP'] = (df['Volume'] * (df['High'] + df['Low'] + df['Close']) / 3).cumsum() / df['Volume'].cumsum()
-                df['5_day_Volume_MA'] = df['Volume'].rolling(window=5).mean()
-                df['10_day_Volume_MA'] = df['Volume'].rolling(window=10).mean()
-                df['20_day_Volume_MA'] = df['Volume'].rolling(window=20).mean()
+                df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
                 df['20_day_SMA'] = df['Close'].rolling(window=20).mean()
                 df['Std_Dev'] = df['Close'].rolling(window=20).std()
                 df['BB_High'] = df['20_day_SMA'] + (df['Std_Dev'] * 2)
                 df['BB_Low'] = df['20_day_SMA'] - (df['Std_Dev'] * 2)
-
+                adx = ADXIndicator(df['High'], df['Low'], df['Close'])
+                df['ADX'] = adx.adx()
+                rsi = RSIIndicator(df['Close'])
+                df['RSI'] = rsi.rsi()
                 return df
 
             def fetch_latest_data(tickers_with_dates):
@@ -1130,18 +1108,7 @@ else:
                     data = yf.download(ticker, start=start_date, end=end_date)
                     if data.empty:
                         continue
-                    data['5_day_EMA'] = data['Close'].ewm(span=5, adjust=False).mean()
-                    data['10_day_EMA'] = data['Close'].ewm(span=10, adjust=False).mean()
-                    data['20_day_EMA'] = data['Close'].ewm(span=20, adjust=False).mean()
-                    data['MACD'] = MACD(data['Close']).macd()
-                    data['MACD_Hist'] = MACD(data['Close']).macd_diff()
-                    data['RSI'] = RSIIndicator(data['Close']).rsi()
-                    
-                   
-                    bb = BollingerBands(data['Close'])
-                    data['Bollinger_High'] = bb.bollinger_hband()
-                    data['Bollinger_Low'] = bb.bollinger_lband()
-                    data['20_day_vol_MA'] = data['Volume'].rolling(window=20).mean()
+                    data = calculate_indicators(data)
 
                     latest_data = data.iloc[-1]
                     technical_data.append({
@@ -1152,13 +1119,13 @@ else:
                         '10_day_EMA': latest_data['10_day_EMA'],
                         '20_day_EMA': latest_data['20_day_EMA'],
                         'MACD': latest_data['MACD'],
-                        'MACD_Hist': latest_data['MACD_Hist'],
+                        'MACD_Hist': latest_data['MACD_hist'],
+                        'ADX': latest_data['ADX'],
                         'RSI': latest_data['RSI'],
-                       
-                        'Bollinger_High': latest_data['Bollinger_High'],
-                        'Bollinger_Low': latest_data['Bollinger_Low'],
+                        'Bollinger_High': latest_data['BB_High'],
+                        'Bollinger_Low': latest_data['BB_Low'],
                         'Volume': latest_data['Volume'],
-                        '20_day_vol_MA': latest_data['20_day_vol_MA']
+                        '20_day_vol_MA': latest_data['Volume_MA']
                     })
                 return pd.DataFrame(technical_data)
 
@@ -1206,115 +1173,18 @@ else:
             if submenu == "MACD":
                 st.write("Stocks with MACD > MACD Signal and MACD > 0 in the last 5 days:")
                 st.dataframe(df_macd_signal)
-                selected_stock = st.selectbox("Select Stock for Visualization", df_macd_signal['Ticker'].unique())
 
             elif submenu == "Moving Average":
                 st.write("Stocks with 10-day EMA crossing above 20-day EMA in the last 5 days:")
                 st.dataframe(df_moving_average_signal)
-                selected_stock = st.selectbox("Select Stock for Visualization", df_moving_average_signal['Ticker'].unique())
 
             elif submenu == "Bollinger Bands":
                 st.write("Stocks with price crossing below Bollinger Low in the last 5 days:")
                 st.dataframe(df_bollinger_low_cross_signal)
-                selected_stock = st.selectbox("Select Stock for Visualization", df_bollinger_low_cross_signal['Ticker'].unique())
 
             elif submenu == "Volume":
                 st.write("Stocks with volume above 20-day moving average in the last 5 days:")
                 st.dataframe(df_volume_increase_signal)
-                selected_stock = st.selectbox("Select Stock for Visualization", df_volume_increase_signal['Ticker'].unique())
-
-            # Visualization of technical indicators
-            def get_macd_hist_colors(macd_hist):
-                colors = []
-                for i in range(1, len(macd_hist)):
-                    if macd_hist.iloc[i] > 0:
-                        color = 'green' if macd_hist.iloc[i] > macd_hist.iloc[i - 1] else 'lightgreen'
-                    else:
-                        color = 'red' if macd_hist.iloc[i] < macd_hist.iloc[i - 1] else 'lightcoral'
-                    colors.append(color)
-                return colors
-
-            def visualize_stock(ticker):
-                data = yf.download(ticker, period="1y", interval="1d")
-                data = calculate_indicators(data)
-
-                fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
-                                    specs=[[{"secondary_y": True}], [{"secondary_y": True}], [{}]], 
-                                    row_heights=[0.5, 0.3, 0.2], vertical_spacing=0.02)
-
-                show_candlestick = st.checkbox('Show Candlestick Chart')
-
-                if show_candlestick:
-                    fig.add_trace(go.Candlestick(x=data.index,
-                                                open=data['Open'],
-                                                high=data['High'],
-                                                low=data['Low'],
-                                                close=data['Close'],
-                                                name='Candlestick'), row=1, col=1)
-                else:
-                    fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Close'), row=1, col=1)
-
-                selected_indicators = st.multiselect("Select Indicators", data.columns)
-
-                for i, indicator in enumerate(selected_indicators):
-                    y_axis_name = f'y{i+2}'
-
-                    if indicator == 'MACD_hist':
-                        macd_hist_colors = get_macd_hist_colors(data[indicator])
-                        fig.add_trace(go.Bar(x=data.index[1:], y=data[indicator][1:], name='MACD Histogram', marker_color=macd_hist_colors), row=1, col=1, secondary_y=True)
-                    elif 'Fib' in indicator or 'Gann' in indicator:
-                        fig.add_trace(go.Scatter(x=data.index, y=data[indicator], mode='lines', name=indicator, line=dict(dash='dash')), row=1, col=1)
-                    else:
-                        fig.add_trace(go.Scatter(x=data.index, y=data[indicator], mode='lines', name=indicator), row=1, col=1, secondary_y=True)
-
-                    fig.update_layout(**{
-                        f'yaxis{i+2}': go.layout.YAxis(
-                            title=indicator,
-                            overlaying='y',
-                            side='right',
-                            position=1 - (i * 0.05)
-                        )
-                    })
-
-                fig.update_layout(
-                    title={
-                        'text': f'{ticker} Price and Technical Indicators',
-                        'y': 0.95,
-                        'x': 0.5,
-                        'xanchor': 'center',
-                        'yanchor': 'top'
-                    },
-                    height=900,
-                    margin=dict(t=100, b=50, l=50, r=50),
-                    yaxis=dict(title='Price'),
-                    yaxis2=dict(title='Indicators', overlaying='y', side='right'),
-                    xaxis=dict(
-                        rangeslider=dict(visible=True),
-                        rangeselector=dict(
-                            buttons=list([
-                                dict(count=7, label='7d', step='day', stepmode='backward'),
-                                dict(count=14, label='14d', step='day', stepmode='backward'),
-                                dict(count=1, label='1m', step='month', stepmode='backward'),
-                                dict(count=3, label='3m', step='month', stepmode='backward'),
-                                dict(count=6, label='6m', step='month', stepmode='backward'),
-                                dict(count=1, label='1y', step='year', stepmode='backward'),
-                                dict(step='all')
-                            ])
-                        ),
-                        type='date'
-                    ),
-                    legend=dict(x=0.5, y=-0.15, orientation='h', xanchor='center', yanchor='top')
-                )
-
-                fig.update_layout(
-                    hovermode='x unified',
-                    hoverlabel=dict(bgcolor="white", font_size=16, font_family="Rockwell")
-                )
-
-                st.plotly_chart(fig)
-
-            if selected_stock:
-                visualize_stock(selected_stock)
 
 
 
