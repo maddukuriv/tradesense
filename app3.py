@@ -114,6 +114,8 @@ sp500_tickers = [
              ]
 
 
+
+
 # Set wide mode as default layout
 st.set_page_config(layout="wide", page_title="TradeSense", page_icon="📈",initial_sidebar_state="expanded")
 
@@ -369,7 +371,7 @@ with st.sidebar:
             forgot_password()
         choice = None
 
-# Main content area
+########################### Main content area #####################################
 
 
     
@@ -380,16 +382,18 @@ if not st.session_state.logged_in:
     st.title("TradeSense")
     st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
 
+
+
     # Function to get stock data and calculate moving averages
     @st.cache_data
     def get_stock_data(ticker_symbol, start_date, end_date):
         data = yf.download(ticker_symbol, start=start_date, end=end_date)
-        data['MA_15'] = data['Close'].rolling(window=15).mean()
-        data['MA_50'] = data['Close'].rolling(window=50).mean()
+        data['MA_10'] = data['Close'].rolling(window=10).mean()
+        data['MA_20'] = data['Close'].rolling(window=20).mean()
         data.dropna(inplace=True)
         return data
 
-    # Function to create Plotly figure
+    # Function to create Plotly figure with volume histogram
     def create_figure(data, indicators, title):
         fig = go.Figure()
         
@@ -403,14 +407,17 @@ if not st.session_state.logged_in:
         
         if 'Close' in indicators:
             fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Close Price'))
-        if 'MA_15' in indicators:
-            fig.add_trace(go.Scatter(x=data.index, y=data['MA_15'], mode='lines', name='15-day MA'))
-        if 'MA_50' in indicators:
-            fig.add_trace(go.Scatter(x=data.index, y=data['MA_50'], mode='lines', name='50-day MA'))
-            
+        if 'MA_10' in indicators:
+            fig.add_trace(go.Scatter(x=data.index, y=data['MA_10'], mode='lines', name='10-day MA'))
+        if 'MA_20' in indicators:
+            fig.add_trace(go.Scatter(x=data.index, y=data['MA_20'], mode='lines', name='20-day MA'))
+
+        # Add volume histogram
+        fig.add_trace(go.Bar(x=data.index, y=data['Volume'], name='Volume', yaxis='y2', marker_color='rgba(0, 0, 100, 0.5)'))
+        
         fig.update_layout(
-            title=title, 
-            xaxis_title='Date', 
+            title=title,
+            xaxis_title='Date',
             yaxis_title='Price',
             xaxis_rangeslider_visible=True,
             plot_bgcolor='dark grey',
@@ -430,7 +437,15 @@ if not st.session_state.logged_in:
                 rangeslider=dict(visible=True),
                 type='date'
             ),
-            yaxis=dict(fixedrange=False),
+            yaxis=dict(
+                title='Price',
+                fixedrange=False
+            ),
+            yaxis2=dict(
+                title='Volume',
+                overlaying='y',
+                side='right'
+            ),
             updatemenus=[dict(
                 type="buttons",
                 buttons=[dict(label="Reset Zoom",
@@ -442,23 +457,40 @@ if not st.session_state.logged_in:
         return fig
 
     col1, col2, col3 = st.columns(3)
+
     with col1:
-        stock_symbols = ["^BSESN", "BSE-500.BO", "^BSEMD", "^BSESMLCAP", "^NSEI", "^NSMIDCP", "^NSEMDCP", "^NSESCP"]
-        ticker = st.selectbox("Enter Stock symbol", stock_symbols)
-        st.write(f"You selected: {ticker}")
+        stock_symbols = {
+            "BSE Sensex": "^BSESN",
+            "BSE 500": "BSE-500.BO",
+            "BSE MidCap": "^BSEMD",
+            "BSE SmallCap": "^BSESMLCAP",
+            "NIFTY 50": "^NSEI",
+            "S&P 500": "^GSPC",
+            "FTSE 100": "^FTSE",
+            "SSE Composite (China)": "000001.SS",
+            "Nikkei 225 (Japan)": "^N225",
+            "ASX 200 (Australia)": "^AXJO",
+            "S&P/TSX (Canada)": "^GSPTSE",
+            "Bitcoin": "BTC-USD",
+            "EUR/USD": "EURUSD=X",
+            "Gold Futures": "GC=F",
+            "Crude Oil Futures": "CL=F"
+        }
+        stock_name = st.selectbox("Select Stock", list(stock_symbols.keys()))
+        ticker = stock_symbols[stock_name]
+        st.write(f"You selected: {stock_name}")
+
     with col2:
-        START = st.date_input('Start Date', pd.to_datetime("2023-06-06"))
+        START = st.date_input('Start Date', value=datetime.now() - timedelta(days=365))
+
     with col3:
-        END = st.date_input('End Date', pd.to_datetime("today"))
+        END = st.date_input('End Date', value=datetime.now() + timedelta(days=1))
 
     if ticker and START and END:
         data = get_stock_data(ticker, START, END)
-        fig = create_figure(data, ['Close', 'MA_15', 'MA_50'], f"{ticker} Stock Prices")
+        fig = create_figure(data, ['Close', 'MA_10', 'MA_20'], f"{stock_name} Stock Prices")
         st.plotly_chart(fig)
 
-
-
-    
 
 else:
     if choice:
