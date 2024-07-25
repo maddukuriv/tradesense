@@ -15,7 +15,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import bcrypt  # for password hashing
 from dotenv import load_dotenv
 from password_validator import PasswordValidator
-
+import pandas_ta as ta
 import yfinance as yf
 import pandas as pd
 import pandas_ta as pta
@@ -968,7 +968,7 @@ else:
 
         elif choice == "Stock Screener":
             # 'Stock Screener' code--------------------------------------------------------------------------------------------------------------------------------------------------------
-
+   
             st.sidebar.subheader("Stock Screener")
 
             # Dropdown for selecting ticker category
@@ -1013,8 +1013,8 @@ else:
             def check_bollinger_low_cross(data):
                 recent_data = data[-5:]
                 for i in range(1, len(recent_data)):
-                    if (recent_data['Close'].iloc[i] < recent_data['Bollinger_Low'].iloc[i] and
-                        recent_data['Close'].iloc[i-1] >= recent_data['Bollinger_Low'].iloc[i-1]):
+                    if (recent_data['Close'].iloc[i] < recent_data['BB_Low'].iloc[i] and
+                        recent_data['Close'].iloc[i-1] >= recent_data['BB_Low'].iloc[i-1]):
                         return recent_data.index[i]
                 return None
 
@@ -1043,6 +1043,60 @@ else:
                         return recent_data.index[i]
                 return None
 
+            def calculate_parabolic_sar(df):
+                af = 0.02
+                af_max = 0.2
+                ep = df['High'].iloc[0]
+                sar = df['Low'].iloc[0]
+                uptrend = True
+                df['Parabolic_SAR'] = np.nan
+
+                for i in range(1, len(df)):
+                    if uptrend:
+                        sar = sar + af * (ep - sar)
+                        if df['Low'].iloc[i] < sar:
+                            uptrend = False
+                            sar = ep
+                            ep = df['Low'].iloc[i]
+                            af = 0.02
+                        else:
+                            if df['High'].iloc[i] > ep:
+                                ep = df['High'].iloc[i]
+                                af = min(af + 0.02, af_max)
+                    else:
+                        sar = sar - af * (sar - ep)
+                        if df['High'].iloc[i] > sar:
+                            uptrend = True
+                            sar = ep
+                            ep = df['High'].iloc[i]
+                            af = 0.02
+                        else:
+                            if df['Low'].iloc[i] < ep:
+                                ep = df['Low'].iloc[i]
+                                af = min(af + 0.02, af_max)
+
+                    df.at[i, 'Parabolic_SAR'] = sar
+                return df['Parabolic_SAR']
+
+            def calculate_adx(df, window=14):
+                high_low = df['High'] - df['Low']
+                high_close = np.abs(df['High'] - df['Close'].shift())
+                low_close = np.abs(df['Low'] - df['Close'].shift())
+                tr = high_low.combine(high_close, np.maximum).combine(low_close, np.maximum)
+                df['TR'] = tr
+                df['+DM'] = np.where((df['High'] - df['High'].shift()) > (df['Low'].shift() - df['Low']), df['High'] - df['High'].shift(), 0)
+                df['+DM'] = np.where(df['+DM'] < 0, 0, df['+DM'])
+                df['-DM'] = np.where((df['Low'].shift() - df['Low']) > (df['High'] - df['High'].shift()), df['Low'].shift() - df['Low'], 0)
+                df['-DM'] = np.where(df['-DM'] < 0, 0, df['-DM'])
+                tr_sma = df['TR'].rolling(window=window).mean()
+                plus_dm_sma = df['+DM'].rolling(window=window).mean()
+                minus_dm_sma = df['-DM'].rolling(window=window).mean()
+                df['+DI'] = 100 * (plus_dm_sma / tr_sma)
+                df['-DI'] = 100 * (minus_dm_sma / tr_sma)
+                df['DX'] = 100 * (np.abs(df['+DI'] - df['-DI']) / (df['+DI'] + df['-DI']))
+                df['ADX'] = df['DX'].rolling(window=window).mean()
+                return df['ADX']
+
             @st.cache_data
             def get_stock_data(ticker_symbols, start_date, end_date):
                 try:
@@ -1063,21 +1117,50 @@ else:
 
             @st.cache_data
             def calculate_indicators(df):
-                df['20_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=20).wma()
-                df['50_MA'] = ta.trend.WMAIndicator(close=df['Close'], window=50).wma()
-
-                macd = ta.trend.MACD(df['Close'])
-                df['MACD'] = macd.macd()
-                df['MACD_Signal'] = macd.macd_signal()
-                df['MACD_Histogram'] = macd.macd_diff()
-
-                rsi = ta.momentum.RSIIndicator(df['Close'])
-                df['RSI'] = rsi.rsi()
-
-                bollinger = ta.volatility.BBANDS(df['Close'])
-                df['Bollinger_High'] = bollinger.bollinger_hband()
-                df['Bollinger_Low'] = bollinger.bollinger_lband()
-                df['Bollinger_Middle'] = bollinger.bollinger_mavg()
+                df['5_day_EMA'] = df['Close'].ewm(span=5, adjust=False).mean()
+                df['10_day_EMA'] = df['Close'].ewm(span=10, adjust=False).mean()
+                df['20_day_EMA'] = df['Close'].ewm(span=20, adjust=False).mean()
+                df['12_day_EMA'] = df['Close'].ewm(span=12, adjust=False).mean()
+                df['26_day_EMA'] = df['Close'].ewm(span=26, adjust=False).mean()
+                df['MACD'] = df['12_day_EMA'] - df['26_day_EMA']
+                df['MACD_signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+                df['MACD_hist'] = df['MACD'] - df['MACD_signal']
+                
+                delta = df['Close'].diff(1)
+                gain = delta.where(delta > 0, 0)
+                loss = -delta.where(delta < 0, 0)
+                avg_gain = gain.rolling(window=14).mean()
+                avg_loss = loss.rolling(window=14).mean()
+                rs = avg_gain / avg_loss
+                df['RSI'] = 100 - (100 / (1 + rs))
+                
+                low_14 = df['Low'].rolling(window=14).min()
+                high_14 = df['High'].rolling(window=14).max()
+                df['Stochastic_%K'] = 100 * (df['Close'] - low_14) / (high_14 - low_14)
+                df['Stochastic_%D'] = df['Stochastic_%K'].rolling(window=3).mean()
+                
+                df['OBV'] = (np.sign(df['Close'].diff()) * df['Volume']).fillna(0).cumsum()
+                
+                clv = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low'])
+                df['A/D_line'] = (clv * df['Volume']).fillna(0).cumsum()
+                
+                df['VWAP'] = (df['Volume'] * (df['High'] + df['Low'] + df['Close']) / 3).cumsum() / df['Volume'].cumsum()
+                df['5_day_Volume_MA'] = df['Volume'].rolling(window=5).mean()
+                df['10_day_Volume_MA'] = df['Volume'].rolling(window=10).mean()
+                df['20_day_Volume_MA'] = df['Volume'].rolling(window=20).mean()
+                df['20_day_SMA'] = df['Close'].rolling(window=20).mean()
+                df['Std_Dev'] = df['Close'].rolling(window=20).std()
+                df['BB_High'] = df['20_day_SMA'] + (df['Std_Dev'] * 2)
+                df['BB_Low'] = df['20_day_SMA'] - (df['Std_Dev'] * 2)
+                
+                high_low = df['High'] - df['Low']
+                high_close = np.abs(df['High'] - df['Close'].shift())
+                low_close = np.abs(df['Low'] - df['Close'].shift())
+                tr = high_low.combine(high_close, np.maximum).combine(low_close, np.maximum)
+                df['ATR'] = tr.rolling(window=14).mean()
+                
+                df['Parabolic_SAR'] = calculate_parabolic_sar(df)
+                df['ADX'] = calculate_adx(df)
 
                 return df
 
@@ -1087,17 +1170,7 @@ else:
                     data = yf.download(ticker, start=start_date, end=end_date)
                     if data.empty:
                         continue
-                    data['5_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=5)
-                    data['10_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=10)
-                    data['20_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=20)
-                    data['MACD'] = ta.trend.macd(data['Close'])
-                    data['MACD_Hist'] = ta.trend.macd_diff(data['Close'])
-                    data['RSI'] = ta.momentum.rsi(data['Close'])
-                    data['ADX'] = ta.trend.adx(data['High'], data['Low'], data['Close'])
-                    data['Bollinger_High'] = ta.volatility.bollinger_hband(data['Close'])
-                    data['Bollinger_Low'] = ta.volatility.bollinger_lband(data['Close'])
-                    data['20_day_vol_MA'] = data['Volume'].rolling(window=20).mean()
-
+                    data = calculate_indicators(data)
                     latest_data = data.iloc[-1]
                     technical_data.append({
                         'Ticker': ticker,
@@ -1107,14 +1180,22 @@ else:
                         '10_day_EMA': latest_data['10_day_EMA'],
                         '20_day_EMA': latest_data['20_day_EMA'],
                         'MACD': latest_data['MACD'],
-                        'MACD_Hist': latest_data['MACD_Hist'],
+                        'MACD_hist': latest_data['MACD_hist'],
                         'RSI': latest_data['RSI'],
+                        'Stochastic_%K': latest_data['Stochastic_%K'],
+                        'Stochastic_%D': latest_data['Stochastic_%D'],
+                        'OBV': latest_data['OBV'],
+                        'A/D_line': latest_data['A/D_line'],
+                        'VWAP': latest_data['VWAP'],
+                        '5_day_Volume_MA': latest_data['5_day_Volume_MA'],
+                        '10_day_Volume_MA': latest_data['10_day_Volume_MA'],
+                        '20_day_Volume_MA': latest_data['20_day_Volume_MA'],
+                        'BB_High': latest_data['BB_High'],
+                        'BB_Low': latest_data['BB_Low'],
+                        'ATR': latest_data['ATR'],
+                        'Parabolic_SAR': latest_data['Parabolic_SAR'],
                         'ADX': latest_data['ADX'],
-                        'Bollinger_High': latest_data['Bollinger_High'],
-                        'Bollinger_Low': latest_data['Bollinger_Low'],
-                        'Volume': latest_data['Volume'],
-                        '20_day_vol_MA': latest_data['20_day_vol_MA']
-                        
+                        'Volume': latest_data['Volume']
                     })
                 return pd.DataFrame(technical_data)
 
@@ -1271,9 +1352,6 @@ else:
 
             if selected_stock:
                 visualize_stock(selected_stock)
-                                
-
-
 
         elif choice == "Stock Analysis":
             #'Technical Analysis' code---------------------------------------------------------------------------------------------------------------------------------
