@@ -371,20 +371,7 @@ with st.sidebar:
 
 # Main content area
 
-def get_stock_data(ticker):
-    try:
-        df = yf.download(ticker, period='1y')
-        if df.empty:
-            st.warning(f"No data found for {ticker}.")
-            return pd.DataFrame()  # Return an empty DataFrame
-        df['2_MA'] = df['Close'].rolling(window=2).mean()
-        df['15_MA'] = df['Close'].rolling(window=15).mean()
-        df['RSI'] = ta.momentum.RSIIndicator(df['Close']).rsi()
-        df['ADX'] = ta.trend.ADXIndicator(df['High'], df['Low'], df['Close']).adx()
-        return df[['Close', '2_MA', '15_MA', 'RSI', 'ADX']].iloc[-1]
-    except Exception as e:
-        st.error(f"Error fetching data for {ticker}: {e}")
-        return pd.Series(dtype='float64')  # Return an empty Series
+
     
 if not st.session_state.logged_in:
     # dashboard code-------------------------------------------------------------------------------------------------------
