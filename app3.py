@@ -68,6 +68,8 @@ from datetime import timedelta, datetime
 from scipy.signal import cwt, ricker, hilbert
 
 
+#Database
+from get_tables import display_tables
 
 
 
@@ -377,7 +379,7 @@ def logout():
 def main_menu():
     st.subheader("Main Menu")
     menu_options = [f"{st.session_state.username}'s Portfolio",f"{st.session_state.username}'s Watchlist", "Stock Screener", "Stock Analysis",
-                    "Markets", "My Account"]
+                    "Markets", "My Account", "Database Admin Page"]
     choice = st.selectbox("Select an option", menu_options)
     return choice
 
@@ -2882,5 +2884,5 @@ else:
                 st.write("Model Summary:")
                 st.text(sarima_model.summary())
 
-
-                
+        elif choice == "Database Admin Page":
+              display_tables()
