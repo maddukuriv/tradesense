@@ -112,7 +112,7 @@ watchdog==4.0.1
 webencodings==0.5.1
 Werkzeug==3.0.3
 wrapt==1.16.0
-wordcloud=1.16.0
+wordcloud==1.16.0
 yfinance==0.2.40
 zipp==3.19.0
 pmdarima==2.0.3
