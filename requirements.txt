@@ -106,6 +106,7 @@ defusedxml @ file:///tmp/build/80754af9/defusedxml_1615228127516/work
 diff-match-patch @ file:///Users/ktietz/demo/mc3/conda-bld/diff-match-patch_1630511840874/work
 dill @ file:///Users/cbousseau/work/recipes/ci_py311/dill_1677926161443/work
 distributed @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_46b2z6ud_6/croot/distributed_1686866053959/work
+docopt==0.6.2
 docstring-to-markdown @ file:///Users/cbousseau/work/recipes/ci_py311/docstring-to-markdown_1677931891483/work
 docutils @ file:///Users/cbousseau/work/recipes/ci_py311/docutils_1677907269557/work
 entrypoints @ file:///Users/cbousseau/work/recipes/ci_py311/entrypoints_1677911798787/work
@@ -165,7 +166,7 @@ iniconfig @ file:///home/linux1/recipes/ci/iniconfig_1610983019677/work
 intake @ file:///Users/cbousseau/work/recipes/ci_py311_2/intake_1678994948878/work
 intervaltree @ file:///Users/ktietz/demo/mc3/conda-bld/intervaltree_1630511889664/work
 ipykernel @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_98tee4lcge/croot/ipykernel_1691121640975/work
-ipython @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_6599f73fa7/croot/ipython_1694181355402/work
+ipython==8.12.3
 ipython-genutils @ file:///tmp/build/80754af9/ipython_genutils_1606773439826/work
 ipywidgets @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_f07ugy1hvo/croot/ipywidgets_1679394821999/work
 isoduration==20.11.0
@@ -225,7 +226,7 @@ matplotlib-inline @ file:///Users/cbousseau/work/recipes/ci_py311/matplotlib-inl
 mccabe @ file:///opt/conda/conda-bld/mccabe_1644221741721/work
 mdit-py-plugins @ file:///Users/cbousseau/work/recipes/ci_py311/mdit-py-plugins_1677995322132/work
 mdurl==0.1.2
-mistune @ file:///Users/cbousseau/work/recipes/ci_py311/mistune_1677916714667/work
+mistune==3.0.2
 ml-dtypes==0.3.2
 more-itertools @ file:///tmp/build/80754af9/more-itertools_1637733554872/work
 mplcursors==0.5.3
@@ -243,7 +244,7 @@ namex==0.0.8
 navigator-updater @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_14tu6qh1h_/croot/navigator-updater_1695210199291/work
 nbclassic @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_d6oy9w0m3l/croot/nbclassic_1681756176477/work
 nbclient @ file:///Users/cbousseau/work/recipes/ci_py311/nbclient_1677916908988/work
-nbconvert @ file:///Users/cbousseau/work/recipes/ci_py311/nbconvert_1677918402558/work
+nbconvert==7.16.4
 nbformat @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_cbnf5nccgk/croot/nbformat_1694616744196/work
 nest-asyncio==1.6.0
 networkx @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_b9af3smw_7/croot/networkx_1690562010704/work
@@ -286,6 +287,7 @@ pep8==1.7.1
 pexpect @ file:///tmp/build/80754af9/pexpect_1605563209008/work
 pickleshare @ file:///tmp/build/80754af9/pickleshare_1606932040724/work
 pillow==10.3.0
+pipreqs==0.5.0
 pkce @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_da285fiplp/croot/pkce_1690384839054/work
 pkginfo @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_d1oq9rhye6/croot/pkginfo_1679431178842/work
 platformdirs==4.2.2
@@ -479,6 +481,7 @@ xyzservices @ file:///Users/cbousseau/work/recipes/ci_py311/xyzservices_16779274
 y-py @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_58d555zc6u/croot/y-py_1683555409055/work
 yahoo-fin==0.8.9.1
 yapf @ file:///tmp/build/80754af9/yapf_1615749224965/work
+yarg==0.1.9
 yarl @ file:///Users/cbousseau/work/recipes/ci_py311/yarl_1677926011607/work
 yfinance==0.2.40
 ypy-websocket @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_e638ipunz1/croot/ypy-websocket_1684192343550/work
