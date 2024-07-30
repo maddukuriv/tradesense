@@ -25,26 +25,54 @@ import ta
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+
+
+
+# technical analysis
+import streamlit as st
+import pandas as pd
+import yfinance as yf
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import numpy as np
 import pandas_ta as ta
-from ta.trend import PSARIndicator
-from scipy.stats import linregress
-from functools import lru_cache
-import smtplib
-import mplfinance as mpf
-import plotly.express as px
-from pmdarima import auto_arima
-from scipy.signal import find_peaks, cwt, ricker, hilbert
-from scipy.stats import zscore
+from datetime import datetime, timedelta
+
+
+
+# news
+import streamlit as st
 from newsapi.newsapi_client import NewsApiClient
-
-
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+import pandas as pd
+from datetime import datetime, timedelta
+import yfinance as yf
+from wordcloud import WordCloud
+import plotly.express as px
+import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
-from ta.trend import EMAIndicator, MACD, ADXIndicator
-from ta.momentum import RSIIndicator
-from ta.volatility import BollingerBands
-from ta.trend import ADXIndicator
-from ta.momentum import RSIIndicator
+# time series 
+import yfinance as yf
+import pandas as pd
+import numpy as np
+import itertools
+from ta import add_all_ta_features
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from sklearn.model_selection import TimeSeriesSplit, GridSearchCV
+from sklearn.metrics import mean_squared_error
+import streamlit as st
+import plotly.graph_objects as go
+from pmdarima import auto_arima
+from datetime import timedelta, datetime
+from scipy.signal import cwt, ricker, hilbert
+
+
+
+
+
+
+
 
 # List of stock tickers
 bse_largecap = ["ABB.BO","ADANIENSOL.BO","ADANIENT.BO","ADANIGREEN.BO","ADANIPORTS.BO","ADANIPOWER.BO","ATGL.NS","AWL.NS","AMBUJACEM.BO","APOLLOHOSP.BO","ASIANPAINT.BO","DMART.BO","AXISBANK.BO","BAJAJ-AUTO.BO","BAJFINANCE.BO","BAJAJFINSV.BO","BAJAJHLDNG.BO","BANDHANBNK.BO","BANKBARODA.BO","BERGEPAINT.BO","BEL.BO","BPCL.BO","BHARTIARTL.BO","BOSCHLTD.BO","BRITANNIA.BO","CHOLAFIN.BO","CIPLA.BO","COALINDIA.BO","DABUR.BO","DIVISLAB.BO","DLF.BO","DRREDDY.BO","EICHERMOT.BO","NYKAA.NS","GAIL.BO","GODREJCP.BO","GRASIM.BO","HAVELLS.BO","HCLTECH.BO","HDFCAMC.BO","HDFCBANK.BO","HDFCLIFE.BO","HEROMOTOCO.BO","HINDALCO.BO","HAL.BO","HINDUNILVR.BO","HINDZINC.BO","ICICIBANK.BO","ICICIGI.BO","ICICIPRULI.BO","IOC.BO","INDUSTOWER.BO","INDUSINDBK.BO","NAUKRI.BO","INFY.BO","INDIGO.BO","ITC.BO","JIOFIN.NS","JSWSTEEL.BO","KOTAKBANK.BO","LT.BO","LICI.NS","LTIM.BO","M&M.BO","MANKIND.NS","MARICO.BO","MARUTI.BO","NESTLEIND.BO","NTPC.BO","ONGC.BO","PAYTM.NS","PIDILITIND.BO","POWERGRID.BO","PNB.BO","RELIANCE.BO","SBICARD.BO","SBILIFE.BO","SHREECEM.BO","SIEMENS.BO","SRF.BO","SBIN.BO","SUNPHARMA.BO","TCS.BO","TATACONSUM.BO","TATAMOTORS.BO","TATAMTRDVR.BO","TATAPOWER.BO","TATASTEEL.BO","TECHM.BO","TITAN.BO","ULTRACEMCO.BO","UNITDSPR.BO","UPL.BO","VBL.BO","VEDL.BO","WIPRO.BO","ZOMATO.BO","ZYDUSLIFE.NS"]
@@ -348,8 +376,8 @@ def logout():
 # Main menu function
 def main_menu():
     st.subheader("Main Menu")
-    menu_options = [f"{st.session_state.username}'s Portfolio",f"{st.session_state.username}'s Watchlist", "Stock Screener", "Stock Analysis", "Stock Prediction",
-                     "Market Stats","Markets", "My Account"]
+    menu_options = [f"{st.session_state.username}'s Portfolio",f"{st.session_state.username}'s Watchlist", "Stock Screener", "Stock Analysis",
+                    "Markets", "My Account"]
     choice = st.selectbox("Select an option", menu_options)
     return choice
 
@@ -381,6 +409,8 @@ if not st.session_state.logged_in:
     st.title("TradeSense")
     st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
 
+    st.subheader("Market Performance")
+
     # Function to get stock data and calculate moving averages
     @st.cache_data
     def get_stock_data(ticker_symbol, start_date, end_date):
@@ -393,7 +423,7 @@ if not st.session_state.logged_in:
     # Function to create Plotly figure with volume histogram
     def create_figure(data, indicators, title):
         fig = go.Figure()
-        
+
         # Add candlestick chart
         fig.add_trace(go.Candlestick(x=data.index,
                                     open=data['Open'],
@@ -401,7 +431,7 @@ if not st.session_state.logged_in:
                                     low=data['Low'],
                                     close=data['Close'],
                                     name='Candlesticks'))
-        
+
         if 'Close' in indicators:
             fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Close Price'))
         if 'MA_10' in indicators:
@@ -411,7 +441,7 @@ if not st.session_state.logged_in:
 
         # Add volume histogram
         fig.add_trace(go.Bar(x=data.index, y=data['Volume'], name='Volume', yaxis='y2', marker_color='rgba(0, 0, 100, 0.5)'))
-        
+
         fig.update_layout(
             title=title,
             xaxis_title='Date',
@@ -457,7 +487,6 @@ if not st.session_state.logged_in:
 
     with col1:
         stock_symbols = {
-           
             "BSE 500": "BSE-500.BO",
             "NIFTY 50": "^NSEI",
             "S&P 500": "^GSPC",
@@ -486,6 +515,63 @@ if not st.session_state.logged_in:
         fig = create_figure(data, ['Close', 'MA_10', 'MA_20'], f"{stock_name} Stock Prices")
         st.plotly_chart(fig)
 
+    # Market Performance
+
+    market_indices = {
+        'S&P 500': '^GSPC',
+        'Dow Jones': '^DJI',
+        'NASDAQ': '^IXIC',
+        'Gold': 'GC=F',
+        'Silver': 'SI=F',
+        'Oil': 'CL=F',
+        'EUR/USD': 'EURUSD=X',
+        'GBP/USD': 'GBPUSD=X',
+        'Bitcoin': 'BTC-USD',
+        'Ethereum': 'ETH-USD'
+    }
+
+    # Define date ranges
+    date_ranges = {
+        "1 day": timedelta(days=1),
+        "5 days": timedelta(days=5),
+        "10 days": timedelta(days=10),
+        "1 month": timedelta(days=30),
+        "3 months": timedelta(days=90),
+        "6 months": timedelta(days=180),
+        "1 year": timedelta(days=365),
+        "2 years": timedelta(days=730),
+        "3 years": timedelta(days=1095),
+        "5 years": timedelta(days=1825)
+    }
+
+    selected_range = st.select_slider(
+        "Select Date Range for Market Performance",
+        options=list(date_ranges.keys()),
+        value="1 year"
+    )
+    END = datetime.now()
+    START = END - date_ranges[selected_range]
+
+    def get_market_data(ticker_symbol, start_date, end_date):
+        return yf.download(ticker_symbol, start=start_date, end=end_date)
+
+    def calculate_performance(data):
+        if data is not None and not data.empty:
+            performance = (data['Close'][-1] - data['Close'][0]) / data['Close'][0] * 100
+            return performance
+        return None
+
+    market_performance = {
+        market: calculate_performance(get_market_data(ticker, START, END))
+        for market, ticker in market_indices.items()
+        if calculate_performance(get_market_data(ticker, START, END)) is not None
+    }
+
+    performance_df = pd.DataFrame(list(market_performance.items()), columns=['Market', 'Performance'])
+    fig = px.bar(performance_df, x='Market', y='Performance', title='Market Performance',
+                labels={'Performance': 'Performance (%)'}, color='Performance',
+                color_continuous_scale=px.colors.diverging.RdYlGn)
+    st.plotly_chart(fig)
 
 else:
     if choice:
@@ -688,10 +774,11 @@ else:
 
         elif choice == "Markets":
                 #'Markets' code-------------------------------------------------------------------------------------------------------------------------------------------------------
+
                 # Function to download data and calculate moving averages with caching
-                @lru_cache(maxsize=32)
-                def get_stock_data(ticker_symbol, start_date, end_date):
-                    data = yf.download(ticker_symbol, start=start_date, end=end_date)
+                @st.cache_data
+                def get_stock_data(ticker_symbol):
+                    data = yf.download(ticker_symbol, period='1y')
                     data['MA_15'] = data['Close'].rolling(window=15).mean()
                     data['MA_50'] = data['Close'].rolling(window=50).mean()
                     data['MACD'] = data['Close'].ewm(span=12, adjust=False).mean() - data['Close'].ewm(span=26, adjust=False).mean()
@@ -718,26 +805,19 @@ else:
                         fig.add_trace(go.Scatter(x=data.index, y=data['Lower_Band'], mode='lines', name='Lower Band'))
 
                     fig.update_layout(title=title, xaxis_title='Date', yaxis_title='Price',
-                                    xaxis_rangeslider_visible=True,
-                                    plot_bgcolor='dark grey',
-                                    paper_bgcolor='white',
-                                    font=dict(color='black'),
-                                    hovermode='x',
+                                    xaxis_rangeslider_visible=True, hovermode='x',
                                     xaxis=dict(rangeselector=dict(buttons=list([
                                         dict(count=1, label="1m", step="month", stepmode="backward"),
                                         dict(count=6, label="6m", step="month", stepmode="backward"),
                                         dict(count=1, label="YTD", step="year", stepmode="todate"),
                                         dict(count=1, label="1y", step="year", stepmode="backward"),
                                         dict(step="all")
-                                    ])),
-                                        rangeslider=dict(visible=True),
-                                        type='date'),
+                                    ])), rangeslider=dict(visible=True), type='date'),
                                     yaxis=dict(fixedrange=False),
-                                    updatemenus=[dict(type="buttons",
-                                                        buttons=[dict(label="Reset Zoom",
-                                                                    method="relayout",
-                                                                    args=[{"xaxis.range": [None, None],
-                                                                            "yaxis.range": [None, None]}])])])
+                                    updatemenus=[dict(type="buttons", buttons=[dict(label="Reset Zoom",
+                                                                                    method="relayout",
+                                                                                    args=[{"xaxis.range": [None, None],
+                                                                                            "yaxis.range": [None, None]}])])])
                     return fig
 
                 # Function to calculate correlation
@@ -746,11 +826,10 @@ else:
 
                 # Function to plot correlation matrix
                 def plot_correlation_matrix(correlation_matrix):
-                    fig = go.Figure(data=go.Heatmap(
-                        z=correlation_matrix.values,
-                        x=correlation_matrix.columns,
-                        y=correlation_matrix.index,
-                        colorscale='Viridis'))
+                    fig = go.Figure(data=go.Heatmap(z=correlation_matrix.values,
+                                                    x=correlation_matrix.columns,
+                                                    y=correlation_matrix.index,
+                                                    colorscale='Viridis'))
                     fig.update_layout(title="Correlation Matrix", xaxis_title='Assets', yaxis_title='Assets')
                     return fig
 
@@ -760,7 +839,6 @@ else:
 
                 # Function to calculate Beta
                 def calculate_beta(asset_returns, market_returns):
-                    # Align the series to have the same index
                     aligned_returns = pd.concat([asset_returns, market_returns], axis=1).dropna()
                     covariance_matrix = np.cov(aligned_returns.iloc[:, 0], aligned_returns.iloc[:, 1])
                     beta = covariance_matrix[0, 1] / covariance_matrix[1, 1]
@@ -771,35 +849,168 @@ else:
                     return np.percentile(returns, confidence_level * 100)
 
                 # Main application
-                st.title("Market Insights")
-
-                # Date inputs
-                col1, col2 = st.columns(2)
-                with col1:
-                    START = st.date_input('Start Date', pd.to_datetime("2023-06-06"))
-                with col2:
-                    END = st.date_input('End Date', pd.to_datetime("today"))
 
                 # Markets submenu
-                submenu = st.sidebar.radio("Select Option", ["Equities", "Commodities", "Currencies", "Cryptocurrencies", "Insights"])
+                submenu = st.sidebar.selectbox("Select Option", ["Equities", "Commodities", "Currencies", "Cryptocurrencies", "Insights"])
 
                 if submenu == "Equities":
-                    st.subheader("Equity Markets")
-                    data_nyse = get_stock_data("^NYA", START, END)
-                    data_bse = get_stock_data("^BSESN", START, END)
-                    indicators = st.multiselect("Select Indicators", ['Close', 'MA_15', 'MA_50', 'MACD', 'Bollinger Bands'], default=['Close'])
-                    fig_nyse = create_figure(data_nyse, indicators, 'NYSE Price')
-                    fig_bse = create_figure(data_bse, indicators, 'BSE Price')
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.plotly_chart(fig_nyse)
+                    ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap"])
+                    tickers = {"BSE-LargeCap": bse_largecap, "BSE-MidCap": bse_midcap, "BSE-SmallCap": bse_smallcap}[ticker_category]
 
-                    with col2:
-                        st.plotly_chart(fig_bse)
+                    @st.cache_data
+                    def get_sector_industry_price_changes(tickers):
+                        data = {
+                            'Ticker': [], 'Company Name': [], 'Sector': [], 'Industry': [], 'Market Cap': [], 'Last Traded Price': [],
+                            '1D % Change': [], '2D % Change': [], '3D % Change': [], '5D % Change': [], '2W % Change': [],
+                            '1M % Change': [], '3M % Change': [], '6M % Change': [], '1Y % Change': [],
+                            '1D Volume': [], '2D Volume': [], '5D Volume': [], '2W Volume': [],
+                            '1M Volume': [], '3M Volume': [], '6M Volume': [], '1Y Volume': [],
+                            'Volume Change %': []
+                        }
+                        for ticker in tickers:
+                            try:
+                                stock = yf.Ticker(ticker)
+                                info = stock.info
+                                price_data_1y = yf.download(ticker, period='1y')
+                                
+                                if not price_data_1y.empty:
+                                    last_traded_price = price_data_1y['Close'].iloc[-1]
+                                    one_day_volume = price_data_1y['Volume'].iloc[-1]
+                                    two_day_volume = price_data_1y['Volume'].iloc[-2:].mean()
+                                    five_day_volume = price_data_1y['Volume'].iloc[-5:].mean()
+                                    two_week_volume = price_data_1y['Volume'].iloc[-10:].mean()
+                                    one_month_volume = price_data_1y['Volume'].iloc[-21:].mean()
+                                    three_month_volume = price_data_1y['Volume'].iloc[-63:].mean()
+                                    six_month_volume = price_data_1y['Volume'].iloc[-126:].mean()
+                                    one_year_volume = price_data_1y['Volume'].mean()
+                                    avg_volume = price_data_1y['Volume'].mean()
+                                    volume_change = ((one_day_volume - avg_volume) / avg_volume) * 100 if avg_volume != 0 else 'N/A'
+                                    price_changes = price_data_1y['Close'].pct_change() * 100
+                                    one_day_change = price_changes.iloc[-1]
+                                    two_day_change = price_changes.iloc[-2:].sum()
+                                    three_day_change = price_changes.iloc[-3:].sum()
+                                    five_day_change = price_changes.iloc[-5:].sum()
+                                    two_week_change = price_changes.iloc[-10:].sum()
+                                    one_month_change = price_changes.iloc[-21:].sum()
+                                    three_month_change = price_changes.iloc[-63:].sum()
+                                    six_month_change = price_changes.iloc[-126:].sum()
+                                    one_year_change = price_changes.sum()
+                                else:
+                                    last_traded_price = 'N/A'
+                                    one_day_volume = 'N/A'
+                                    two_day_volume = 'N/A'
+                                    five_day_volume = 'N/A'
+                                    two_week_volume = 'N/A'
+                                    one_month_volume = 'N/A'
+                                    three_month_volume = 'N/A'
+                                    six_month_volume = 'N/A'
+                                    one_year_volume = 'N/A'
+                                    volume_change = 'N/A'
+                                    one_day_change = 'N/A'
+                                    two_day_change = 'N/A'
+                                    three_day_change = 'N/A'
+                                    five_day_change = 'N/A'
+                                    two_week_change = 'N/A'
+                                    one_month_change = 'N/A'
+                                    three_month_change = 'N/A'
+                                    six_month_change = 'N/A'
+                                    one_year_change = 'N/A'
+                                
+                                data['Ticker'].append(ticker)
+                                data['Company Name'].append(info.get('longName', 'N/A'))
+                                data['Sector'].append(info.get('sector', 'N/A'))
+                                data['Industry'].append(info.get('industry', 'N/A'))
+                                data['Last Traded Price'].append(last_traded_price)
+                                data['Market Cap'].append(info.get('marketCap', 'N/A'))
+                                data['1D % Change'].append(one_day_change)
+                                data['2D % Change'].append(two_day_change)
+                                data['3D % Change'].append(three_day_change)
+                                data['5D % Change'].append(five_day_change)
+                                data['2W % Change'].append(two_week_change)
+                                data['1M % Change'].append(one_month_change)
+                                data['3M % Change'].append(three_month_change)
+                                data['6M % Change'].append(six_month_change)
+                                data['1Y % Change'].append(one_year_change)
+                                data['1D Volume'].append(one_day_volume)
+                                data['2D Volume'].append(two_day_volume)
+                                data['5D Volume'].append(five_day_volume)
+                                data['2W Volume'].append(two_week_volume)
+                                data['1M Volume'].append(one_month_volume)
+                                data['3M Volume'].append(three_month_volume)
+                                data['6M Volume'].append(six_month_volume)
+                                data['1Y Volume'].append(one_year_volume)
+                                data['Volume Change %'].append(volume_change)
+                            
+                            except Exception as e:
+                                st.error(f"Error fetching data for {ticker}: {e}")
+                        
+                        df = pd.DataFrame(data)
+                        
+                        # Convert all relevant columns to numeric and fill NaNs with 0
+                        numeric_columns = [col for col in df.columns if col not in ['Ticker', 'Company Name', 'Sector', 'Industry']]
+                        df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce').fillna(0)
 
+                        return df
+
+                    sector_industry_price_changes_df = get_sector_industry_price_changes(tickers)
+
+                    # Streamlit app
+                    st.subheader('Market Stats')
+                    st.dataframe(sector_industry_price_changes_df)
+                    st.subheader('Price')
+                    price_chart_option = st.selectbox('Select period to view price changes:', [
+                        '1D % Change', '2D % Change', '3D % Change', '5D % Change',
+                        '2W % Change', '1M % Change', '3M % Change', '6M % Change', '1Y % Change'
+                    ])
+
+                    df_price_sorted = sector_industry_price_changes_df[['Ticker', price_chart_option]].copy()
+                    df_price_sorted[price_chart_option] = pd.to_numeric(df_price_sorted[price_chart_option], errors='coerce')
+                    df_price_sorted = df_price_sorted.sort_values(by=price_chart_option, ascending=False).reset_index(drop=True)
+                    df_price_sorted.columns = ['Ticker', '% Change']
+
+                    fig_price = px.bar(df_price_sorted, x='Ticker', y='% Change', title=f'{price_chart_option} Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
+                    st.plotly_chart(fig_price)
+
+                    st.subheader('Volume')
+                    volume_chart_option = st.selectbox('Select period to view volume changes:', [
+                        '1D Volume', '2D Volume', '5D Volume', '2W Volume',
+                        '1M Volume', '3M Volume', '6M Volume', '1Y Volume'
+                    ])
+
+                    df_volume_sorted = sector_industry_price_changes_df[['Ticker', volume_chart_option]].copy()
+                    df_volume_sorted[volume_chart_option] = pd.to_numeric(df_volume_sorted[volume_chart_option], errors='coerce')
+                    df_volume_sorted = df_volume_sorted.sort_values(by=volume_chart_option, ascending=False).reset_index(drop=True)
+                    df_volume_sorted.columns = ['Ticker', 'Volume']
+
+                    fig_volume = px.bar(df_volume_sorted, x='Ticker', y='Volume', title=f'{volume_chart_option} Volume', color='Volume', color_continuous_scale=px.colors.diverging.RdYlGn)
+                    st.plotly_chart(fig_volume)
+
+                    st.subheader('Sector and Industry Performance')
+                    numeric_columns = [col for col in sector_industry_price_changes_df.columns if col not in ['Ticker', 'Company Name', 'Sector', 'Industry']]
+
+                    sector_performance = sector_industry_price_changes_df.groupby('Sector')[numeric_columns].mean().reset_index()
+                    sector_chart_option = st.selectbox('Select period to view sector performance:', numeric_columns)
+
+                    sector_sorted = sector_performance[['Sector', sector_chart_option]].copy()
+                    sector_sorted = sector_sorted.sort_values(by=sector_chart_option, ascending=False).reset_index(drop=True)
+                    sector_sorted.columns = ['Sector', '% Change']
+
+                    fig_sector = px.bar(sector_sorted, x='Sector', y='% Change', title=f'{sector_chart_option} by Sector', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
+                    st.plotly_chart(fig_sector)
+
+                    industry_performance = sector_industry_price_changes_df.groupby('Industry')[numeric_columns].mean().reset_index()
+                    industry_chart_option = st.selectbox('Select period to view industry performance:', numeric_columns)
+
+                    industry_sorted = industry_performance[['Industry', industry_chart_option]].copy()
+                    industry_sorted = industry_sorted.sort_values(by=industry_chart_option, ascending=False).reset_index(drop=True)
+                    industry_sorted.columns = ['Industry', '% Change']
+
+                    fig_industry = px.bar(industry_sorted, x='Industry', y='% Change', title=f'{industry_chart_option} by Industry', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
+                    st.plotly_chart(fig_industry)
 
                 elif submenu == "Commodities":
                     st.subheader("Commodities")
+                    
                     tickers = ["GC=F", "CL=F", "NG=F", "SI=F", "HG=F"]
                     selected_tickers = st.multiselect("Select stock tickers to visualize", tickers, default=["GC=F", "CL=F"])
                     indicators = st.multiselect("Select Indicators", ['Close', 'MA_15', 'MA_50', 'MACD', 'Bollinger Bands'], default=['Close'])
@@ -808,7 +1019,7 @@ else:
                     else:
                         columns = st.columns(len(selected_tickers))
                         for ticker, col in zip(selected_tickers, columns):
-                            data = get_stock_data(ticker, START, END)
+                            data = get_stock_data(ticker)
                             fig = create_figure(data, indicators, f'{ticker} Price')
                             col.plotly_chart(fig)
 
@@ -822,7 +1033,7 @@ else:
                     else:
                         columns = st.columns(len(selected_tickers))
                         for ticker, col in zip(selected_tickers, columns):
-                            data = get_stock_data(ticker, START, END)
+                            data = get_stock_data(ticker)
                             fig = create_figure(data, indicators, f'{ticker} Price')
                             col.plotly_chart(fig)
 
@@ -836,7 +1047,7 @@ else:
                     else:
                         columns = st.columns(len(selected_tickers))
                         for ticker, col in zip(selected_tickers, columns):
-                            data = get_stock_data(ticker, START, END)
+                            data = get_stock_data(ticker)
                             fig = create_figure(data, indicators, f'{ticker} Price')
                             col.plotly_chart(fig)
 
@@ -845,14 +1056,14 @@ else:
                     st.write("This section provides an in-depth analysis of the markets, commodities, forex, and cryptos.")
 
                     # Get data for all categories
-                    data_nyse = get_stock_data("^NYA", START, END)
-                    data_bse = get_stock_data("^BSESN", START, END)
-                    data_gold = get_stock_data("GC=F", START, END)
-                    data_oil = get_stock_data("CL=F", START, END)
-                    data_eurusd = get_stock_data("EURUSD=X", START, END)
-                    data_gbpusd = get_stock_data("GBPUSD=X", START, END)
-                    data_btc = get_stock_data("BTC-USD", START, END)
-                    data_eth = get_stock_data("ETH-USD", START, END)
+                    data_nyse = get_stock_data("^NYA")
+                    data_bse = get_stock_data("^BSESN")
+                    data_gold = get_stock_data("GC=F")
+                    data_oil = get_stock_data("CL=F")
+                    data_eurusd = get_stock_data("EURUSD=X")
+                    data_gbpusd = get_stock_data("GBPUSD=X")
+                    data_btc = get_stock_data("BTC-USD")
+                    data_eth = get_stock_data("ETH-USD")
 
                     # Calculate correlations
                     correlation_data = {
@@ -873,10 +1084,9 @@ else:
                     st.plotly_chart(fig_corr_matrix)
 
                     # Calculate market returns for beta calculation (assuming S&P 500 as market index)
-                    data_sp500 = get_stock_data("^GSPC", START, END)
+                    data_sp500 = get_stock_data("^GSPC")
                     market_returns = data_sp500['Close'].pct_change().dropna()
 
-                    # Trend and Additional Insights Analysis
                     st.write("**Trend Analysis and Insights:**")
                     analysis_data = {
                         "Assets": ['NYSE', 'BSE', 'Gold', 'Oil', 'EURUSD', 'GBPUSD', 'BTC', 'ETH'],
@@ -954,7 +1164,6 @@ else:
                     df_analysis = pd.DataFrame(analysis_data)
                     st.table(df_analysis)
 
-                    # Annualized metrics
                     st.write("**Annualized Metrics:**")
                     annualized_data = {
                         "Assets": ['NYSE', 'BSE', 'Gold', 'Oil', 'EURUSD', 'GBPUSD', 'BTC', 'ETH'],
@@ -981,14 +1190,12 @@ else:
                     }
                     df_annualized = pd.DataFrame(annualized_data)
                     st.table(df_annualized)
+                                
 
 
         elif choice == "Stock Screener":
    
-         
-            
 
-            # 'Stock Screener' code
             st.sidebar.subheader("Stock Screener")
 
             # Dropdown for selecting ticker category
@@ -1010,12 +1217,11 @@ else:
                 tickers = bse_smallcap
 
             # Define functions for strategy logic
-            def calculate_macd(data, slow=26, fast=12, signal=9):
-                data['EMA_fast'] = data['Close'].ewm(span=fast, min_periods=fast).mean()
-                data['EMA_slow'] = data['Close'].ewm(span=slow, min_periods=slow).mean()
-                data['MACD'] = data['EMA_fast'] - data['EMA_slow']
-                data['MACD_signal'] = data['MACD'].ewm(span=signal, min_periods=signal).mean()
-                data['MACD_histogram'] = data['MACD'] - data['MACD_signal']
+            def calculate_macd(data):
+                macd = ta.macd(data['Close'])
+                data['MACD'] = macd['MACD_12_26_9']
+                data['MACD_signal'] = macd['MACDs_12_26_9']
+                data['MACD_histogram'] = macd['MACDh_12_26_9']
                 return data
 
             def check_macd_signal(data):
@@ -1038,9 +1244,9 @@ else:
                         return recent_data.index[i]
                 return None
 
-            def calculate_ema(data, short_window=10, long_window=20):
-                data['Short_EMA'] = data['Close'].ewm(span=short_window, adjust=False).mean()
-                data['Long_EMA'] = data['Close'].ewm(span=long_window, adjust=False).mean()
+            def calculate_ema(data):
+                data['Short_EMA'] = ta.ema(data['Close'], length=10)
+                data['Long_EMA'] = ta.ema(data['Close'], length=20)
                 return data
 
             def check_moving_average_crossover(data):
@@ -1083,23 +1289,20 @@ else:
 
             @st.cache_data
             def calculate_indicators(df):
-                df['5_day_EMA'] = df['Close'].ewm(span=5, adjust=False).mean()
-                df['10_day_EMA'] = df['Close'].ewm(span=10, adjust=False).mean()
-                df['20_day_EMA'] = df['Close'].ewm(span=20, adjust=False).mean()
-                df['12_day_EMA'] = df['Close'].ewm(span=12, adjust=False).mean()
-                df['26_day_EMA'] = df['Close'].ewm(span=26, adjust=False).mean()
-                df['MACD'] = df['12_day_EMA'] - df['26_day_EMA']
-                df['MACD_signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-                df['MACD_hist'] = df['MACD'] - df['MACD_signal']
-                df['Volume_MA'] = df['Volume'].rolling(window=20).mean()
-                df['20_day_SMA'] = df['Close'].rolling(window=20).mean()
+                df['20_MA'] = ta.sma(df['Close'], length=20)
+                df['50_MA'] = ta.sma(df['Close'], length=50)
+
+                macd = ta.macd(df['Close'])
+                df['MACD'] = macd['MACD_12_26_9']
+                df['MACD_Signal'] = macd['MACDs_12_26_9']
+                df['MACD_Histogram'] = macd['MACDh_12_26_9']
+
+                df['RSI'] = ta.rsi(df['Close'])
+
                 df['Std_Dev'] = df['Close'].rolling(window=20).std()
-                df['BB_High'] = df['20_day_SMA'] + (df['Std_Dev'] * 2)
-                df['BB_Low'] = df['20_day_SMA'] - (df['Std_Dev'] * 2)
-                adx = ADXIndicator(df['High'], df['Low'], df['Close'])
-                df['ADX'] = adx.adx()
-                rsi = RSIIndicator(df['Close'])
-                df['RSI'] = rsi.rsi()
+                df['BB_High'] = df['20_MA'] + (df['Std_Dev'] * 2)
+                df['BB_Low'] = df['20_MA'] - (df['Std_Dev'] * 2)
+
                 return df
 
             def fetch_latest_data(tickers_with_dates):
@@ -1108,7 +1311,22 @@ else:
                     data = yf.download(ticker, start=start_date, end=end_date)
                     if data.empty:
                         continue
-                    data = calculate_indicators(data)
+                    data['5_day_EMA'] = ta.ema(data['Close'], length=5)
+                    data['10_day_EMA'] = ta.ema(data['Close'], length=10)
+                    data['20_day_EMA'] = ta.ema(data['Close'], length=20)
+                    macd = ta.macd(data['Close'])
+                    data['MACD'] = macd['MACD_12_26_9']
+                    data['MACD_Hist'] = macd['MACDh_12_26_9']
+                    data['RSI'] = ta.rsi(data['Close'])
+                    adx = ta.adx(data['High'], data['Low'], data['Close'])
+                    data['ADX_14'] = adx['ADX_14']
+                    data['ADX_NEG'] = adx['DMP_14']
+                    data['ADX_POS'] = adx['DMN_14']
+                    data['20_MA'] = ta.sma(data['Close'], length=20)
+                    data['Std_Dev'] = data['Close'].rolling(window=20).std()
+                    data['BB_High'] = data['20_MA'] + (data['Std_Dev'] * 2)
+                    data['BB_Low'] = data['20_MA'] - (data['Std_Dev'] * 2)
+                    data['20_day_vol_MA'] = data['Volume'].rolling(window=20).mean()
 
                     latest_data = data.iloc[-1]
                     technical_data.append({
@@ -1119,13 +1337,16 @@ else:
                         '10_day_EMA': latest_data['10_day_EMA'],
                         '20_day_EMA': latest_data['20_day_EMA'],
                         'MACD': latest_data['MACD'],
-                        'MACD_Hist': latest_data['MACD_hist'],
-                        'ADX': latest_data['ADX'],
+                        'MACD_Hist': latest_data['MACD_Hist'],
                         'RSI': latest_data['RSI'],
+                        'ADX_14': latest_data['ADX_14'],
+                        'ADX_NEG': latest_data['ADX_NEG'],
+                        'ADX_POS': latest_data['ADX_POS'],
                         'Bollinger_High': latest_data['BB_High'],
                         'Bollinger_Low': latest_data['BB_Low'],
                         'Volume': latest_data['Volume'],
-                        '20_day_vol_MA': latest_data['Volume_MA']
+                        '20_day_vol_MA': latest_data['20_day_vol_MA']
+                        
                     })
                 return pd.DataFrame(technical_data)
 
@@ -1149,7 +1370,7 @@ else:
                     if occurrence_date:
                         macd_signal_list.append((ticker, occurrence_date))
                 elif submenu == "Moving Average":
-                    data = calculate_ema(data, short_window=10, long_window=20)
+                    data = calculate_ema(data)
                     occurrence_date = check_moving_average_crossover(data)
                     if occurrence_date:
                         moving_average_tickers.append((ticker, occurrence_date))
@@ -1173,32 +1394,59 @@ else:
             if submenu == "MACD":
                 st.write("Stocks with MACD > MACD Signal and MACD > 0 in the last 5 days:")
                 st.dataframe(df_macd_signal)
+            
 
             elif submenu == "Moving Average":
                 st.write("Stocks with 10-day EMA crossing above 20-day EMA in the last 5 days:")
                 st.dataframe(df_moving_average_signal)
+            
 
             elif submenu == "Bollinger Bands":
                 st.write("Stocks with price crossing below Bollinger Low in the last 5 days:")
                 st.dataframe(df_bollinger_low_cross_signal)
+            
 
             elif submenu == "Volume":
                 st.write("Stocks with volume above 20-day moving average in the last 5 days:")
                 st.dataframe(df_volume_increase_signal)
 
 
-
         elif choice == "Stock Analysis":
             #'Technical Analysis' code---------------------------------------------------------------------------------------------------------------------------------
+
             st.sidebar.subheader("Stock Analysis")
-            submenu = st.sidebar.selectbox("Select Analysis Type", ["Technical", "Sentiment"])  
 
-            if submenu == "Technical":
+            # User input for the stock ticker
+            ticker = st.sidebar.text_input('Enter Stock Ticker (e.g., BAJAJFINSV.NS): ', 'BAJAJFINSV.NS')
 
 
+            submenu = st.sidebar.selectbox("Select Analysis Type", ["Financial Analysis", "Technical Analysis", "Sentiment Analysis", "Price Forecast"])
+
+
+
+            # Date inputs limited to the last 30 days
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=30)
+
+            if submenu == "Financial Analysis":
+                pass
+
+            elif submenu == "Technical Analysis":
                 # Define a function to download data
                 def download_data(ticker, start_date, end_date):
                     df = yf.download(ticker, start=start_date, end=end_date, interval="1d")
+                    return df
+
+                # Define a function to calculate William Arbitrage
+                def calculate_williams_alligator(df):
+                    jaw_length = 13
+                    teeth_length = 8
+                    lips_length = 5
+
+                    df['Jaw'] = df['Close'].shift(jaw_length).rolling(window=jaw_length).mean()
+                    df['Teeth'] = df['Close'].shift(teeth_length).rolling(window=teeth_length).mean()
+                    df['Lips'] = df['Close'].shift(lips_length).rolling(window=lips_length).mean()
+
                     return df
 
                 # Define a function to calculate technical indicators
@@ -1334,6 +1582,9 @@ else:
                     
                     # Advance Decline Line calculation
                     df['Advance_Decline_Line'] = advances.cumsum() - declines.cumsum()
+                    
+                    # William Arbitrage calculation
+                    df = calculate_williams_alligator(df)
                     
                     return df
 
@@ -2126,8 +2377,7 @@ else:
                 # Streamlit App
                 st.title('Stock Technical Analysis')
                 
-                # User input for the stock ticker
-                ticker = st.sidebar.text_input('Enter Stock Ticker (e.g., BAJAJFINSV.NS): ', 'BAJAJFINSV.NS')
+                
 
                 # Date inputs
                 start_date = st.sidebar.date_input("Start Date", value=datetime.now() - timedelta(days=365))
@@ -2152,7 +2402,7 @@ else:
                     if view_option == 'Visualization':
                         # Define indicator groups
                         indicator_groups = {
-                            "Trend Indicators": ["5_day_EMA", "10_day_EMA", "20_day_EMA", "MACD", "MACD_signal", "MACD_hist", "Trend_Line", "Ichimoku_conv", "Ichimoku_base", "Ichimoku_A", "Ichimoku_B", "Parabolic_SAR", "SuperTrend", "Donchian_High", "Donchian_Low", "Vortex_Pos", "Vortex_Neg", "ADX"],
+                            "Trend Indicators": ["5_day_EMA", "10_day_EMA", "20_day_EMA", "MACD", "MACD_signal", "MACD_hist", "Trend_Line", "Ichimoku_conv", "Ichimoku_base", "Ichimoku_A", "Ichimoku_B", "Parabolic_SAR", "SuperTrend", "Donchian_High", "Donchian_Low", "Vortex_Pos", "Vortex_Neg", "ADX", "Jaw", "Teeth", "Lips"],
                             "Momentum Indicators": ["RSI", "Stochastic_%K", "Stochastic_%D", "ROC", "DPO", "Williams_%R", "CMO", "CCI", "RVI", "RVI_Signal", "Ultimate_Oscillator", "Trix", "Trix_Signal", "Klinger"],
                             "Volatility": ["ATR", "Std_Dev", "BB_High", "BB_Low","20_day_SMA", "Keltner_High", "Keltner_Low"],
                             "Volume Indicators": ["OBV", "A/D_line", "Price_to_Volume", "TRIN", "Advance_Decline_Line", "McClellan_Oscillator", "Volume_Profile", "Chaikin_MF", "Williams_AD", "Ease_of_Movement", "MFI", "Elder_Ray_Bull", "Elder_Ray_Bear", "VWAP"],
@@ -2279,251 +2529,182 @@ else:
                             st.markdown(f"### Overall Score: {overall_description}")
                             st.markdown(f"<p style='font-size:20px;'>Recommendation: {recommendation}</p>", unsafe_allow_html=True)
 
+            elif submenu == "Sentiment Analysis":
 
-
-            else:
-                
                 # Initialize NewsApiClient with your API key
-                newsapi = NewsApiClient(api_key='252b2075083945dfbed8945ddc240a2b')
-                analyzer = SentimentIntensityAnalyzer()
+                    newsapi = NewsApiClient(api_key='252b2075083945dfbed8945ddc240a2b')
+                    analyzer = SentimentIntensityAnalyzer()
 
-                def fetch_news(ticker):
-                    # Fetch news articles related to the ticker
-                    all_articles = newsapi.get_everything(q=ticker,
-                                                        language='en',
-                                                        sort_by='publishedAt',
-                                                        page_size=10,
-                                                        sources='the-times-of-india, financial-express, the-hindu, bloomberg, cnbc')
-                    articles = []
-                    for article in all_articles['articles']:
-                        articles.append({
-                            'title': article['title'],
-                            'description': article['description'],
-                            'url': article['url'],
-                            'publishedAt': article['publishedAt']
-                        })
-                    return articles
+                    def fetch_news(company_name, start_date, end_date):
+                        # Fetch news articles related to the company name
+                        all_articles = newsapi.get_everything(q=company_name,
+                                                            language='en',
+                                                            from_param=start_date.strftime('%Y-%m-%d'),
+                                                            to=end_date.strftime('%Y-%m-%d'),
+                                                            sort_by='publishedAt',
+                                                            page_size=50,
+                                                            sources='the-times-of-india, financial-express, the-hindu, bloomberg, cnbc')
+                        articles = []
+                        for article in all_articles['articles']:
+                            articles.append({
+                                'title': article['title'],
+                                'description': article['description'],
+                                'url': article['url'],
+                                'publishedAt': article['publishedAt'],
+                                'source': article['source']['name']
+                            })
+                        return articles
 
-                def perform_sentiment_analysis(articles):
-                    sentiments = []
-                    for article in articles:
-                        if article['description']:
-                            score = analyzer.polarity_scores(article['description'])
-                            sentiment = score['compound']
-                            sentiments.append(sentiment)
+                    def perform_sentiment_analysis(articles):
+                        sentiments = []
+                        for article in articles:
+                            if article['description']:
+                                score = analyzer.polarity_scores(article['description'])
+                                article['sentiment'] = score
+                                sentiments.append(article)
+                            else:
+                                article['sentiment'] = {'compound': 0, 'neg': 0, 'neu': 0, 'pos': 0}
+                                sentiments.append(article)
+                        return sentiments
+
+                    def make_recommendation(sentiments):
+                        avg_sentiment = sum([s['sentiment']['compound'] for s in sentiments]) / len(sentiments)
+                        if avg_sentiment > 0.1:
+                            return "Based on the sentiment analysis, it is recommended to BUY the stock."
+                        elif avg_sentiment < -0.1:
+                            return "Based on the sentiment analysis, it is recommended to NOT BUY the stock."
                         else:
-                            sentiments.append(0)
-                    return sentiments
+                            return "Based on the sentiment analysis, it is recommended to HOLD OFF on any action."
 
-                def make_recommendation(sentiments):
-                    avg_sentiment = sum(sentiments) / len(sentiments)
-                    if avg_sentiment > 0.1:
-                        return "Based on the sentiment analysis, it is recommended to BUY the stock."
-                    elif avg_sentiment < -0.1:
-                        return "Based on the sentiment analysis, it is recommended to NOT BUY the stock."
-                    else:
-                        return "Based on the sentiment analysis, it is recommended to HOLD OFF on any action."
+                    def count_sentiments(sentiments):
+                        positive = sum(1 for s in sentiments if s['sentiment']['compound'] > 0.1)
+                        negative = sum(1 for s in sentiments if s['sentiment']['compound'] < -0.1)
+                        neutral = len(sentiments) - positive - negative
+                        return positive, negative, neutral
 
-                st.title("Stock News Sentiment Analysis")
-                ticker = st.text_input("Enter the Company Name:")
+                    def generate_wordcloud(text, title):
+                        wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+                        plt.figure(figsize=(10, 5))
+                        plt.imshow(wordcloud, interpolation='bilinear')
+                        plt.title(title)
+                        plt.axis('off')
+                        st.pyplot(plt)
 
-                if ticker:
-                    with st.spinner("Fetching news..."):
-                        articles = fetch_news(ticker)
-                    
-                    if articles:
-                        with st.spinner("Performing sentiment analysis..."):
-                            sentiments = perform_sentiment_analysis(articles)
-                        
-                        df = pd.DataFrame({
-                            'Title': [article['title'] for article in articles],
-                            'Description': [article['description'] for article in articles],
-                            'URL': [article['url'] for article in articles],
-                            'Published At': [article['publishedAt'] for article in articles],
-                            'Sentiment': sentiments
-                        })
-                        
-                        st.write("Recent News Articles:")
-                        for i, row in df.iterrows():
-                            st.write(f"**Article {i+1}:** {row['Title']}")
-                            st.write(f"**Published At:** {row['Published At']}")
-                            st.write(f"**Description:** {row['Description']}")
-                            st.write(f"**URL:** {row['URL']}")
-                            st.write(f"**Sentiment Score:** {row['Sentiment']:.2f}")
-                            st.write("---")
-                        
-                        st.write("Sentiment Analysis Summary:")
-                        st.bar_chart(df['Sentiment'])
+                    st.title("Stock News Sentiment Analysis")
 
-                        recommendation = make_recommendation(sentiments)
-                        st.write("Investment Recommendation:")
-                        st.write(recommendation)
-                    else:
-                        st.write("No news articles found for this ticker.")
+                    if ticker:
+                        # Fetch company name using yfinance
+                        try:
+                            company_info = yf.Ticker(ticker)
+                            company_name = company_info.info['shortName']
+                        except KeyError:
+                            company_name = ticker
 
-        elif choice == "Stock Prediction":
-            # Your existing 'Stock Price Forecasting' code-----------------------------------------------------------------------------------------------------------------------
+                        st.write(f"Fetching news for: {company_name}")
 
-            # Sidebar for user input
-            st.sidebar.subheader("Prediction")
+                        if company_name:
+                            with st.spinner("Fetching news..."):
+                                articles = fetch_news(company_name, start_date, end_date)
 
-            submenu = st.sidebar.selectbox("Select Option", ["Trend", "Price"])  
+                            if articles:
+                                with st.spinner("Performing sentiment analysis..."):
+                                    sentiments = perform_sentiment_analysis(articles)
 
-            
+                                df = pd.DataFrame(sentiments)
 
-            if submenu == "Trend":
-                tickers = st.sidebar.multiselect("Enter Stock Symbols", options=bse_largecap+bse_midcap+bse_smallcap)
-                time_period = st.sidebar.selectbox("Select Time Period", options=["6mo", "1y", "5y"], index=0)
-                @st.cache_data
-                def load_data(ticker, period):
-                    return yf.download(ticker, period=period)
+                                # Radio button options for Articles and Summary
+                                view_option = st.sidebar.radio("View Options", ["Articles", "Summary"])
 
-                def remove_outliers(df, column='Close', z_thresh=3):
-                    df['zscore'] = zscore(df[column])
-                    df = df[df['zscore'].abs() <= z_thresh]
-                    df.drop(columns='zscore', inplace=True)
-                    return df
+                                if view_option == "Articles":
+                                    st.write("Recent News Articles:")
+                                    for i, row in df.iterrows():
+                                        st.write(f"**Article {i+1}:** {row['title']}")
+                                        st.write(f"**Published At:** {row['publishedAt']}")
+                                        st.write(f"**Description:** {row['description']}")
+                                        st.write(f"**URL:** {row['url']}")
+                                        st.write(f"**Source:** {row['source']}")
+                                        st.write(f"**Sentiment Score:** {row['sentiment']['compound']:.2f}")
+                                        st.write("---")
 
-                def calculate_indicators(df):
-                    df['SMA_10'] = ta.trend.sma_indicator(df['Close'], window=10)
-                    df['SMA_20'] = ta.trend.sma_indicator(df['Close'], window=20)
-                    df['SMA_50'] = ta.trend.sma_indicator(df['Close'], window=50)
-                    df['RSI'] = ta.momentum.rsi(df['Close'], window=14)
-                    df['MACD'] = ta.trend.macd(df['Close'])
-                    df['MACD_Signal'] = ta.trend.macd_signal(df['Close'])
-                    df['MACD_Hist'] = ta.trend.macd_diff(df['Close'])
-                    df['Bollinger_High'] = ta.volatility.bollinger_hband(df['Close'])
-                    df['Bollinger_Low'] = ta.volatility.bollinger_lband(df['Close'])
-                    df['Stochastic_Oscillator'] = ta.momentum.stoch(df['High'], df['Low'], df['Close'])
-                    df['ATR'] = ta.volatility.average_true_range(df['High'], df['Low'], df['Close'])
-                    df['OBV'] = ta.volume.on_balance_volume(df['Close'], df['Volume'])
-                    df['VPT'] = ta.volume.volume_price_trend(df['Close'], df['Volume'])
-                    df['CMF'] = ta.volume.chaikin_money_flow(df['High'], df['Low'], df['Close'], df['Volume'])
-                    df['VWAP'] = ta.volume.volume_weighted_average_price(df['High'], df['Low'], df['Close'], df['Volume'])
-                    return df
+                                elif view_option == "Summary":
+                                    st.subheader("Sentiment Analysis Summary:")
+                                    avg_sentiment = sum(df['sentiment'].apply(lambda x: x['compound'])) / len(df)
+                                    st.write(f"Average Sentiment Score: {avg_sentiment:.2f}")
 
-                def calculate_peaks_troughs(df):
-                    peaks, _ = find_peaks(df['Close'])
-                    troughs, _ = find_peaks(-df['Close'])
-                    df['Peaks'] = np.nan
-                    df['Troughs'] = np.nan
-                    df.loc[df.index[peaks], 'Peaks'] = df['Close'].iloc[peaks]
-                    df.loc[df.index[troughs], 'Troughs'] = df['Close'].iloc[troughs]
-                    return df
+                                    positive, negative, neutral = count_sentiments(sentiments)
+                                    st.write(f"Positive Articles: {positive}")
+                                    st.write(f"Negative Articles: {negative}")
+                                    st.write(f"Neutral Articles: {neutral}")
 
-                def calculate_fourier(df, n=5):
-                    close_fft = np.fft.fft(df['Close'].values)
-                    fft_df = pd.DataFrame({'fft': close_fft})
-                    fft_df['absolute'] = np.abs(fft_df['fft'])
-                    fft_df['angle'] = np.angle(fft_df['fft'])
-                    fft_df = fft_df.sort_values(by='absolute', ascending=False).head(n)
-                    
-                    # Calculate dominant frequency in days
-                    freqs = np.fft.fftfreq(len(df))
-                    dominant_freqs = freqs[np.argsort(np.abs(close_fft))[-n:]]
-                    # Ensure frequencies are positive
-                    positive_freqs = np.abs(dominant_freqs)
-                    cycles_in_days = 1 / positive_freqs
-                    fft_df['cycles_in_days'] = cycles_in_days
-                    return fft_df
+                                    # Sentiment score bar chart
+                                    fig_bar = px.bar(df, x=df.index, y=df['sentiment'].apply(lambda x: x['compound']),
+                                                    labels={'x': 'Article', 'y': 'Sentiment Score'},
+                                                    title='Sentiment Score per Article')
+                                    st.plotly_chart(fig_bar)
 
-                def calculate_wavelet(df):
-                    widths = np.arange(1, 31)
-                    cwt_matrix = cwt(df['Close'], ricker, widths)
-                    return cwt_matrix
+                                    # Sentiment trend over time
+                                    df['publishedAt'] = pd.to_datetime(df['publishedAt']).dt.tz_localize(None)
+                                    df.set_index('publishedAt', inplace=True)
+                                    df = df.sort_index()
 
-                def calculate_hilbert(df):
-                    analytic_signal = hilbert(df['Close'])
-                    amplitude_envelope = np.abs(analytic_signal)
-                    instantaneous_phase = np.unwrap(np.angle(analytic_signal))
-                    return amplitude_envelope, instantaneous_phase
+                                    # Aggregate sentiment by day
+                                    daily_sentiment = df['sentiment'].apply(lambda x: x['compound']).resample('D').mean()
 
-                # Streamlit UI
-                st.title("Multi-Stock Cycle Detection and Analysis")
+                                    fig_line = px.line(daily_sentiment.rolling(window=5).mean(),
+                                                    labels={'value': 'Sentiment Score', 'index': 'Date'},
+                                                    title='Sentiment Trend Over Time')
+                                    st.plotly_chart(fig_line)
 
-                results = []
+                                    # Correlate sentiment with stock price
+                                    
+                                    stock_data = yf.download(ticker, start=start_date, end=end_date)
+                                    if not stock_data.empty:
+                                        stock_data.index = stock_data.index.tz_localize(None)
+                                        stock_data = stock_data[['Close']]
+                                        stock_data['Sentiment'] = daily_sentiment
+                                        combined_data = pd.concat([stock_data, daily_sentiment], axis=1).dropna()
 
-                for ticker in tickers:
-                    st.subheader(f"Analysis for {ticker}")
-                    data = load_data(ticker, time_period)
-                    
-                    if not data.empty:
-                        df = data.copy()
-                        df = remove_outliers(df)
-                        df = calculate_indicators(df)
-                        df = calculate_peaks_troughs(df)
+                                        fig_combined = go.Figure()
+                                        fig_combined.add_trace(go.Scatter(x=combined_data.index, y=combined_data['Close'],
+                                                                        mode='lines', name='Stock Price'))
+                                        fig_combined.add_trace(go.Scatter(x=combined_data.index, y=combined_data['Sentiment'],
+                                                                        mode='lines', name='Sentiment Score', yaxis='y2'))
 
-                        st.subheader(f"{ticker} Data and Indicators ({time_period} Period)")
-                        st.dataframe(df.tail())
+                                        fig_combined.update_layout(
+                                            title='Stock Price and Sentiment Over Time',
+                                            xaxis_title='Date',
+                                            yaxis_title='Stock Price',
+                                            yaxis2=dict(title='Sentiment Score', overlaying='y', side='right'),
+                                            legend=dict(x=0, y=1, traceorder='normal')
+                                        )
+                                        st.plotly_chart(fig_combined)
 
-                        # Fourier Transform results
-                        st.subheader("Fourier Transform - Dominant Cycles")
-                        fft_df = calculate_fourier(df)
-                        st.write("Dominant Cycles from Fourier Transform (Top 5):")
-                        st.dataframe(fft_df)
+                                    # Sentiment distribution pie chart
+                                    
+                                    sentiment_counts = pd.Series([positive, negative, neutral], index=['Positive', 'Negative', 'Neutral'])
+                                    fig_pie = px.pie(sentiment_counts, values=sentiment_counts, names=sentiment_counts.index, title='Sentiment Distribution')
+                                    st.plotly_chart(fig_pie)
 
-                        # Determine current position in the cycle
-                        dominant_cycle = fft_df.iloc[1] if fft_df.iloc[1]['absolute'] > fft_df.iloc[2]['absolute'] else fft_df.iloc[2]
-                        current_phase_angle = dominant_cycle['angle']
-                        current_position = 'upward' if current_phase_angle > 0 else 'downward'
+                                    # Generate and display word clouds for positive and negative articles
+                                    positive_text = ' '.join(df[df['sentiment'].apply(lambda x: x['compound']) > 0.1]['description'].dropna())
+                                    negative_text = ' '.join(df[df['sentiment'].apply(lambda x: x['compound']) < -0.1]['description'].dropna())
+                                    if positive_text:
+                                        st.write("Positive Articles Word Cloud:")
+                                        generate_wordcloud(positive_text, 'Positive Articles')
+                                    if negative_text:
+                                        st.write("Negative Articles Word Cloud:")
+                                        generate_wordcloud(negative_text, 'Negative Articles')
 
-                        st.subheader("Current Cycle Position")
-                        st.write(f"The stock is currently in an '{current_position}' phase of the dominant cycle with a phase angle of {current_phase_angle:.2f} radians.")
+                                    recommendation = make_recommendation(sentiments)
+                                    st.subheader("Investment Recommendation:")
+                                    st.write(recommendation)
 
-                        # Explanation of what this means
-                        if current_position == 'upward':
-                            st.write("This means the stock price is currently in an upward trend within its dominant cycle, and it is expected to continue rising.")
+                            else:
+                                st.write("No news articles found for this company.")
                         else:
-                            st.write("This means the stock price is currently in a downward trend within its dominant cycle, and it is expected to continue falling.")
+                            st.write("Invalid ticker symbol.")
 
-                        # Calculate and display Wavelet Transform results
-                        st.subheader("Wavelet Transform")
-                        cwt_matrix = calculate_wavelet(df)
-
-                        # Insights from Wavelet Transform
-                        max_wavelet_amplitude = np.max(np.abs(cwt_matrix))
-                        st.write("**Wavelet Transform Insights:**")
-                        st.write(f"The maximum amplitude in the wavelet transform is {max_wavelet_amplitude:.2f}.")
-
-                        # Calculate and display Hilbert Transform results
-                        st.subheader("Hilbert Transform")
-                        amplitude_envelope, instantaneous_phase = calculate_hilbert(df)
-
-                        # Insights from Hilbert Transform
-                        st.write("**Hilbert Transform Insights:**")
-                        st.write(f"The current amplitude envelope is {amplitude_envelope[-1]:.2f}.")
-                        st.write(f"The current instantaneous phase is {instantaneous_phase[-1]:.2f} radians.")
-
-                        # Collecting results for comparison
-                        results.append({
-                            'Ticker': ticker,
-                            'Fourier_Dominant_Cycle_Days': fft_df['cycles_in_days'].iloc[0],
-                            'Fourier_Angle': fft_df['angle'].iloc[1],  # Correctly selecting the dominant cycle angle
-                            'Fourier_Trend': current_position,
-                            'Wavelet_Max_Amplitude': max_wavelet_amplitude,
-                            'Hilbert_Amplitude': amplitude_envelope[-1],
-                            'Hilbert_Instantaneous_Phase': instantaneous_phase[-1]
-                        })
-
-                # Comparison and Final Recommendation
-                st.subheader("Comparison and Final Recommendation")
-                results_df = pd.DataFrame(results)
-                st.dataframe(results_df)
-
-                # Final Recommendation based on collected results
-                buy_recommendation = results_df[
-                    (results_df['Wavelet_Max_Amplitude'] > 1000) &  # Adjust threshold as necessary
-                    (results_df['Hilbert_Amplitude'] > results_df['Hilbert_Amplitude'].mean()) &  # Strong current price movement
-                    (results_df['Fourier_Trend'] == 'upward')  # Current price trend is upward
-                ]
-
-                if not buy_recommendation.empty:
-                    st.write("**Recommendation: Buy**")
-                    st.dataframe(buy_recommendation[['Ticker', 'Fourier_Dominant_Cycle_Days', 'Fourier_Angle', 'Fourier_Trend', 'Wavelet_Max_Amplitude', 'Hilbert_Amplitude']])
-                else:
-                    st.write("No strong buy recommendations based on the current analysis.")
-
-            else:
+            elif submenu == "Price Forecast":
 
                 # Function to fetch stock data from Yahoo Finance
                 def get_stock_data(ticker, start_date, end_date):
@@ -2539,37 +2720,37 @@ else:
                     df['MACD'] = df['EMA_12'] - df['EMA_26']
                     df['Signal_Line'] = df['MACD'].ewm(span=9, adjust=False).mean()
                     df['MACD_Hist'] = df['MACD'] - df['Signal_Line']
-                    
+                                
                     # Relative Strength Index (RSI)
                     delta = df['Close'].diff()
                     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
                     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
                     rs = gain / loss
                     df['RSI'] = 100 - (100 / (1 + rs))
-                    
+                                
                     # Bollinger Bands
                     df['SMA_20'] = df['Close'].rolling(window=20).mean()
                     df['Std_Dev'] = df['Close'].rolling(window=20).std()
                     df['Upper_Band'] = df['SMA_20'] + (df['Std_Dev'] * 2)
                     df['Lower_Band'] = df['SMA_20'] - (df['Std_Dev'] * 2)
                     df['BBW'] = (df['Upper_Band'] - df['Lower_Band']) / df['SMA_20']  # Bollinger Band Width
-                    
+                                
                     # Exponential Moving Average (EMA)
                     df['EMA_50'] = df['Close'].ewm(span=50, adjust=False).mean()
-                    
+                                
                     # Average True Range (ATR)
                     df['High-Low'] = df['High'] - df['Low']
                     df['High-PrevClose'] = np.abs(df['High'] - df['Close'].shift(1))
                     df['Low-PrevClose'] = np.abs(df['Low'] - df['Close'].shift(1))
                     df['True_Range'] = df[['High-Low', 'High-PrevClose', 'Low-PrevClose']].max(axis=1)
                     df['ATR'] = df['True_Range'].rolling(window=14).mean()
-                    
+                                
                     # Rate of Change (ROC)
                     df['ROC'] = df['Close'].pct_change(periods=12) * 100
-                    
+                                
                     # On-Balance Volume (OBV)
                     df['OBV'] = (np.sign(df['Close'].diff()) * df['Volume']).fillna(0).cumsum()
-                    
+                                
                     return df
 
                 # Functions for Fourier, Wavelet, and Hilbert transforms
@@ -2579,51 +2760,63 @@ else:
                     fft_df['absolute'] = np.abs(fft_df['fft'])
                     fft_df['angle'] = np.angle(fft_df['fft'])
                     fft_df = fft_df.sort_values(by='absolute', ascending=False).head(n)
-                    freqs = np.fft.fftfreq(len(df))
-                    dominant_freqs = freqs[np.argsort(np.abs(close_fft))[-n:]]
-                    positive_freqs = np.abs(dominant_freqs)
-                    cycles_in_days = 1 / positive_freqs
-                    fft_df['cycles_in_days'] = cycles_in_days
-                    return fft_df
+                    fft_df = fft_df.reindex(range(len(df)), fill_value=0)  # Ensure it matches the length of the stock data
+                    return fft_df['absolute']
 
                 def calculate_wavelet(df):
                     widths = np.arange(1, 31)
                     cwt_matrix = cwt(df['Close'], ricker, widths)
-                    return cwt_matrix
+                    max_wavelet = np.max(cwt_matrix, axis=0)
+                    return pd.Series(max_wavelet).reindex(range(len(df)), fill_value=0)  # Ensure it matches the length of the stock data
 
                 def calculate_hilbert(df):
                     analytic_signal = hilbert(df['Close'])
                     amplitude_envelope = np.abs(analytic_signal)
                     instantaneous_phase = np.unwrap(np.angle(analytic_signal))
-                    return amplitude_envelope, instantaneous_phase
+                    return pd.Series(amplitude_envelope), pd.Series(instantaneous_phase)
 
                 # Streamlit UI
                 st.title("Stock Price Prediction with SARIMA Model")
 
-                # Sidebar for user input
-                st.sidebar.subheader("Settings")
-                ticker_symbol = st.sidebar.text_input("Enter Stock Symbol", value="CUMMINSIND.NS")
-                start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime("2021-06-01"))
-                end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("today"))
+                start_date = st.sidebar.date_input("Start Date", value=datetime.now() - timedelta(days=1500))
+                end_date = st.sidebar.date_input("End Date", value=datetime.now() + timedelta(days=1))
+            
                 forecast_period = st.sidebar.number_input("Forecast Period (days)", value=10, min_value=1, max_value=30)
 
                 # Fetch the data
-                stock_data = get_stock_data(ticker_symbol, start_date, end_date)
+                stock_data = get_stock_data(ticker, start_date, end_date)
 
                 # Calculate technical indicators
                 stock_data = calculate_technical_indicators(stock_data)
 
                 # Calculate Fourier, Wavelet, and Hilbert transforms
-                fft_df = calculate_fourier(stock_data)
-                cwt_matrix = calculate_wavelet(stock_data)
-                amplitude_envelope, instantaneous_phase = calculate_hilbert(stock_data)
+                stock_data['Fourier'] = calculate_fourier(stock_data)
+                stock_data['Wavelet'] = calculate_wavelet(stock_data)
+                stock_data['Hilbert_Amplitude'], stock_data['Hilbert_Phase'] = calculate_hilbert(stock_data)
 
                 # Drop rows with NaN values
                 stock_data.dropna(inplace=True)
 
                 # Extract the closing prices and technical indicators
                 close_prices = stock_data['Close']
-                technical_indicators = stock_data[['MACD', 'Signal_Line', 'MACD_Hist', 'RSI', 'SMA_20', 'Upper_Band', 'Lower_Band', 'BBW', 'EMA_50', 'ATR', 'ROC', 'OBV']]
+                technical_indicators = stock_data[['MACD', 'Signal_Line', 'MACD_Hist', 'RSI', 'SMA_20', 'Upper_Band', 'Lower_Band', 'BBW', 'EMA_50', 'ATR', 'ROC', 'OBV', 'Fourier', 'Wavelet', 'Hilbert_Amplitude', 'Hilbert_Phase']]
+
+                # Check correlation with close prices
+                correlations = technical_indicators.corrwith(close_prices).sort_values()
+
+                # Display correlation as a bar chart
+                fig_corr = go.Figure(go.Bar(
+                    x=correlations.values,
+                    y=correlations.index,
+                    orientation='h'
+                ))
+                fig_corr.update_layout(
+                    title="Correlation with Close Prices",
+                    xaxis_title="Correlation",
+                    yaxis_title="Indicators",
+                    yaxis=dict(tickmode='linear')
+                )
+                st.plotly_chart(fig_corr)
 
                 # Train SARIMA model with exogenous variables (technical indicators)
                 sarima_model = auto_arima(
@@ -2673,7 +2866,7 @@ else:
                 ))
 
                 fig.update_layout(
-                    title=f'Stock Price Forecast for {ticker_symbol}',
+                    title=f'Stock Price Forecast for {ticker}',
                     xaxis_title='Date',
                     yaxis_title='Close Price',
                     legend=dict(x=0.01, y=0.99),
@@ -2685,252 +2878,9 @@ else:
                 st.write("Forecasted Prices for the next {} days:".format(forecast_period))
                 st.dataframe(forecasted_df)
 
-
-        
-
-
-        elif choice == "Market Stats":
-        # 'Market Stats' code -------------------------------------------------------------------------------------------    
-
-            # Function to get stock data and calculate moving averages
-            @st.cache_data
-            def get_stock_data(ticker_symbol, start_date, end_date):
-                data = yf.download(ticker_symbol, start=start_date, end=end_date)
-                data['MA_15'] = data['Close'].rolling(window=15).mean()
-                data['MA_50'] = data['Close'].rolling(window=50).mean()
-                data.dropna(inplace=True)
-                return data
-
-            # Function to create Plotly figure
-            def create_figure(data, indicators, title):
-                fig = go.Figure()
-                if 'Close' in indicators:
-                    fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Close Price'))
-                if 'MA_15' in indicators:
-                    fig.add_trace(go.Scatter(x=data.index, y=data['MA_15'], mode='lines', name='15-day MA'))
-                if 'MA_50' in indicators:
-                    fig.add_trace(go.Scatter(x=data.index, y=data['MA_50'], mode='lines', name='50-day MA'))
-                fig.update_layout(
-                    title=title, 
-                    xaxis_title='Date', 
-                    yaxis_title='Price',
-                    xaxis_rangeslider_visible=True,
-                    plot_bgcolor='light grey',
-                    paper_bgcolor='white',
-                    font=dict(color='black'),
-                    hovermode='x',
-                    xaxis=dict(
-                        rangeselector=dict(
-                            buttons=list([
-                                dict(count=1, label="1m", step="month", stepmode="backward"),
-                                dict(count=6, label="6m", step="month", stepmode="backward"),
-                                dict(count=1, label="YTD", step="year", stepmode="todate"),
-                                dict(count=1, label="1y", step="year", stepmode="backward"),
-                                dict(step="all")
-                            ])
-                        ),
-                        rangeslider=dict(visible=True),
-                        type='date'
-                    ),
-                    yaxis=dict(fixedrange=False),
-                    updatemenus=[dict(
-                        type="buttons",
-                        buttons=[dict(label="Reset Zoom",
-                                    method="relayout",
-                                    args=[{"xaxis.range": [None, None],
-                                            "yaxis.range": [None, None]}])]
-                    )]
-                )
-                return fig
-
-            # Function to fetch data
-            @st.cache_data
-            def fetch_data(tickers, period='1d', interval='1d'):
-                data = yf.download(tickers, period=period, interval=interval)
-                data = data['Close'].dropna(how='all')
-                data = data.fillna(method='ffill').fillna(method='bfill')
-                return data
-
-            # Function to fetch stock data and volume
-            @st.cache_data
-            def get_volume_data(ticker, start_date, end_date):
-                data = yf.download(ticker, start=start_date, end=end_date)
-                return data['Volume'].sum()
-
-            # Function to fetch sector data
-            @st.cache_data
-            def get_sector_data(ticker_symbol, start_date, end_date):
-                data = yf.download(ticker_symbol, start=start_date, end=end_date)
-                return data
-
-            # Function to calculate sector performance
-            def calculate_performance(data):
-                if not data.empty:
-                    performance = (data['Close'].iloc[-1] / data['Close'].iloc[0] - 1) * 100
-                    return performance
-                return None
-
-            # Function to fetch market data
-            @st.cache_data
-            def get_market_data(ticker_symbol, start_date, end_date):
-                data = yf.download(ticker_symbol, start=start_date, end=end_date)
-                return data
-
-            st.title("Market Stats")
+                # Display model summary
+                st.write("Model Summary:")
+                st.text(sarima_model.summary())
 
 
-            # Create tiles for different sections
-            tile_selection = st.sidebar.selectbox("Select a section", 
-                                        ["Major Indices", "Top Gainers and Losers", "Volume Chart", 
-                                        "Sector Performance Chart", "Market Performance"])
-
-            # Major Indices
-            if tile_selection == "Major Indices":
-                st.subheader("Major Indices")
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    stock_symbols = ["^BSESN", "BSE-500.BO", "^BSEMD", "^BSESMLCAP", "^NSEI", "^NSMIDCP", "^NSEMDCP", "^NSESCP"]
-                    ticker = st.selectbox("Enter Stock symbol", stock_symbols)
-                    st.write(f"You selected: {ticker}")
-                with col2:
-                    START = st.date_input('Start Date', pd.to_datetime("2023-06-06"))
-                with col3:
-                    END = st.date_input('End Date', pd.to_datetime("today"))
-                if ticker and START and END:
-                    data = get_stock_data(ticker, START, END)
-                    fig = create_figure(data, ['Close', 'MA_15', 'MA_50'], f"{ticker} Stock Prices")
-                    st.plotly_chart(fig)
-
-            # Top Gainers and Losers
-            elif tile_selection == "Top Gainers and Losers":
-                st.subheader("Top Gainers and Losers")
-
-                ticker_group = st.selectbox("Select Ticker Group", ["Large Cap", "Mid Cap", "Small Cap"])
-                if ticker_group == "Large Cap":
-                    tickers = bse_largecap
-                elif ticker_group == "Mid Cap":
-                    tickers = bse_midcap
-                else:
-                    tickers = bse_smallcap
-
-                # Fetch data for different periods
-                periods = {
-                    'Daily': ('1d', '1m'),
-                    'Weekly': ('5d', '1d'),
-                    'Monthly': ('1mo', '1d'),
-                    
-                    '3 Months': ('3mo', '1d'),
-                    '6 Months': ('6mo', '1d'),
-                    '1 Year': ('1y', '1d'),
-                    '2 Years': ('2y', '1d'),
-                    '5 Years': ('5y', '1d')
-                }
-
-                period_data_frames = {}
-                for period_name, (p, i) in periods.items():
-                    data = fetch_data(tickers, period=p, interval=i).pct_change().dropna(how='all') * 100
-                    period_data_frames[period_name] = data.apply(lambda x: x[-1] - x[0])
-
-                # Dropdown menu to select the period
-                bar_chart_option = st.selectbox('Select to view:', list(period_data_frames.keys()))
-
-                # Display the selected bar chart
-                df_sorted = period_data_frames[bar_chart_option].sort_values(ascending=False).reset_index()
-                df_sorted.columns = ['Ticker', '% Change']
-                fig = px.bar(df_sorted, x='Ticker', y='% Change', title=f'{bar_chart_option} Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
-                st.plotly_chart(fig)
-
-            # Volume Chart
-            elif tile_selection == "Volume Chart":
-                st.subheader("Volume Chart")
                 
-                ticker_group = st.selectbox("Select Ticker Group", ["Large Cap", "Mid Cap", "Small Cap"])
-                if ticker_group == "Large Cap":
-                    tickers = bse_largecap
-                elif ticker_group == "Mid Cap":
-                    tickers = bse_midcap
-                else:
-                    tickers = bse_smallcap
-                col1, col2 = st.columns(2)
-                with col1:
-                    start_date = st.date_input('Start Date', datetime(2022, 1, 1), key='start_date')
-                with col2:
-                    end_date = st.date_input('End Date', datetime.today(), key='end_date')
-                volume_data = {ticker: get_volume_data(ticker, start_date, end_date) for ticker in tickers}
-                volume_df = pd.DataFrame(list(volume_data.items()), columns=['Ticker', 'Volume'])
-                fig = px.bar(volume_df, x='Ticker', y='Volume', title='Trading Volume of Stocks',
-                            labels={'Volume': 'Total Volume'}, color='Volume',
-                            color_continuous_scale=px.colors.sequential.Viridis)
-                st.plotly_chart(fig)
-
-            # Sector Performance Chart
-            elif tile_selection == "Sector Performance Chart":
-                st.subheader("Sector Performance Chart")
-                sector_indices = {
-                    'NIFTY_BANK': '^NSEBANK',
-                    'NIFTY_IT': '^CNXIT',
-                    'NIFTY_AUTO': '^CNXAUTO',
-                    'NIFTY_FMCG': '^CNXFMCG',
-                    'NIFTY_PHARMA': '^CNXPHARMA',
-                    'NIFTY_REALTY': '^CNXREALTY',
-                    'NIFTY_METAL': '^CNXMETAL',
-                    'NIFTY_MEDIA': '^CNXMEDIA',
-                    'NIFTY_PSU_BANK': '^CNXPSUBANK',
-                    'NIFTY_ENERGY': '^CNXENERGY',
-                    'NIFTY_COMMODITIES': '^CNXCOMMOD',
-                    'NIFTY_INFRASTRUCTURE': '^CNXINFRA',
-                    'NIFTY_SERVICES_SECTOR': '^CNXSERVICE',
-                    'NIFTY_FINANCIAL_SERVICES': '^CNXFINANCE',
-                    'NIFTY_MNC': '^CNXMNC',
-                    'NIFTY_PSE': '^CNXPSE',
-                    'NIFTY_CPSE': '^CNXCPSE',
-                    'NIFTY_100': '^CNX100',
-                    'NIFTY_200': '^CNX200',
-                    'NIFTY_500': '^CNX500',
-                    'NIFTY_MIDCAP_50': '^CNXMID50',
-                    'NIFTY_MIDCAP_100': '^CNXMIDCAP',
-                    'NIFTY_SMALLCAP_100': '^CNXSMCAP',
-                    'NIFTY_NEXT_50': '^CNXNIFTY'
-                }
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    start_date = st.date_input('Start Date', datetime(2022, 1, 1), key='start_date')
-                with col2:
-                    end_date = st.date_input('End Date', datetime.today(), key='end_date')
-                sector_performance = {sector: calculate_performance(get_sector_data(ticker, start_date, end_date)) for sector, ticker in sector_indices.items() if calculate_performance(get_sector_data(ticker, start_date, end_date)) is not None}
-                performance_df = pd.DataFrame(list(sector_performance.items()), columns=['Sector', 'Performance'])
-                fig = px.bar(performance_df, x='Sector', y='Performance', title='Sector Performance',
-                            labels={'Performance': 'Performance (%)'}, color='Performance',
-                            color_continuous_scale=px.colors.sequential.Viridis)
-                st.plotly_chart(fig)
-
-            # Market Performance
-            elif tile_selection == "Market Performance":
-                st.subheader("Market Performance")
-                market_indices = {
-                    'S&P 500': '^GSPC',
-                    'Dow Jones': '^DJI',
-                    'NASDAQ': '^IXIC',
-                    'Gold': 'GC=F',
-                    'Silver': 'SI=F',
-                    'Oil': 'CL=F',
-                    'EUR/USD': 'EURUSD=X',
-                    'GBP/USD': 'GBPUSD=X',
-                    'Bitcoin': 'BTC-USD',
-                    'Ethereum': 'ETH-USD'
-                }
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    start_date = st.date_input('Start Date', datetime(2022, 1, 1), key='start_date')
-                with col2:
-                    end_date = st.date_input('End Date', datetime.today(), key='end_date')
-                market_performance = {market: calculate_performance(get_market_data(ticker, start_date, end_date)) for market, ticker in market_indices.items() if calculate_performance(get_market_data(ticker, start_date, end_date)) is not None}
-                performance_df = pd.DataFrame(list(market_performance.items()), columns=['Market', 'Performance'])
-                fig = px.bar(performance_df, x='Market', y='Performance', title='Market Performance',
-                            labels={'Performance': 'Performance (%)'}, color='Performance',
-                            color_continuous_scale=px.colors.diverging.RdYlGn)
-                st.plotly_chart(fig)
-
- 

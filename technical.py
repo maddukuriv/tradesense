@@ -12,6 +12,18 @@ def download_data(ticker, start_date, end_date):
     df = yf.download(ticker, start=start_date, end=end_date, interval="1d")
     return df
 
+# Define a function to calculate William Arbitrage
+def calculate_williams_alligator(df):
+    jaw_length = 13
+    teeth_length = 8
+    lips_length = 5
+
+    df['Jaw'] = df['Close'].shift(jaw_length).rolling(window=jaw_length).mean()
+    df['Teeth'] = df['Close'].shift(teeth_length).rolling(window=teeth_length).mean()
+    df['Lips'] = df['Close'].shift(lips_length).rolling(window=lips_length).mean()
+
+    return df
+
 # Define a function to calculate technical indicators
 def calculate_indicators(df):
     df['CMO'] = ta.cmo(df['Close'], length=14)
@@ -145,6 +157,9 @@ def calculate_indicators(df):
     
     # Advance Decline Line calculation
     df['Advance_Decline_Line'] = advances.cumsum() - declines.cumsum()
+    
+    # William Arbitrage calculation
+    df = calculate_williams_alligator(df)
     
     return df
 
@@ -963,7 +978,7 @@ if ticker:
     if view_option == 'Visualization':
         # Define indicator groups
         indicator_groups = {
-            "Trend Indicators": ["5_day_EMA", "10_day_EMA", "20_day_EMA", "MACD", "MACD_signal", "MACD_hist", "Trend_Line", "Ichimoku_conv", "Ichimoku_base", "Ichimoku_A", "Ichimoku_B", "Parabolic_SAR", "SuperTrend", "Donchian_High", "Donchian_Low", "Vortex_Pos", "Vortex_Neg", "ADX"],
+            "Trend Indicators": ["5_day_EMA", "10_day_EMA", "20_day_EMA", "MACD", "MACD_signal", "MACD_hist", "Trend_Line", "Ichimoku_conv", "Ichimoku_base", "Ichimoku_A", "Ichimoku_B", "Parabolic_SAR", "SuperTrend", "Donchian_High", "Donchian_Low", "Vortex_Pos", "Vortex_Neg", "ADX", "Jaw", "Teeth", "Lips"],
             "Momentum Indicators": ["RSI", "Stochastic_%K", "Stochastic_%D", "ROC", "DPO", "Williams_%R", "CMO", "CCI", "RVI", "RVI_Signal", "Ultimate_Oscillator", "Trix", "Trix_Signal", "Klinger"],
             "Volatility": ["ATR", "Std_Dev", "BB_High", "BB_Low","20_day_SMA", "Keltner_High", "Keltner_Low"],
             "Volume Indicators": ["OBV", "A/D_line", "Price_to_Volume", "TRIN", "Advance_Decline_Line", "McClellan_Oscillator", "Volume_Profile", "Chaikin_MF", "Williams_AD", "Ease_of_Movement", "MFI", "Elder_Ray_Bull", "Elder_Ray_Bear", "VWAP"],
