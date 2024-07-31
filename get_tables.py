@@ -9,6 +9,7 @@ db_path = 'new_etrade.db'
 def load_data(table_name):
     conn = sqlite3.connect(db_path)
     query = f"SELECT * FROM {table_name};"
+    print("query::", query)
     data = pd.read_sql_query(query, conn)
     conn.close()
     return data
