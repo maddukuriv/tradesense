@@ -41,8 +41,8 @@ def display_watchlist():
     watchlist = list(watchlists_collection.find({"user_id": user_id}))
 
     # Add new ticker to watchlist
-    new_ticker = st.text_input("Add a new ticker to your watchlist")
-    if st.button("Add Ticker"):
+    new_ticker = st.sidebar.text_input("Add a new ticker to your watchlist")
+    if st.sidebar.button("Add Ticker"):
         try:
             fetch_ticker_data(new_ticker)
             if not watchlists_collection.find_one({"user_id": user_id, "ticker": new_ticker}):
@@ -83,8 +83,8 @@ def display_watchlist():
         st.dataframe(watchlist_df)
 
         # Option to remove ticker from watchlist
-        ticker_to_remove = st.selectbox("Select a ticker to remove", [entry['ticker'] for entry in watchlist])
-        if st.button("Remove Ticker"):
+        ticker_to_remove = st.sidebar.selectbox("Select a ticker to remove", [entry['ticker'] for entry in watchlist])
+        if st.sidebar.button("Remove Ticker"):
             watchlists_collection.delete_one({"user_id": user_id, "ticker": ticker_to_remove})
             st.success(f"{ticker_to_remove} removed from your watchlist.")
             st.experimental_rerun()  # Refresh the app to reflect changes
