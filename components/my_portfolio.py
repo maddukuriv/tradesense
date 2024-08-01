@@ -18,15 +18,11 @@ def display_portfolio():
     portfolio = list(portfolios_collection.find({"user_id": user_id}))
 
     # Add new stock to portfolio
-    st.subheader("Add to Portfolio")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        new_ticker = st.text_input("Ticker Symbol")
-    with col2:
-        shares = st.number_input("Number of Shares", min_value=0.0, step=0.01)
-    with col3:
-        bought_price = st.number_input("Bought Price per Share", min_value=0.0, step=0.01)
-    if st.button("Add to Portfolio"):
+    st.sidebar.subheader("Add to Portfolio")
+    new_ticker = st.text_input("Ticker Symbol")
+    shares = st.number_input("Number of Shares", min_value=0.0, step=0.01)
+    bought_price = st.number_input("Bought Price per Share", min_value=0.0, step=0.01)
+    if st.sidebar.button("Add to Portfolio"):
         try:
             current_data = yf.download(new_ticker, period='1d')
             if current_data.empty:
@@ -98,8 +94,8 @@ def display_portfolio():
             fig.update_layout(title_text='Profit/Loss', xaxis_title='Value', yaxis_title='Sum')
             st.plotly_chart(fig)
 
-        ticker_to_remove = st.selectbox("Select a ticker to remove", [entry['ticker'] for entry in portfolio])
-        if st.button("Remove from Portfolio"):
+        ticker_to_remove = st.sidebar.selectbox("Select a ticker to remove", [entry['ticker'] for entry in portfolio])
+        if st.sidebar.button("Remove from Portfolio"):
             portfolios_collection.delete_one({"user_id": user_id, "ticker": ticker_to_remove})
             st.success(f"{ticker_to_remove} removed from your portfolio.")
             st.experimental_rerun()  # Refresh the app to reflect changes
