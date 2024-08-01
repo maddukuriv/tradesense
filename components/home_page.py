@@ -76,13 +76,7 @@ def home_page_app():
               overlaying='y',
               side='right'
           ),
-          updatemenus=[dict(
-              type="buttons",
-              buttons=[dict(
-                            method="relayout",
-                            args=[{"xaxis.range": [None, None],
-                                  "yaxis.range": [None, None]}])]
-          )]
+       
       )
       return fig
 
