@@ -1122,7 +1122,7 @@ def stock_analysis_app():
                 overall_description = f"{overall_score*100:.1f}%"
                 recommendation = get_recommendation(overall_score)
                 
-                st.divider()  # Add divider before the overall score section
+                
                 
                 col1, col2 = st.columns([1, 2])
                 with col2:
