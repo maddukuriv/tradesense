@@ -7,6 +7,7 @@ import plotly.graph_objs as go
 import plotly.express as px
 from datetime import datetime, timedelta
 
+
 def home_page_app():
     st.title("TradeSense")
     st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
@@ -21,7 +22,7 @@ def home_page_app():
         return data
 
     # Function to create Plotly figure with volume histogram
-    def create_figure(data, indicators, title):
+    def create_figure(data, indicators, ticker):
         fig = go.Figure()
 
         # Add candlestick chart
@@ -50,7 +51,7 @@ def home_page_app():
                 'xanchor': 'center',
                 'yanchor': 'top'
             },
-            height=700,
+            height=500,
             margin=dict(t=100, b=10, l=50, r=50),
             yaxis=dict(title='Price'),
             yaxis2=dict(title='Volume', overlaying='y', side='right'),
@@ -73,7 +74,7 @@ def home_page_app():
             hovermode='x unified',
             hoverlabel=dict(bgcolor="white", font_size=16, font_family="Rockwell")
         )
-        st.plotly_chart(fig)
+        return fig
 
     col1, col2, col3 = st.columns(3)
 
@@ -104,7 +105,7 @@ def home_page_app():
 
     if ticker and START and END:
         data = get_stock_data(ticker, START, END)
-        fig = create_figure(data, ['Close', 'MA_10', 'MA_20'], f"{stock_name} Stock Prices")
+        fig = create_figure(data, ['Close', 'MA_10', 'MA_20'], ticker)
         st.plotly_chart(fig)
 
     st.divider()
@@ -163,7 +164,9 @@ def home_page_app():
     }
 
     performance_df = pd.DataFrame(list(market_performance.items()), columns=['Market', 'Performance'])
-    fig = px.bar(performance_df, x='Market', y='Performance', title='Market Performance',
+    fig2 = px.bar(performance_df, x='Market', y='Performance', title='Market Performance',
                 labels={'Performance': 'Performance (%)'}, color='Performance',
                 color_continuous_scale=px.colors.diverging.RdYlGn)
-    st.plotly_chart(fig)
+    st.plotly_chart(fig2)
+
+
