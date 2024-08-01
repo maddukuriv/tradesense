@@ -1095,6 +1095,7 @@ def stock_analysis_app():
                 )
 
                 st.plotly_chart(fig)
+            
             else:
                 # Calculate scores
                 scores, details = calculate_scores(data)
@@ -1114,19 +1115,22 @@ def stock_analysis_app():
                         for detail in details_list:
                             if detail:  # Check if detail is not an empty string
                                 st.markdown(f"- {detail}")
-                st.divider()
+                    st.divider()  # Add divider between each gauge section
 
                 # Calculate overall weightage score
                 overall_score = np.mean(list(scores.values()))
                 overall_description = f"{overall_score*100:.1f}%"
                 recommendation = get_recommendation(overall_score)
-            
+                
+                st.divider()  # Add divider before the overall score section
+                
                 col1, col2 = st.columns([1, 2])
                 with col2:
                     st.plotly_chart(create_gauge(overall_score, 'Overall Score'))
                 with col1:
                     st.markdown(f"### Overall Score: {overall_description}")
                     st.markdown(f"<p style='font-size:20px;'>Recommendation: {recommendation}</p>", unsafe_allow_html=True)
+
 
     elif submenu == "Sentiment Analysis":
 
