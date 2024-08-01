@@ -3,10 +3,8 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-
+import plotly.graph_objs as go
 import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 
 
@@ -47,59 +45,46 @@ def home_page_app():
       # Add volume histogram
       fig.add_trace(go.Bar(x=data.index, y=data['Volume'], name='Volume', yaxis='y2', marker_color='rgba(0, 0, 100, 0.5)'))
 
-      def update_layout(fig, title, mode='light'):
-        if mode == 'dark':
-            bgcolor = 'rgb(17, 17, 17)'
-            font_color = 'white'
-            grid_color = 'gray'
-        else:
-            bgcolor = 'white'
-            font_color = 'black'
-            grid_color = 'lightgray'
-
-        fig.update_layout(
-            title=title,
-            xaxis_title='Date',
-            yaxis_title='Price',
-            xaxis_rangeslider_visible=True,
-            plot_bgcolor=bgcolor,
-            paper_bgcolor=bgcolor,
-            font=dict(color=font_color),
-            hovermode='x',
-            xaxis=dict(
-                rangeselector=dict(
-                    buttons=list([
-                        dict(count=1, label="1m", step="month", stepmode="backward"),
-                        dict(count=6, label="6m", step="month", stepmode="backward"),
-                        dict(count=1, label="YTD", step="year", stepmode="todate"),
-                        dict(count=1, label="1y", step="year", stepmode="backward"),
-                        dict(step="all")
-                    ])
-                ),
-                rangeslider=dict(visible=True),
-                type='date',
-                gridcolor=grid_color
-            ),
-            yaxis=dict(
-                title='Price',
-                fixedrange=False,
-                gridcolor=grid_color
-            ),
-            yaxis2=dict(
-                title='Volume',
-                overlaying='y',
-                side='right',
-                gridcolor=grid_color
-            ),
-            updatemenus=[dict(
-                type="buttons",
-                buttons=[dict(label="Reset Zoom",
+      fig.update_layout(
+          title=title,
+          xaxis_title='Date',
+          yaxis_title='Price',
+          xaxis_rangeslider_visible=True,
+          plot_bgcolor='dark grey',
+          
+          font=dict(color='black'),
+          hovermode='x',
+          xaxis=dict(
+              rangeselector=dict(
+                  buttons=list([
+                      dict(count=1, label="1m", step="month", stepmode="backward"),
+                      dict(count=6, label="6m", step="month", stepmode="backward"),
+                      dict(count=1, label="YTD", step="year", stepmode="todate"),
+                      dict(count=1, label="1y", step="year", stepmode="backward"),
+                      dict(step="all")
+                  ])
+              ),
+              rangeslider=dict(visible=True),
+              type='date'
+          ),
+          yaxis=dict(
+              title='Price',
+              fixedrange=False
+          ),
+          yaxis2=dict(
+              title='Volume',
+              overlaying='y',
+              side='right'
+          ),
+          updatemenus=[dict(
+              type="buttons",
+              buttons=[dict(label="Reset Zoom",
                             method="relayout",
                             args=[{"xaxis.range": [None, None],
-                                    "yaxis.range": [None, None]}])]
-            )]
-        )
-        return fig
+                                  "yaxis.range": [None, None]}])]
+          )]
+      )
+      return fig
 
   col1, col2, col3 = st.columns(3)
 
