@@ -13,12 +13,17 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from pmdarima import auto_arima
 from scipy.signal import hilbert, cwt, ricker
+from urllib.parse import urlparse, parse_qs
 
 def stock_analysis_app():
     st.sidebar.subheader("Stock Analysis")
 
+    # Fetch the ticker from URL parameters
+    query_params = st.experimental_get_query_params()
+    ticker_from_url = query_params.get('ticker', [None])[0]
+
     # User input for the stock ticker
-    ticker = st.sidebar.text_input('Enter Stock Ticker (e.g., BAJAJFINSV.NS): ', 'BAJAJFINSV.NS')
+    ticker = st.sidebar.text_input('Enter Stock Ticker (e.g., BAJAJFINSV.NS): ', ticker_from_url if ticker_from_url else 'BAJAJFINSV.NS')
     submenu = st.sidebar.selectbox("Select Analysis Type", ["Financial Analysis", "Technical Analysis", "Sentiment Analysis", "Price Forecast"])
 
     # Date inputs limited to the last 30 days
@@ -1478,3 +1483,12 @@ def stock_analysis_app():
         # Display model summary
         st.write("Model Summary:")
         st.text(sarima_model.summary())
+
+def main():
+    page = st.sidebar.radio("Select a Page", ["Stock Analysis"])
+
+    if page == "Stock Analysis":
+        stock_analysis_app()
+
+if __name__ == "__main__":
+    main()
