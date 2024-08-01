@@ -19,16 +19,15 @@ def stock_analysis_app():
 
     # User input for the stock ticker
     ticker = st.sidebar.text_input('Enter Stock Ticker (e.g., BAJAJFINSV.NS): ', 'BAJAJFINSV.NS')
-    submenu = st.sidebar.selectbox("Select Analysis Type", ["Financial Analysis", "Technical Analysis", "Sentiment Analysis", "Price Forecast"])
+    submenu = st.sidebar.selectbox("Select Analysis Type", [ "Technical Analysis", "Sentiment Analysis", "Price Forecast"])
 
     # Date inputs limited to the last 30 days
     end_date = datetime.now()
     start_date = end_date - timedelta(days=395)
 
-    if submenu == "Financial Analysis":
-        pass
+    
 
-    elif submenu == "Technical Analysis":
+    if submenu == "Technical Analysis":
         # Define a function to download data
         def download_data(ticker, start_date, end_date):
             df = yf.download(ticker, start=start_date, end=end_date, interval="1d")
