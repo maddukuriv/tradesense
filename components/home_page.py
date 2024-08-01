@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 def home_page_app():
   st.title("TradeSense")
   st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
-  st.divider()
+  
 
   # Function to get stock data and calculate moving averages
   @st.cache_data
@@ -111,6 +111,8 @@ def home_page_app():
       fig = create_figure(data, ['Close', 'MA_10', 'MA_20'], f"{stock_name} Stock Prices")
       st.plotly_chart(fig)
 
+  st.divider()
+  
   # Market Performance
   st.subheader("Market's Performance")
 
