@@ -19,9 +19,9 @@ def display_portfolio():
 
     # Add new stock to portfolio
     st.sidebar.subheader("Add to Portfolio")
-    new_ticker = st.text_input("Ticker Symbol")
-    shares = st.number_input("Number of Shares", min_value=0.0, step=0.01)
-    bought_price = st.number_input("Bought Price per Share", min_value=0.0, step=0.01)
+    new_ticker = st.sidebar.text_input("Ticker Symbol")
+    shares = st.sidebar.number_input("Number of Shares", min_value=0.0, step=0.01)
+    bought_price = st.sidebar.number_input("Bought Price per Share", min_value=0.0, step=0.01)
     if st.sidebar.button("Add to Portfolio"):
         try:
             current_data = yf.download(new_ticker, period='1d')
