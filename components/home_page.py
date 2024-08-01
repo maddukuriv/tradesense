@@ -78,7 +78,7 @@ def home_page_app():
           ),
           updatemenus=[dict(
               type="buttons",
-              buttons=[dict(label="Reset Zoom",
+              buttons=[dict(
                             method="relayout",
                             args=[{"xaxis.range": [None, None],
                                   "yaxis.range": [None, None]}])]
