@@ -1100,7 +1100,8 @@ def stock_analysis_app():
                 scores, details = calculate_scores(data)
                 
                 # Display data table
-                st.write(data)
+                st.write("Last 15 days data")
+                st.write(data.tail(15))
 
                 # Create and display gauges and details in two columns
                 for key, value in scores.items():
