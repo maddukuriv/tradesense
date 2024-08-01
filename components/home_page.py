@@ -73,7 +73,7 @@ def home_page_app():
             hovermode='x unified',
             hoverlabel=dict(bgcolor="white", font_size=16, font_family="Rockwell")
         )
-        
+        st.plotly_chart(fig)
 
     col1, col2, col3 = st.columns(3)
 
