@@ -51,7 +51,7 @@ def home_page_app():
           yaxis_title='Price',
           xaxis_rangeslider_visible=True,
           plot_bgcolor='dark grey',
-          paper_bgcolor='white',
+          
           font=dict(color='black'),
           hovermode='x',
           xaxis=dict(
