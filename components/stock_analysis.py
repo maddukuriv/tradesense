@@ -1484,11 +1484,4 @@ def stock_analysis_app():
         st.write("Model Summary:")
         st.text(sarima_model.summary())
 
-def main():
-    page = st.sidebar.radio("Select a Page", ["Stock Analysis"])
 
-    if page == "Stock Analysis":
-        stock_analysis_app()
-
-if __name__ == "__main__":
-    main()
