@@ -2886,3 +2886,4 @@ else:
 
         elif choice == "Database Admin Page":
               display_tables()
+              

@@ -1320,6 +1320,7 @@ else:
 
 
         elif choice == "Stock Screener":
+            # Stock screener code --------------------------------------------------------------------------------------------------------
    
 
             st.sidebar.subheader("Stock Screener")
@@ -1545,10 +1546,7 @@ else:
             # User input for the stock ticker
             ticker = st.sidebar.text_input('Enter Stock Ticker (e.g., BAJAJFINSV.NS): ', 'BAJAJFINSV.NS')
 
-
             submenu = st.sidebar.selectbox("Select Analysis Type", ["Financial Analysis", "Technical Analysis", "Sentiment Analysis", "Price Forecast"])
-
-
 
             # Date inputs limited to the last 30 days
             end_date = datetime.now()

@@ -1,16 +1,13 @@
-import yfinance as yf
 import pandas as pd
 import numpy as np
-import itertools
-from ta import add_all_ta_features
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-from sklearn.model_selection import TimeSeriesSplit, GridSearchCV
-from sklearn.metrics import mean_squared_error
-import streamlit as st
+import yfinance as yf
 import plotly.graph_objects as go
-from pmdarima import auto_arima
-from datetime import timedelta, datetime
-from scipy.signal import cwt, ricker, hilbert
+import streamlit as st
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.model_selection import train_test_split, TimeSeriesSplit
+from sklearn.linear_model import LassoCV
+import joblib
 
 # Function to fetch stock data from Yahoo Finance
 def get_stock_data(ticker, start_date, end_date):
@@ -18,8 +15,16 @@ def get_stock_data(ticker, start_date, end_date):
     stock_data.reset_index(inplace=True)
     return stock_data
 
-# Function to calculate technical indicators
+# Function to calculate technical indicators for swing trading
 def calculate_technical_indicators(df):
+    # Short-term Moving Averages (e.g., 10, 20 days)
+    df['SMA_10'] = df['Close'].rolling(window=10).mean()
+    df['SMA_20'] = df['Close'].rolling(window=20).mean()
+                
+    # Exponential Moving Averages (EMAs)
+    df['EMA_10'] = df['Close'].ewm(span=10, adjust=False).mean()
+    df['EMA_20'] = df['Close'].ewm(span=20, adjust=False).mean()
+                
     # Moving Average Convergence Divergence (MACD)
     df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
     df['EMA_26'] = df['Close'].ewm(span=26, adjust=False).mean()
@@ -39,10 +44,6 @@ def calculate_technical_indicators(df):
     df['Std_Dev'] = df['Close'].rolling(window=20).std()
     df['Upper_Band'] = df['SMA_20'] + (df['Std_Dev'] * 2)
     df['Lower_Band'] = df['SMA_20'] - (df['Std_Dev'] * 2)
-    df['BBW'] = (df['Upper_Band'] - df['Lower_Band']) / df['SMA_20']  # Bollinger Band Width
-                
-    # Exponential Moving Average (EMA)
-    df['EMA_50'] = df['Close'].ewm(span=50, adjust=False).mean()
                 
     # Average True Range (ATR)
     df['High-Low'] = df['High'] - df['Low']
@@ -56,40 +57,23 @@ def calculate_technical_indicators(df):
                 
     # On-Balance Volume (OBV)
     df['OBV'] = (np.sign(df['Close'].diff()) * df['Volume']).fillna(0).cumsum()
+    
+    # Lagged Returns
+    df['Return_1'] = df['Close'].pct_change(1)
+    df['Return_5'] = df['Close'].pct_change(5)
                 
     return df
 
-# Functions for Fourier, Wavelet, and Hilbert transforms
-def calculate_fourier(df, n=5):
-    close_fft = np.fft.fft(df['Close'].values)
-    fft_df = pd.DataFrame({'fft': close_fft})
-    fft_df['absolute'] = np.abs(fft_df['fft'])
-    fft_df['angle'] = np.angle(fft_df['fft'])
-    fft_df = fft_df.sort_values(by='absolute', ascending=False).head(n)
-    fft_df = fft_df.reindex(range(len(df)), fill_value=0)  # Ensure it matches the length of the stock data
-    return fft_df['absolute']
-
-def calculate_wavelet(df):
-    widths = np.arange(1, 31)
-    cwt_matrix = cwt(df['Close'], ricker, widths)
-    max_wavelet = np.max(cwt_matrix, axis=0)
-    return pd.Series(max_wavelet).reindex(range(len(df)), fill_value=0)  # Ensure it matches the length of the stock data
-
-def calculate_hilbert(df):
-    analytic_signal = hilbert(df['Close'])
-    amplitude_envelope = np.abs(analytic_signal)
-    instantaneous_phase = np.unwrap(np.angle(analytic_signal))
-    return pd.Series(amplitude_envelope), pd.Series(instantaneous_phase)
-
 # Streamlit UI
-st.title("Stock Price Prediction with SARIMA Model")
+st.title("Stock Price Prediction for Swing Trading")
 
 # Sidebar for user input
 st.sidebar.subheader("Settings")
 ticker_symbol = st.sidebar.text_input("Enter Stock Symbol", value="CUMMINSIND.NS")
 start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime("2021-06-01"))
 end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("today"))
-forecast_period = st.sidebar.number_input("Forecast Period (days)", value=10, min_value=1, max_value=30)
+forecast_period = st.sidebar.number_input("Forecast Period (days)", value=5, min_value=1, max_value=30)
+model_save_path = "lasso_stock_model.pkl"
 
 # Fetch the data
 stock_data = get_stock_data(ticker_symbol, start_date, end_date)
@@ -97,62 +81,51 @@ stock_data = get_stock_data(ticker_symbol, start_date, end_date)
 # Calculate technical indicators
 stock_data = calculate_technical_indicators(stock_data)
 
-# Calculate Fourier, Wavelet, and Hilbert transforms
-stock_data['Fourier'] = calculate_fourier(stock_data)
-stock_data['Wavelet'] = calculate_wavelet(stock_data)
-stock_data['Hilbert_Amplitude'], stock_data['Hilbert_Phase'] = calculate_hilbert(stock_data)
-
 # Drop rows with NaN values
 stock_data.dropna(inplace=True)
 
 # Extract the closing prices and technical indicators
 close_prices = stock_data['Close']
-technical_indicators = stock_data[['MACD', 'Signal_Line', 'MACD_Hist', 'RSI', 'SMA_20', 'Upper_Band', 'Lower_Band', 'BBW', 'EMA_50', 'ATR', 'ROC', 'OBV', 'Fourier', 'Wavelet', 'Hilbert_Amplitude', 'Hilbert_Phase']]
+technical_indicators = stock_data[['SMA_10', 'SMA_20', 'EMA_10', 'EMA_20', 'MACD', 'Signal_Line', 'MACD_Hist', 'RSI', 'ATR', 'Return_1', 'Return_5']]
 
-# Check correlation with close prices
-correlations = technical_indicators.corrwith(close_prices).sort_values()
+# Normalize the technical indicators
+scaler = StandardScaler()
+technical_indicators_scaled = scaler.fit_transform(technical_indicators)
 
-# Display correlation as a bar chart
-fig_corr = go.Figure(go.Bar(
-    x=correlations.values,
-    y=correlations.index,
-    orientation='h'
-))
-fig_corr.update_layout(
-    title="Correlation with Close Prices",
-    xaxis_title="Correlation",
-    yaxis_title="Indicators",
-    yaxis=dict(tickmode='linear')
-)
-st.plotly_chart(fig_corr)
+# Split data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(technical_indicators_scaled, close_prices, test_size=0.2, shuffle=False)
 
-# Train SARIMA model with exogenous variables (technical indicators)
-sarima_model = auto_arima(
-    close_prices,
-    exogenous=technical_indicators,
-    start_p=1,
-    start_q=1,
-    max_p=3,
-    max_q=3,
-    m=7,  # Weekly seasonality
-    start_P=0,
-    seasonal=True,
-    d=1,
-    D=1,
-    trace=True,
-    error_action='ignore',
-    suppress_warnings=True,
-    stepwise=True
-)
+# Use Lasso regression for regularization
+lasso = LassoCV(cv=TimeSeriesSplit(n_splits=5)).fit(X_train, y_train)
 
-# Forecasting the next n business days (excluding weekends)
-future_technical_indicators = technical_indicators.tail(forecast_period).values
-forecast = sarima_model.predict(n_periods=forecast_period, exogenous=future_technical_indicators)
+# Save the model
+joblib.dump(lasso, model_save_path)
 
-# Generate the forecasted dates excluding weekends
-forecasted_dates = pd.bdate_range(start=stock_data['Date'].iloc[-1], periods=forecast_period + 1)[1:]
+# Load the model
+lasso = joblib.load(model_save_path)
 
-forecasted_df = pd.DataFrame({'Date': forecasted_dates, 'Forecasted_Close': forecast})
+# Predictions using Lasso
+lasso_forecast_train = lasso.predict(X_train)
+lasso_forecast_test = lasso.predict(X_test)
+
+# Calculate R-squared and RMSE for Lasso
+lasso_r2_train = r2_score(y_train, lasso_forecast_train)
+lasso_r2_test = r2_score(y_test, lasso_forecast_test)
+lasso_rmse_train = np.sqrt(mean_squared_error(y_train, lasso_forecast_train))
+lasso_rmse_test = np.sqrt(mean_squared_error(y_test, lasso_forecast_test))
+
+# Display R-squared and RMSE for Lasso
+st.write(f"Lasso Training R-squared: {lasso_r2_train:.4f}")
+st.write(f"Lasso Test R-squared: {lasso_r2_test:.4f}")
+st.write(f"Lasso Training RMSE: {lasso_rmse_train:.4f}")
+st.write(f"Lasso Test RMSE: {lasso_rmse_test:.4f}")
+
+# Generate the forecasted dates excluding weekends for test set
+start_date_test = stock_data['Date'].iloc[len(y_train)]
+end_date_test = stock_data['Date'].iloc[-1]
+forecasted_dates_test = pd.bdate_range(start=start_date_test, end=end_date_test)
+
+forecasted_df_test_lasso = pd.DataFrame({'Date': forecasted_dates_test[:len(y_test)], 'Forecasted_Close': lasso_forecast_test})
 
 # Plotly interactive figure with time slider
 fig = go.Figure()
@@ -164,13 +137,13 @@ fig.add_trace(go.Scatter(
     name='Close Price'
 ))
 
-# Add forecasted prices
+# Add forecasted prices for Lasso
 fig.add_trace(go.Scatter(
-    x=forecasted_df['Date'],
-    y=forecasted_df['Forecasted_Close'],
+    x=forecasted_df_test_lasso['Date'],
+    y=forecasted_df_test_lasso['Forecasted_Close'],
     mode='lines',
-    name='Forecasted Close Price',
-    line=dict(color='orange')
+    name='Lasso Forecasted Close Price',
+    line=dict(color='purple')
 ))
 
 fig.update_layout(
@@ -183,9 +156,14 @@ fig.update_layout(
 st.plotly_chart(fig)
 
 # Display forecasted prices
-st.write("Forecasted Prices for the next {} days:".format(forecast_period))
-st.dataframe(forecasted_df)
+st.write("Forecasted Prices for the test period:")
+st.dataframe(forecasted_df_test_lasso)
 
-# Display model summary
-st.write("Model Summary:")
-st.text(sarima_model.summary())
+# Summary of results
+st.subheader("Summary of Results")
+st.write(f"Training R-squared: {lasso_r2_train:.4f}")
+st.write(f"Test R-squared: {lasso_r2_test:.4f}")
+st.write(f"Training RMSE: {lasso_rmse_train:.4f}")
+st.write(f"Test RMSE: {lasso_rmse_test:.4f}")
+
+st.write(f"The model has been saved to {model_save_path} and can be loaded for future predictions.")
