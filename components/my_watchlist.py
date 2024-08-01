@@ -4,6 +4,7 @@ from utils.mongodb import watchlists_collection
 import yfinance as yf
 import pandas_ta as ta
 import pandas as pd
+import ta
 
 # Helper function to calculate indicators
 def calculate_indicators(data):
