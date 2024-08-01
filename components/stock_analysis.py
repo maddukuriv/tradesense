@@ -1114,6 +1114,7 @@ def stock_analysis_app():
                         for detail in details_list:
                             if detail:  # Check if detail is not an empty string
                                 st.markdown(f"- {detail}")
+                    st.divider()
 
                 # Calculate overall weightage score
                 overall_score = np.mean(list(scores.values()))
