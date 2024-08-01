@@ -3,9 +3,9 @@ import pandas as pd
 import pandas_ta as ta
 import numpy as np
 import yfinance as yf
+
 from datetime import datetime, timedelta
 from utils.constants import bse_largecap, bse_smallcap, bse_midcap
-
 def stock_screener_app():
     st.sidebar.subheader("Stock Screener")
 
@@ -157,6 +157,7 @@ def stock_screener_app():
                 'Bollinger_Low': latest_data['BB_Low'],
                 'Volume': latest_data['Volume'],
                 '20_day_vol_MA': latest_data['20_day_vol_MA']
+                
             })
         return pd.DataFrame(technical_data)
 
@@ -199,29 +200,23 @@ def stock_screener_app():
     df_bollinger_low_cross_signal = fetch_latest_data(bollinger_low_cross_tickers)
     df_volume_increase_signal = fetch_latest_data(volume_increase_tickers)
 
-    def add_links(df):
-        df['Ticker'] = df['Ticker'].apply(lambda x: f'<a target="_blank" href="/stock_analysis?ticker={x}">{x}</a>')
-        return df
-
     st.title("Stock's Based on Selected Strategy")
 
     if submenu == "MACD":
         st.write("Stocks with MACD > MACD Signal and MACD > 0 in the last 5 days:")
-        df_macd_signal = add_links(df_macd_signal)
-        st.markdown(df_macd_signal.to_html(escape=False), unsafe_allow_html=True)
+        st.dataframe(df_macd_signal)
+    
 
     elif submenu == "Moving Average":
         st.write("Stocks with 10-day EMA crossing above 20-day EMA in the last 5 days:")
-        df_moving_average_signal = add_links(df_moving_average_signal)
-        st.markdown(df_moving_average_signal.to_html(escape=False), unsafe_allow_html=True)
+        st.dataframe(df_moving_average_signal)
+    
 
     elif submenu == "Bollinger Bands":
         st.write("Stocks with price crossing below Bollinger Low in the last 5 days:")
-        df_bollinger_low_cross_signal = add_links(df_bollinger_low_cross_signal)
-        st.markdown(df_bollinger_low_cross_signal.to_html(escape=False), unsafe_allow_html=True)
+        st.dataframe(df_bollinger_low_cross_signal)
+    
 
     elif submenu == "Volume":
         st.write("Stocks with volume above 20-day moving average in the last 5 days:")
-        df_volume_increase_signal = add_links(df_volume_increase_signal)
-        st.markdown(df_volume_increase_signal.to_html(escape=False), unsafe_allow_html=True)
-
+        st.dataframe(df_volume_increase_signal)
