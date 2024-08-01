@@ -10,9 +10,8 @@ from datetime import datetime, timedelta
 
 def home_page_app():
   st.title("TradeSense")
-  st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
-
-  
+  st.subheader("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
+  st.divider()
 
   # Function to get stock data and calculate moving averages
   @st.cache_data
