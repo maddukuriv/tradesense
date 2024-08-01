@@ -14,6 +14,7 @@ from plotly.subplots import make_subplots
 from pmdarima import auto_arima
 from scipy.signal import hilbert, cwt, ricker
 
+
 def stock_analysis_app():
     st.sidebar.subheader("Stock Analysis")
 

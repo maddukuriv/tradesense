@@ -45,39 +45,37 @@ def home_page_app():
       fig.add_trace(go.Bar(x=data.index, y=data['Volume'], name='Volume', yaxis='y2', marker_color='rgba(0, 0, 100, 1)'))
 
       fig.update_layout(
-          title=title,
-          xaxis_title='Date',
-          yaxis_title='Price',
-          xaxis_rangeslider_visible=True,
-          plot_bgcolor='dark grey',
-          
-          font=dict(color='black'),
-          hovermode='x',
-          xaxis=dict(
-              rangeselector=dict(
-                  buttons=list([
-                      dict(count=1, label="1m", step="month", stepmode="backward"),
-                      dict(count=6, label="6m", step="month", stepmode="backward"),
-                      dict(count=1, label="YTD", step="year", stepmode="todate"),
-                      dict(count=1, label="1y", step="year", stepmode="backward"),
-                      dict(step="all")
-                  ])
-              ),
-              rangeslider=dict(visible=True),
-              type='date'
-          ),
-          yaxis=dict(
-              title='Price',
-              fixedrange=False
-          ),
-          yaxis2=dict(
-              title='Volume',
-              overlaying='y',
-              side='right'
-          ),
-       
-      )
-      return fig
+        title={
+            'text': f'{ticker} Price and Technical Indicators',
+            'y': 0.97,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'
+        },
+        height=900,
+        margin=dict(t=100, b=10, l=50, r=50),
+        yaxis=dict(title='Price'),
+        yaxis2=dict(title='Indicators', overlaying='y', side='right'),
+        xaxis=dict(
+            rangeslider=dict(visible=True),
+            rangeselector=dict(
+                buttons=list([
+                    dict(count=7, label='7d', step='day', stepmode='backward'),
+                    dict(count=14, label='14d', step='day', stepmode='backward'),
+                    dict(count=1, label='1m', step='month', stepmode='backward'),
+                    dict(count=3, label='3m', step='month', stepmode='backward'),
+                    dict(count=6, label='6m', step='month', stepmode='backward'),
+                    dict(count=1, label='1y', step='year', stepmode='backward'),
+                    dict(step='all')
+                ])
+            ),
+            type='date'
+        ),
+        legend=dict(x=0.5, y=-0.02, orientation='h', xanchor='center', yanchor='top'),
+        hovermode='x unified',
+        hoverlabel=dict(bgcolor="white", font_size=16, font_family="Rockwell")
+    )
+
 
   col1, col2, col3 = st.columns(3)
 
