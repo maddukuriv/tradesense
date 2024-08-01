@@ -12,7 +12,7 @@ def home_page_app():
   st.title("TradeSense")
   st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
 
-  st.subheader("Market Performance")
+  
 
   # Function to get stock data and calculate moving averages
   @st.cache_data
@@ -113,6 +113,7 @@ def home_page_app():
       st.plotly_chart(fig)
 
   # Market Performance
+  st.subheader("Market's Performance")
 
   market_indices = {
       'S&P 500': '^GSPC',
