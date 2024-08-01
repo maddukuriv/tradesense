@@ -324,6 +324,10 @@ def forgot_password():
                 st.success("Password reset successfully. You can now log in with the new password.")
                 st.session_state.identity_verified = False
 
+# Function to convert string date to datetime.date
+def string_to_date(date_string):
+    return datetime.strptime(date_string, '%Y-%m-%d').date()
+
 # My Account function
 def my_account():
     st.subheader("My Account")
@@ -332,7 +336,7 @@ def my_account():
         user = users_collection.find_one({"_id": ObjectId(st.session_state.user_id)})
 
         new_name = st.text_input("Update your name", value=user['name'], key='account_name')
-        new_dob = st.date_input("Update your date of birth", value=user['dob'], key='account_dob')
+        new_dob = st.date_input("Update your date of birth", value=string_to_date(user['dob']), key='account_dob')
         new_pob = st.text_input("Update your place of birth", value=user['pob'], key='account_pob')
 
         if st.button("Update Details"):
