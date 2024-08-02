@@ -88,8 +88,8 @@ def markets_app():
         ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap"])
         tickers = {"BSE-LargeCap": bse_largecap, "BSE-MidCap": bse_midcap, "BSE-SmallCap": bse_smallcap}[ticker_category]
 
-        @st.cache_data(ttl=86400)
-        def get_sector_industry_price_changes(tickers, date):
+        @st.cache_data(ttl=60)
+        def get_sector_industry_price_changes(tickers, timestamp):
             data = {
                 'Ticker': [], 'Company Name': [], 'Sector': [], 'Industry': [], 'Market Cap': [], 'Last Traded Price': [],
                 '1D % Change': [], '2D % Change': [], '3D % Change': [], '5D % Change': [], '2W % Change': [],
@@ -183,7 +183,7 @@ def markets_app():
 
             return df
 
-        sector_industry_price_changes_df = get_sector_industry_price_changes(tickers, datetime.now().date())
+        sector_industry_price_changes_df = get_sector_industry_price_changes(tickers, datetime.now())
 
         # Streamlit app
         st.subheader('Market Stats')

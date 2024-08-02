@@ -80,7 +80,7 @@ def stock_screener_app():
                 return recent_data.index[i]
         return None
 
-    @st.cache_data
+    @st.cache_data(ttl=60)
     def get_stock_data(ticker_symbols, start_date, end_date):
         stock_data = {}
         progress_bar = st.progress(0)
@@ -99,7 +99,7 @@ def stock_screener_app():
                 st.error(f"Error fetching data for ticker '{ticker_symbol}': {e}")
         return stock_data
 
-    @st.cache_data
+    @st.cache_data(ttl=60)
     def calculate_indicators(df):
         df['20_MA'] = ta.sma(df['Close'], length=20)
         df['50_MA'] = ta.sma(df['Close'], length=50)
