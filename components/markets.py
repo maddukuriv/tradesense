@@ -6,8 +6,9 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from utils.constants import bse_largecap, bse_midcap, bse_smallcap
-# Function to download data and calculate moving averages with caching
+from datetime import datetime
 
+# Function to download data and calculate moving averages with caching
 def get_stock_data(ticker_symbol):
     data = yf.download(ticker_symbol, period='1y')
     data['MA_15'] = data['Close'].rolling(window=15).mean()
@@ -87,8 +88,8 @@ def markets_app():
         ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap"])
         tickers = {"BSE-LargeCap": bse_largecap, "BSE-MidCap": bse_midcap, "BSE-SmallCap": bse_smallcap}[ticker_category]
 
-        @st.cache_data
-        def get_sector_industry_price_changes(tickers):
+        @st.cache_data(ttl=86400)
+        def get_sector_industry_price_changes(tickers, date):
             data = {
                 'Ticker': [], 'Company Name': [], 'Sector': [], 'Industry': [], 'Market Cap': [], 'Last Traded Price': [],
                 '1D % Change': [], '2D % Change': [], '3D % Change': [], '5D % Change': [], '2W % Change': [],
@@ -182,7 +183,7 @@ def markets_app():
 
             return df
 
-        sector_industry_price_changes_df = get_sector_industry_price_changes(tickers)
+        sector_industry_price_changes_df = get_sector_industry_price_changes(tickers, datetime.now().date())
 
         # Streamlit app
         st.subheader('Market Stats')
@@ -420,3 +421,7 @@ def markets_app():
         }
         df_annualized = pd.DataFrame(annualized_data)
         st.table(df_annualized)
+
+# Run the app
+if __name__ == "__main__":
+    markets_app()
