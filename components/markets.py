@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from utils.constants import bse_largecap, bse_midcap, bse_smallcap
 # Function to download data and calculate moving averages with caching
-@st.cache_data
+
 def get_stock_data(ticker_symbol):
     data = yf.download(ticker_symbol, period='1y')
     data['MA_15'] = data['Close'].rolling(window=15).mean()
