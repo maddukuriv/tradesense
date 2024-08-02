@@ -41,7 +41,7 @@ def home_page_app():
             fig.add_trace(go.Scatter(x=data.index, y=data['MA_20'], mode='lines', name='20-day MA'))
 
         # Add volume histogram
-        fig.add_trace(go.Bar(x=data.index, y=data['Volume'], name='Volume', yaxis='y2', marker_color='rgba(255, 0, 255, 0.4)'))
+        fig.add_trace(go.Bar(x=data.index, y=data['Volume'], name='Volume', yaxis='y2', marker_color='rgba(255, 0, 255, 0.2)'))
 
         fig.update_layout(
             title={
