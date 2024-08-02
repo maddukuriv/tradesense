@@ -1,9 +1,8 @@
-
 import streamlit as st
 from utils.mongodb import users_collection
 from bson.objectid import ObjectId
 from utils.hash_utils import string_to_date, verify_password, hash_password
-
+from datetime import datetime
 
 # My Account function
 def my_account():
@@ -17,7 +16,8 @@ def my_account():
         new_pob = st.text_input("Update your place of birth", value=user['pob'], key='account_pob')
 
         if st.button("Update Details"):
-            users_collection.update_one({"_id": ObjectId(user['_id'])}, {"$set": {"name": new_name, "dob": new_dob, "pob": new_pob}})
+            new_dob_str = new_dob.strftime('%Y-%m-%d')  # Convert the date to string
+            users_collection.update_one({"_id": ObjectId(user['_id'])}, {"$set": {"name": new_name, "dob": new_dob_str, "pob": new_pob}})
             st.success("Details updated successfully!")
 
         st.subheader("Change Password")
@@ -35,3 +35,7 @@ def my_account():
                     st.success("Password changed successfully!")
             else:
                 st.error("Current password is incorrect.")
+
+# To call the function in your main Streamlit app
+if __name__ == "__main__":
+    my_account()
