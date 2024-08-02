@@ -2,7 +2,6 @@ import streamlit as st
 from components.my_portfolio import get_user_id
 from utils.mongodb import watchlists_collection
 import yfinance as yf
-import pandas_ta as ta
 import pandas as pd
 import ta
 
@@ -11,18 +10,18 @@ def calculate_indicators(data):
     try:
         data['5_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=5)
         data['15_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=15)
-        data['MACD'] = ta.trend.macd(data['Close'])
-        data['MACD_Hist'] = ta.trend.macd_diff(data['Close'])
+        macd = ta.trend.MACD(data['Close'])
+        data['MACD'] = macd.macd()
+        data['MACD_Hist'] = macd.macd_diff()
         data['RSI'] = ta.momentum.rsi(data['Close'])
         data['ADX'] = ta.trend.adx(data['High'], data['Low'], data['Close'])
-        data['Bollinger_High'] = ta.volatility.bollinger_hband(data['Close'])
-        data['Bollinger_Low'] = ta.volatility.bollinger_lband(data['Close'])
+        bollinger = ta.volatility.BollingerBands(data['Close'])
+        data['Bollinger_High'] = bollinger.bollinger_hband()
+        data['Bollinger_Low'] = bollinger.bollinger_lband()
         data['20_day_vol_MA'] = data['Volume'].rolling(window=20).mean()
         return data
     except Exception as e:
-        raise ValueError("Error calculating indicators") from e
-
-
+        raise ValueError(f"Error calculating indicators: {str(e)}")
 
 # Helper function to fetch ticker data from yfinance
 def fetch_ticker_data(ticker):
@@ -30,10 +29,10 @@ def fetch_ticker_data(ticker):
         stock = yf.Ticker(ticker)
         data = stock.history(period="1y")
         if data.empty:
-            raise ValueError("Ticker not found")
+            raise ValueError(f"Ticker {ticker} not found")
         return data
     except Exception as e:
-        raise ValueError("Ticker not found") from e
+        raise ValueError(f"Error fetching data for ticker {ticker}: {str(e)}")
 
 # Watchlist feature
 def display_watchlist():
@@ -79,9 +78,12 @@ def display_watchlist():
             except ValueError as ve:
                 st.error(f"Error fetching data for {ticker}: {ve}")
 
-        watchlist_df = pd.DataFrame.from_dict(watchlist_data, orient='index')
-        st.write("Your Watchlist:")
-        st.dataframe(watchlist_df)
+        if watchlist_data:
+            watchlist_df = pd.DataFrame.from_dict(watchlist_data, orient='index')
+            st.write("Your Watchlist:")
+            st.dataframe(watchlist_df)
+        else:
+            st.write("No valid data found for the tickers in your watchlist.")
 
         # Option to remove ticker from watchlist
         ticker_to_remove = st.sidebar.selectbox("Select a ticker to remove", [entry['ticker'] for entry in watchlist])
@@ -91,3 +93,17 @@ def display_watchlist():
             st.experimental_rerun()  # Refresh the app to reflect changes
     else:
         st.write("Your watchlist is empty.")
+
+# To call the function in your main Streamlit app
+if __name__ == "__main__":
+    if 'username' not in st.session_state:
+        st.session_state.username = 'Guest'  # or handle the case where username is not set
+    if 'email' not in st.session_state:
+        st.session_state.email = 'guest@example.com'  # or handle the case where email is not set
+    if 'logged_in' not in st.session_state:
+        st.session_state.logged_in = False  # or handle the case where logged_in is not set
+    
+    if st.session_state.logged_in:
+        display_watchlist()
+    else:
+        st.write("Please log in to view your watchlist.")
