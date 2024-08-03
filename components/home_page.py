@@ -71,7 +71,7 @@ def home_page_app():
             ),
             legend=dict(x=0.5, y=-0.02, orientation='h', xanchor='center', yanchor='top'),
             hovermode='x unified',
-            hoverlabel=dict(bgcolor="white", font_size=16, font_family="Rockwell")
+            hoverlabel=dict(bgcolor="light blue", font_size=16, font_family="Rockwell")
         )
         return fig
 
@@ -92,7 +92,7 @@ def home_page_app():
             "Gold Futures": "GC=F",
             "Crude Oil Futures": "CL=F"
         }
-        stock_name = st.selectbox("Select Stock", list(stock_symbols.keys()))
+        stock_name = st.selectbox("Select Index", list(stock_symbols.keys()))
         ticker = stock_symbols[stock_name]
         st.write(f"You selected: {stock_name}")
 

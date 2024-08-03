@@ -1153,7 +1153,7 @@ def stock_analysis_app():
                         'xanchor': 'center',
                         'yanchor': 'top'
                     },
-                    height=900,
+                    height=800,
                     margin=dict(t=100, b=10, l=50, r=50),
                     yaxis=dict(title='Price'),
                     yaxis2=dict(title='Indicators', overlaying='y', side='right'),
@@ -1172,35 +1172,79 @@ def stock_analysis_app():
                         ),
                         type='date'
                     ),
-                    legend=dict(x=0.5, y=-0.02, orientation='h', xanchor='center', yanchor='top')
+                    legend=dict(x=0.5, y=0.3, orientation='h', xanchor='center', yanchor='top')
                 )
 
                 fig.update_layout(
                     hovermode='x unified',
-                    hoverlabel=dict(bgcolor="white", font_size=16, font_family="Rockwell")
+                    hoverlabel=dict(bgcolor="light blue", font_size=16, font_family="Rockwell")
                 )
 
+                st.plotly_chart(fig)
+
+                st.divider() 
+                st.subheader("Stock Historical Price Trend")
+                data = yf.download(ticker, period='5y', interval='1d')
+
+                # Add 'Month' and 'Year' columns to the dataframe
+                data['Month'] = data.index.month
+                data['Year'] = data.index.year
+
+                # Create a Plotly figure
+                fig = go.Figure()   
+
+                # Add a line trace for each year
+                for year in data['Year'].unique():
+                    yearly_data = data[data['Year'] == year]
+                    fig.add_trace(go.Scatter(x=yearly_data['Month'], y=yearly_data['Close'], mode='lines', name=str(year), visible=True))
+
+                # Create buttons for each year
+                buttons = []
+                buttons.append(dict(label='All',
+                                    method='update',
+                                    args=[{'visible': [True] * len(data['Year'].unique())},
+                                        {'title': 'Monthly Stock Prices for All Years'}]))
+
+                for i, year in enumerate(data['Year'].unique()):
+                    buttons.append(dict(label=str(year),
+                                        method='update',
+                                        args=[{'visible': [j == i for j in range(len(data['Year'].unique()))]},
+                                            {'title': f'Monthly Stock Prices for {year}'}]))
+
+                # Add dropdown menu to the figure
+                fig.update_layout(
+                    updatemenus=[
+                        dict(
+                            active=0,
+                            buttons=buttons,
+                            x=0.17,
+                            y=1.15,
+                            xanchor='left',
+                            yanchor='top'
+                        )
+                    ]
+                )
+
+                # Update layout
+                fig.update_layout(
+                    title=f'Monthly Stock Prices for {ticker} (Last 5 Years)',
+                    xaxis_title='Month',
+                    yaxis_title='Close Price (INR)',
+                    xaxis=dict(
+                        tickmode='array',
+                        tickvals=list(range(1, 13)),
+                        ticktext=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                    ),
+                )
+
+                # Show the figure in Streamlit
                 st.plotly_chart(fig)
             
             else:
                 # Calculate scores
                 scores, details = calculate_scores(data)
                 
-                # Display data table
-                st.write("Last 15 days data")
-                st.write(data.tail(15))
-                # Select indicators for visualization
-                pct_change_indicators = [col for col in data.columns if col.endswith('_Pct_Change')]
-                selected_pct_change_indicators = st.multiselect("Select % Change Indicators to Visualize", pct_change_indicators, default=pct_change_indicators[:5])
-
-                # Plot % change indicators
-                fig_pct_change = make_subplots(rows=len(selected_pct_change_indicators), cols=1, shared_xaxes=True, vertical_spacing=0.02)
-
-                for i, indicator in enumerate(selected_pct_change_indicators):
-                    fig_pct_change.add_trace(go.Scatter(x=data.index, y=data[indicator], mode='lines', name=indicator), row=i+1, col=1)
-
-                fig_pct_change.update_layout(height=300 * len(selected_pct_change_indicators), title_text="% Change in Technical Indicators Over Time")
-                st.plotly_chart(fig_pct_change)
+                
 
                 # Create and display gauges and details in two columns
                 for key, value in scores.items():
@@ -1229,6 +1273,66 @@ def stock_analysis_app():
                     st.markdown(f"### Overall Score: {overall_description}")
                     st.markdown(f"<p style='font-size:20px;'>Recommendation: {recommendation}</p>", unsafe_allow_html=True)
 
+                st.divider()
+                st.subheader("Stock Historical - Technical Indicators") 
+                # Add a sample percentage change indicator for demonstration
+                data['Close_Pct_Change'] = data['Close'].pct_change() * 100
+                # Display data table
+                st.write("Last 15 days data")
+                st.write(data.tail(15))
+                # Select indicators for visualization
+                pct_change_indicators = [col for col in data.columns if col.endswith('_Pct_Change')]
+                selected_pct_change_indicators = st.multiselect("Select % Change Indicators to Visualize", pct_change_indicators, default=['Close_Pct_Change'])
+
+                # Plot % change indicators
+                fig = make_subplots(specs=[[{"secondary_y": True}]])
+                fig.add_trace(go.Scatter(x=data.index, y=data['Close_Pct_Change'], mode='lines', name='Close_Pct_Change'), secondary_y=False)
+
+                for indicator in selected_pct_change_indicators:
+                    if indicator != 'Close_Pct_Change':
+                        fig.add_trace(go.Scatter(x=data.index, y=data[indicator], mode='lines', name=indicator), secondary_y=True)
+
+                fig.update_layout(
+                    title="% Change in Technical Indicators Over Time",
+                    height=600,
+                    xaxis=dict(
+                        rangeslider=dict(visible=True),
+                        rangeselector=dict(
+                            buttons=list([
+                                dict(count=5, label='5d', step='day', stepmode='backward'),
+                                dict(count=10, label='10d', step='day', stepmode='backward'),
+                                dict(count=15, label='15d', step='day', stepmode='backward'),
+                                dict(count=30, label='30d', step='day', stepmode='backward'),
+                                dict(step='all')
+                            ])
+                        ),
+                        type='date'
+                    )
+                )
+
+                st.plotly_chart(fig)
+
+
+                st.divider()
+                st.subheader("Stock Historical Cycles") 
+                # Load the data from the provided CSV file
+                df = data
+
+                # Checking if the dataframe contains the necessary columns: 'MACD' and 'MACD_Signal'
+                required_columns = ['MACD', 'MACD_signal']
+                if all(column in df.columns for column in required_columns):
+                    # Adding a column for the previous day's MACD
+                    df['Previous_MACD'] = df['MACD'].shift(1)
+                    df['Previous_MACD_signal'] = df['MACD_signal'].shift(1)
+
+                    # Filtering rows where MACD > MACD_Signal and the previous day MACD < MACD_Signal
+                    filtered_df = df[(df['MACD'] > df['MACD_signal']) & (df['Previous_MACD'] < df['Previous_MACD_signal'])]
+
+                    # Displaying the filtered dataframe
+                    st.write(filtered_df)
+                else:
+                    missing_columns = [column for column in required_columns if column not in df.columns]
+                    st.write(f"The following required columns are missing: {missing_columns}")
 
     elif submenu == "Sentiment Analysis":
 
