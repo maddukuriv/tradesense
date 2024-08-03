@@ -71,7 +71,7 @@ def home_page_app():
             ),
             legend=dict(x=0.5, y=-0.02, orientation='h', xanchor='center', yanchor='top'),
             hovermode='x unified',
-            hoverlabel=dict(bgcolor="light blue", font_size=16, font_family="Rockwell")
+            hoverlabel=dict( font_size=16, font_family="Rockwell")
         )
         return fig
 
