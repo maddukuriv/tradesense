@@ -48,61 +48,93 @@ def stock_analysis_app():
 
         # Define a function to calculate technical indicators
         def calculate_indicators(df):
+            def add_percentage_change_column(df, column_name):
+
+                new_column_name = f'{column_name}_Pct_Change'
+                df[new_column_name] = df[column_name].pct_change() * 100
+                return df
+            
             df['CMO'] = ta.cmo(df['Close'], length=14)
+            df = add_percentage_change_column(df, 'CMO')
             
             keltner = ta.kc(df['High'], df['Low'], df['Close'])
             df['Keltner_High'] = keltner['KCUe_20_2']
             df['Keltner_Low'] = keltner['KCLe_20_2']
+            df = add_percentage_change_column(df, 'Keltner_High')
+            df = add_percentage_change_column(df, 'Keltner_Low')
             
             df['CCI'] = ta.cci(df['High'], df['Low'], df['Close'], length=20)
+            df = add_percentage_change_column(df, 'CCI')
             df['Ultimate_Oscillator'] = ta.uo(df['High'], df['Low'], df['Close'])
-            
+            df = add_percentage_change_column(df, 'Ultimate_Oscillator')
+
             kvo = ta.kvo(df['High'], df['Low'], df['Close'], df['Volume'])
             df['Klinger'] = kvo['KVO_34_55_13']
-            
+            df = add_percentage_change_column(df, 'Klinger')
+
             donchian = ta.donchian(df['High'], df['Low'])
             df['Donchian_High'] = donchian['DCU_20_20']
             df['Donchian_Low'] = donchian['DCL_20_20']
-            
+            df = add_percentage_change_column(df, 'Donchian_High')
+            df = add_percentage_change_column(df, 'Donchian_Low')
+
             df['MFI'] = ta.mfi(df['High'], df['Low'], df['Close'], df['Volume']).astype(float)
-            
+            df = add_percentage_change_column(df, 'MFI')
+
             distance_moved = ((df['High'] + df['Low']) / 2) - ((df['High'].shift(1) + df['Low'].shift(1)) / 2)
             box_ratio = (df['Volume'] / 1e8) / (df['High'] - df['Low'])
             emv = distance_moved / box_ratio
             df['Ease_of_Movement'] = emv.rolling(window=14).mean()
+            df = add_percentage_change_column(df, 'Ease_of_Movement')
             
             df['Chaikin_MF'] = ta.cmf(df['High'], df['Low'], df['Close'], df['Volume'])
-            
+            df = add_percentage_change_column(df, 'Chaikin_MF')
+
             df['Williams_R'] = ta.willr(df['High'], df['Low'], df['Close'])
-            
+            df = add_percentage_change_column(df, 'Williams_R')
+
             trix = ta.trix(df['Close'])
             df['Trix'] = trix['TRIX_30_9']
             df['Trix_Signal'] = trix['TRIXs_30_9']
-            
+            df = add_percentage_change_column(df, 'Trix')
+            df = add_percentage_change_column(df, 'Trix_Signal')
+
+
             vortex = ta.vortex(df['High'], df['Low'], df['Close'])
             df['Vortex_Pos'] = vortex['VTXP_14']
             df['Vortex_Neg'] = vortex['VTXM_14']
-            
+            df = add_percentage_change_column(df, 'Vortex_Pos')
+            df = add_percentage_change_column(df, 'Vortex_Neg')
+
             supertrend = ta.supertrend(df['High'], df['Low'], df['Close'], length=7, multiplier=3.0)
             df['SuperTrend'] = supertrend['SUPERT_7_3.0']
-            
+            df = add_percentage_change_column(df, 'SuperTrend')
+
             df['RVI'] = ta.rvi(df['High'], df['Low'], df['Close'])
             df['RVI_Signal'] = ta.ema(df['RVI'], length=14)
+            df = add_percentage_change_column(df, 'RVI')
+            df = add_percentage_change_column(df, 'RVI_Signal')
             
             bull_power = df['High'] - ta.ema(df['Close'], length=13)
             bear_power = df['Low'] - ta.ema(df['Close'], length=13)
             df['Elder_Ray_Bull'] = bull_power
             df['Elder_Ray_Bear'] = bear_power
+            df = add_percentage_change_column(df, 'Elder_Ray_Bull')
+            df = add_percentage_change_column(df, 'Elder_Ray_Bear')
             
             wad = ta.ad(df['High'], df['Low'], df['Close'], df['Volume'])
             df['Williams_AD'] = wad
+            df = add_percentage_change_column(df, 'Williams_AD')
             
             # Darvas Box Theory
             df['Darvas_High'] = df['High'].rolling(window=20).max()
             df['Darvas_Low'] = df['Low'].rolling(window=20).min()
+            df = add_percentage_change_column(df, 'Darvas_High')
+            df = add_percentage_change_column(df, 'Darvas_Low')
             
             # Volume Profile calculation
             df['Volume_Profile'] = df.groupby(pd.cut(df['Close'], bins=20))['Volume'].transform('sum')
+            df = add_percentage_change_column(df, 'Volume_Profile')
 
             # Additional technical indicators
             df['5_day_EMA'] = df['Close'].ewm(span=5, adjust=False).mean()
@@ -113,6 +145,14 @@ def stock_analysis_app():
             df['MACD'] = df['12_day_EMA'] - df['26_day_EMA']
             df['MACD_signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
             df['MACD_hist'] = df['MACD'] - df['MACD_signal']
+            df = add_percentage_change_column(df, '5_day_EMA')
+            df = add_percentage_change_column(df, '10_day_EMA')
+            df = add_percentage_change_column(df, '20_day_EMA')
+            df = add_percentage_change_column(df, '12_day_EMA')
+            df = add_percentage_change_column(df, '26_day_EMA')
+            df = add_percentage_change_column(df, 'MACD')
+            df = add_percentage_change_column(df, 'MACD_signal')
+            df = add_percentage_change_column(df, 'MACD_hist')
             
             delta = df['Close'].diff(1)
             gain = delta.where(delta > 0, 0)
@@ -121,17 +161,22 @@ def stock_analysis_app():
             avg_loss = loss.rolling(window=14).mean()
             rs = avg_gain / avg_loss
             df['RSI'] = 100 - (100 / (1 + rs))
+            df = add_percentage_change_column(df, 'RSI')
             
             low_14 = df['Low'].rolling(window=14).min()
             high_14 = df['High'].rolling(window=14).max()
             df['Stochastic_%K'] = 100 * (df['Close'] - low_14) / (high_14 - low_14)
             df['Stochastic_%D'] = df['Stochastic_%K'].rolling(window=3).mean()
+            df = add_percentage_change_column(df, 'Stochastic_%K')
+            df = add_percentage_change_column(df, 'Stochastic_%D')
             
             df['OBV'] = (np.sign(df['Close'].diff()) * df['Volume']).fillna(0).cumsum()
-            
+            df = add_percentage_change_column(df, 'OBV')
+
             clv = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low'])
             df['A/D_line'] = (clv * df['Volume']).fillna(0).cumsum()
-            
+            df = add_percentage_change_column(df, 'A/D_line')
+
             df['VWAP'] = (df['Volume'] * (df['High'] + df['Low'] + df['Close']) / 3).cumsum() / df['Volume'].cumsum()
             df['5_day_Volume_MA'] = df['Volume'].rolling(window=5).mean()
             df['10_day_Volume_MA'] = df['Volume'].rolling(window=10).mean()
@@ -140,49 +185,90 @@ def stock_analysis_app():
             df['Std_Dev'] = df['Close'].rolling(window=20).std()
             df['BB_High'] = df['20_day_SMA'] + (df['Std_Dev'] * 2)
             df['BB_Low'] = df['20_day_SMA'] - (df['Std_Dev'] * 2)
+            df = add_percentage_change_column(df, 'VWAP')
+            df = add_percentage_change_column(df, '5_day_Volume_MA')
+            df = add_percentage_change_column(df, '10_day_Volume_MA')
+            df = add_percentage_change_column(df, '20_day_Volume_MA')
+            df = add_percentage_change_column(df, '20_day_SMA')
+            df = add_percentage_change_column(df, 'Std_Dev')
+            df = add_percentage_change_column(df, 'BB_High')
+            df = add_percentage_change_column(df, 'BB_Low')
             
             high_low = df['High'] - df['Low']
             high_close = np.abs(df['High'] - df['Close'].shift())
             low_close = np.abs(df['Low'] - df['Close'].shift())
             tr = high_low.combine(high_close, np.maximum).combine(low_close, np.maximum)
             df['ATR'] = tr.rolling(window=14).mean()
+            df = add_percentage_change_column(df, 'ATR')
             
             # Parabolic SAR calculation
             df['Parabolic_SAR'] = calculate_parabolic_sar(df)
+            df = add_percentage_change_column(df, 'Parabolic_SAR')
             
             # ADX calculation
             df['ADX'] = calculate_adx(df)
+            df = add_percentage_change_column(df, 'ADX')
             
             # Ichimoku Cloud calculation
             df['Ichimoku_conv'], df['Ichimoku_base'], df['Ichimoku_A'], df['Ichimoku_B'] = calculate_ichimoku(df)
+            df = add_percentage_change_column(df, 'Ichimoku_conv')
+            df = add_percentage_change_column(df, 'Ichimoku_base')
+            df = add_percentage_change_column(df, 'Ichimoku_A')
+            df = add_percentage_change_column(df, 'Ichimoku_B')
             
             # Other indicators
             df['ROC'] = ((df['Close'] - df['Close'].shift(12)) / df['Close'].shift(12)) * 100
+            df = add_percentage_change_column(df, 'ROC')
             df['DPO'] = df['Close'] - df['Close'].shift(21).rolling(window=21).mean()
+            df = add_percentage_change_column(df, 'DPO')
             df['Williams_%R'] = (high_14 - df['Close']) / (high_14 - low_14) * -100
+            df = add_percentage_change_column(df, 'Williams_%R')
             df['McClellan_Oscillator'] = df['Close'].ewm(span=19, adjust=False).mean() - df['Close'].ewm(span=39, adjust=False).mean()
+            df = add_percentage_change_column(df, 'McClellan_Oscillator')
             
             advances = (df['Close'] > df['Open']).astype(int)
             declines = (df['Close'] < df['Open']).astype(int)
             df['TRIN'] = (advances.rolling(window=14).sum() / declines.rolling(window=14).sum()) / (df['Volume'].rolling(window=14).mean() / df['Volume'].rolling(window=14).mean())
             df['Price_to_Volume'] = df['Close'] / df['Volume']
             df['Trend_Line'] = df['Close'].rolling(window=30).mean()
+            df = add_percentage_change_column(df, 'TRIN')
+            df = add_percentage_change_column(df, 'Price_to_Volume')
+            df = add_percentage_change_column(df, 'Trend_Line')
             
             # Pivot Points calculation
             df['Pivot_Point'], df['Resistance_1'], df['Support_1'], df['Resistance_2'], df['Support_2'], df['Resistance_3'], df['Support_3'] = calculate_pivot_points(df)
+            df = add_percentage_change_column(df, 'Pivot_Point')
+            df = add_percentage_change_column(df, 'Resistance_1')
+            df = add_percentage_change_column(df, 'Support_1')
+            df = add_percentage_change_column(df, 'Resistance_2')
+            df = add_percentage_change_column(df, 'Support_2')
+            df = add_percentage_change_column(df, 'Resistance_3')
+            df = add_percentage_change_column(df, 'Support_3')
             
             # Fibonacci Levels calculation
             df = calculate_fibonacci_levels(df)
+            df = add_percentage_change_column(df, 'Fib_0.0')
+            df = add_percentage_change_column(df, 'Fib_0.236')
+            df = add_percentage_change_column(df, 'Fib_0.382')
+            df = add_percentage_change_column(df, 'Fib_0.5')
+            df = add_percentage_change_column(df, 'Fib_0.618')
+            df = add_percentage_change_column(df, 'Fib_1.0')
             
             # Gann Levels calculation
             df = calculate_gann_levels(df)
+            df = add_percentage_change_column(df, 'Gann_0.25')
+            df = add_percentage_change_column(df, 'Gann_0.5')
+            df = add_percentage_change_column(df, 'Gann_0.75')
             
             # Advance Decline Line calculation
             df['Advance_Decline_Line'] = advances.cumsum() - declines.cumsum()
-            
+            df = add_percentage_change_column(df, 'Advance_Decline_Line')
+
             # William Arbitrage calculation
             df = calculate_williams_alligator(df)
-            
+            df = add_percentage_change_column(df, 'Jaw')
+            df = add_percentage_change_column(df, 'Teeth')
+            df = add_percentage_change_column(df, 'Lips')
             return df
 
         def calculate_parabolic_sar(df):
@@ -1103,6 +1189,18 @@ def stock_analysis_app():
                 # Display data table
                 st.write("Last 15 days data")
                 st.write(data.tail(15))
+                # Select indicators for visualization
+                pct_change_indicators = [col for col in data.columns if col.endswith('_Pct_Change')]
+                selected_pct_change_indicators = st.multiselect("Select % Change Indicators to Visualize", pct_change_indicators, default=pct_change_indicators[:5])
+
+                # Plot % change indicators
+                fig_pct_change = make_subplots(rows=len(selected_pct_change_indicators), cols=1, shared_xaxes=True, vertical_spacing=0.02)
+
+                for i, indicator in enumerate(selected_pct_change_indicators):
+                    fig_pct_change.add_trace(go.Scatter(x=data.index, y=data[indicator], mode='lines', name=indicator), row=i+1, col=1)
+
+                fig_pct_change.update_layout(height=300 * len(selected_pct_change_indicators), title_text="% Change in Technical Indicators Over Time")
+                st.plotly_chart(fig_pct_change)
 
                 # Create and display gauges and details in two columns
                 for key, value in scores.items():
