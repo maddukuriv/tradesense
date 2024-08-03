@@ -114,17 +114,55 @@ def home_page_app():
     st.subheader("Market's Performance")
 
     market_indices = {
-        'S&P 500': '^GSPC',
-        'Dow Jones': '^DJI',
-        'NASDAQ': '^IXIC',
-        'Gold': 'GC=F',
-        'Silver': 'SI=F',
-        'Oil': 'CL=F',
-        'EUR/USD': 'EURUSD=X',
-        'GBP/USD': 'GBPUSD=X',
-        'Bitcoin': 'BTC-USD',
-        'Ethereum': 'ETH-USD'
+    # Market Indices
+    'S&P 500': '^GSPC',
+    'Dow Jones': '^DJI',
+    'NASDAQ': '^IXIC',
+    'Nikkei 225': '^N225',
+    'FTSE 100': '^FTSE',
+    'DAX': '^GDAXI',
+    'CAC 40': '^FCHI',
+    'Shanghai Composite': '000001.SS',
+    'Hang Seng Index': '^HSI',
+    'Sensex': '^BSESN',
+
+    # Commodities
+    'Gold': 'GC=F',
+    'Silver': 'SI=F',
+    'Oil': 'CL=F',
+    'Natural Gas': 'NG=F',
+    'Copper': 'HG=F',
+    'Corn': 'ZC=F',
+    'Soybeans': 'ZS=F',
+    'Wheat': 'ZW=F',
+    'Cotton': 'CT=F',
+    'Coffee': 'KC=F',
+
+    # Currencies
+    'EUR/USD': 'EURUSD=X',
+    'GBP/USD': 'GBPUSD=X',
+    'USD/JPY': 'JPY=X',
+    'USD/CHF': 'CHF=X',
+    'USD/CAD': 'CAD=X',
+    'AUD/USD': 'AUDUSD=X',
+    'NZD/USD': 'NZDUSD=X',
+    'USD/CNY': 'CNY=X',
+    'USD/SEK': 'SEK=X',
+    'USD/INR': 'INR=X',
+
+    # Cryptocurrencies
+    'Bitcoin': 'BTC-USD',
+    'Ethereum': 'ETH-USD',
+    'Tether': 'USDT-USD',
+    'Binance Coin': 'BNB-USD',
+    'USD Coin': 'USDC-USD',
+    'XRP': 'XRP-USD',
+    'Cardano': 'ADA-USD',
+    'Solana': 'SOL-USD',
+    'Dogecoin': 'DOGE-USD',
+    'Polygon': 'MATIC-USD'
     }
+
 
     # Define date ranges
     date_ranges = {
