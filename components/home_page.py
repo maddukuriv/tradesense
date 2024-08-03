@@ -168,6 +168,8 @@ def home_page_app():
     # Define date ranges
     date_ranges = {
         "1 day": timedelta(days=1),
+        "2 days": timedelta(days=2),
+        "3 days": timedelta(days=3),
         "5 days": timedelta(days=5),
         "10 days": timedelta(days=10),
         "1 month": timedelta(days=30),
