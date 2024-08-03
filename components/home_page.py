@@ -103,9 +103,12 @@ def home_page_app():
         END = st.date_input('End Date', value=datetime.now() + timedelta(days=1))
 
     if ticker and START and END:
-        data = get_stock_data(ticker, START, END)
-        fig = create_figure(data, ['Close', 'MA_10', 'MA_20'], ticker)
-        st.plotly_chart(fig)
+        try:
+            data = get_stock_data(ticker, START, END)
+            fig = create_figure(data, ['Close', 'MA_10', 'MA_20'], ticker)
+            st.plotly_chart(fig)
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
 
     st.divider()
     
@@ -186,7 +189,14 @@ def home_page_app():
 
     @st.cache_data(ttl=60)
     def get_market_data(ticker_symbol, start_date, end_date):
-        return yf.download(ticker_symbol, start=start_date, end=end_date)
+        try:
+            data = yf.download(ticker_symbol, start=start_date, end=end_date)
+            if data.empty:
+                raise ValueError(f"No data found for ticker {ticker_symbol}")
+            return data
+        except Exception as e:
+            st.error(f"Error downloading data for {ticker_symbol}: {e}")
+            return None
 
     def calculate_performance(data):
         if data is not None and not data.empty:
@@ -197,7 +207,7 @@ def home_page_app():
     market_performance = {
         market: calculate_performance(get_market_data(ticker, START, END))
         for market, ticker in market_indices.items()
-        if calculate_performance(get_market_data(ticker, START, END)) is not None
+        if get_market_data(ticker, START, END) is not None
     }
 
     performance_df = pd.DataFrame(list(market_performance.items()), columns=['Market', 'Performance'])
