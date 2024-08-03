@@ -979,7 +979,7 @@ def stock_analysis_app():
         # Date inputs
         start_date = st.sidebar.date_input("Start Date", value=datetime.now() - timedelta(days=365))
         end_date = st.sidebar.date_input("End Date", value=datetime.now() + timedelta(days=1))
-       
+
         if ticker:
             # Download data from Yahoo Finance
             data = download_data(ticker, start_date, end_date)
@@ -1140,26 +1140,23 @@ def stock_analysis_app():
 
             def fetch_news(company_name, start_date, end_date):
                 # Fetch news articles related to the company name
-                try:
-                    all_articles = newsapi.get_everything(q=company_name,
-                                                        language='en',
-                                                        from_param=start_date.strftime('%Y-%m-%d'),
-                                                        to=end_date.strftime('%Y-%m-%d'),
-                                                        sort_by='publishedAt',
-                                                        page_size=50,
-                                                        sources='the-times-of-india, financial-express, the-hindu, bloomberg, cnbc')
-                    articles = []
-                    for article in all_articles['articles']:
-                        articles.append({
-                            'title': article['title'],
-                            'description': article['description'],
-                            'url': article['url'],
-                            'publishedAt': article['publishedAt'],
-                            'source': article['source']['name']
-                        })
-                    return articles
-                except ValueError:
-                    print("Invalid Value!", ValueError)
+                all_articles = newsapi.get_everything(q=company_name,
+                                                    language='en',
+                                                    from_param=start_date.strftime('%Y-%m-%d'),
+                                                    to=end_date.strftime('%Y-%m-%d'),
+                                                    sort_by='publishedAt',
+                                                    page_size=50,
+                                                    sources='the-times-of-india, financial-express, the-hindu, bloomberg, cnbc')
+                articles = []
+                for article in all_articles['articles']:
+                    articles.append({
+                        'title': article['title'],
+                        'description': article['description'],
+                        'url': article['url'],
+                        'publishedAt': article['publishedAt'],
+                        'source': article['source']['name']
+                    })
+                return articles
 
             def perform_sentiment_analysis(articles):
                 sentiments = []
@@ -1210,8 +1207,7 @@ def stock_analysis_app():
 
                 if company_name:
                     with st.spinner("Fetching news..."):
-                        start_date_last_month = st.sidebar.date_input("Start Date", value=datetime.now() - timedelta(days=30))
-                        articles = fetch_news(company_name, start_date_last_month, end_date)
+                        articles = fetch_news(company_name, start_date, end_date)
 
                     if articles:
                         with st.spinner("Performing sentiment analysis..."):
