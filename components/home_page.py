@@ -7,13 +7,12 @@ import plotly.graph_objs as go
 import plotly.express as px
 from datetime import datetime, timedelta
 
-
 def home_page_app():
     st.title("TradeSense")
     st.write("An ultimate platform for smart trading insights. Please log in or sign up to get started.")
     
     # Function to get stock data and calculate moving averages
-    @st.cache_data
+    @st.cache_data(ttl=60)
     def get_stock_data(ticker_symbol, start_date, end_date):
         data = yf.download(ticker_symbol, start=start_date, end=end_date)
         data['MA_10'] = data['Close'].rolling(window=10).mean()
@@ -114,55 +113,54 @@ def home_page_app():
     st.subheader("Market's Performance")
 
     market_indices = {
-    # Market Indices
-    'S&P 500': '^GSPC',
-    'Dow Jones': '^DJI',
-    'NASDAQ': '^IXIC',
-    'Nikkei 225': '^N225',
-    'FTSE 100': '^FTSE',
-    'DAX': '^GDAXI',
-    'CAC 40': '^FCHI',
-    'Shanghai Composite': '000001.SS',
-    'Hang Seng Index': '^HSI',
-    'Sensex': '^BSESN',
+        # Market Indices
+        'S&P 500': '^GSPC',
+        'Dow Jones': '^DJI',
+        'NASDAQ': '^IXIC',
+        'Nikkei 225': '^N225',
+        'FTSE 100': '^FTSE',
+        'DAX': '^GDAXI',
+        'CAC 40': '^FCHI',
+        'Shanghai Composite': '000001.SS',
+        'Hang Seng Index': '^HSI',
+        'Sensex': '^BSESN',
 
-    # Commodities
-    'Gold': 'GC=F',
-    'Silver': 'SI=F',
-    'Oil': 'CL=F',
-    'Natural Gas': 'NG=F',
-    'Copper': 'HG=F',
-    'Corn': 'ZC=F',
-    'Soybeans': 'ZS=F',
-    'Wheat': 'ZW=F',
-    'Cotton': 'CT=F',
-    'Coffee': 'KC=F',
+        # Commodities
+        'Gold': 'GC=F',
+        'Silver': 'SI=F',
+        'Oil': 'CL=F',
+        'Natural Gas': 'NG=F',
+        'Copper': 'HG=F',
+        'Corn': 'ZC=F',
+        'Soybeans': 'ZS=F',
+        'Wheat': 'ZW=F',
+        'Cotton': 'CT=F',
+        'Coffee': 'KC=F',
 
-    # Currencies
-    'EUR/USD': 'EURUSD=X',
-    'GBP/USD': 'GBPUSD=X',
-    'USD/JPY': 'JPY=X',
-    'USD/CHF': 'CHF=X',
-    'USD/CAD': 'CAD=X',
-    'AUD/USD': 'AUDUSD=X',
-    'NZD/USD': 'NZDUSD=X',
-    'USD/CNY': 'CNY=X',
-    'USD/SEK': 'SEK=X',
-    'USD/INR': 'INR=X',
+        # Currencies
+        'EUR/USD': 'EURUSD=X',
+        'GBP/USD': 'GBPUSD=X',
+        'USD/JPY': 'JPY=X',
+        'USD/CHF': 'CHF=X',
+        'USD/CAD': 'CAD=X',
+        'AUD/USD': 'AUDUSD=X',
+        'NZD/USD': 'NZDUSD=X',
+        'USD/CNY': 'CNY=X',
+        'USD/SEK': 'SEK=X',
+        'USD/INR': 'INR=X',
 
-    # Cryptocurrencies
-    'Bitcoin': 'BTC-USD',
-    'Ethereum': 'ETH-USD',
-    'Tether': 'USDT-USD',
-    'Binance Coin': 'BNB-USD',
-    'USD Coin': 'USDC-USD',
-    'XRP': 'XRP-USD',
-    'Cardano': 'ADA-USD',
-    'Solana': 'SOL-USD',
-    'Dogecoin': 'DOGE-USD',
-    'Polygon': 'MATIC-USD'
+        # Cryptocurrencies
+        'Bitcoin': 'BTC-USD',
+        'Ethereum': 'ETH-USD',
+        'Tether': 'USDT-USD',
+        'Binance Coin': 'BNB-USD',
+        'USD Coin': 'USDC-USD',
+        'XRP': 'XRP-USD',
+        'Cardano': 'ADA-USD',
+        'Solana': 'SOL-USD',
+        'Dogecoin': 'DOGE-USD',
+        'Polygon': 'MATIC-USD'
     }
-
 
     # Define date ranges
     date_ranges = {
@@ -186,6 +184,7 @@ def home_page_app():
     END = datetime.now()
     START = END - date_ranges[selected_range]
 
+    @st.cache_data(ttl=60)
     def get_market_data(ticker_symbol, start_date, end_date):
         return yf.download(ticker_symbol, start=start_date, end=end_date)
 
@@ -207,4 +206,6 @@ def home_page_app():
                 color_continuous_scale=px.colors.diverging.RdYlGn)
     st.plotly_chart(fig2)
 
-
+# To run the app
+if __name__ == "__main__":
+    home_page_app()
