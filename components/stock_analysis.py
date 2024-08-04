@@ -1348,7 +1348,7 @@ def stock_analysis_app():
                                                     to=end_date.strftime('%Y-%m-%d'),
                                                     sort_by='publishedAt',
                                                     page_size=50,
-                                                    sources='the-times-of-india, financial-express, the-hindu, bloomberg, cnbc')
+                                                    sources='the-times-of-india, financial-express, the-hindu, bloomberg, cnbc, moneycontrol, times-of-india, the-hindu, hindustan-times, economic-times, ndtv, the-new-indian-express, the-tribune')
                 articles = []
                 for article in all_articles['articles']:
                     articles.append({
