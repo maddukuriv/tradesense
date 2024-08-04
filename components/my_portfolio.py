@@ -103,7 +103,7 @@ def display_portfolio():
         with col2:
             fig2 = go.Figure()
             fig2.add_trace(go.Bar(x=portfolio_df['Ticker'], y=portfolio_df['P&L (%)']))
-            fig2.update_layout(title_text='Profit/Loss Percentage of Each Stock', xaxis_title='Ticker', yaxis_title='P&L (%)')
+            fig2.update_layout(title_text='Profit Percentage of Each Stock', xaxis_title='Ticker', yaxis_title='P&L (%)')
             st.plotly_chart(fig2)
 
         col3, col4 = st.columns(2)
@@ -144,4 +144,14 @@ def display_portfolio():
         st.write("Your portfolio is empty.")
 
 # Call the function to display the portfolio
-display_portfolio()
+if 'username' not in st.session_state:
+    st.session_state.username = 'Guest'  # or handle the case where username is not set
+if 'email' not in st.session_state:
+    st.session_state.email = 'guest@example.com'  # or handle the case where email is not set
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False  # or handle the case where logged_in is not set
+
+if st.session_state.logged_in:
+    display_portfolio()
+else:
+    st.write("Please log in to view your portfolio.")

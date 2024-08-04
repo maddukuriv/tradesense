@@ -112,16 +112,15 @@ def display_watchlist():
     else:
         st.write("Your watchlist is empty.")
 
-# To call the function in your main Streamlit app
-if __name__ == "__main__":
-    if 'username' not in st.session_state:
-        st.session_state.username = 'Guest'  # or handle the case where username is not set
-    if 'email' not in st.session_state:
-        st.session_state.email = 'guest@example.com'  # or handle the case where email is not set
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False  # or handle the case where logged_in is not set
-    
-    if st.session_state.logged_in:
-        display_watchlist()
-    else:
-        st.write("Please log in to view your watchlist.")
+# Call the function to display the watchlist
+if 'username' not in st.session_state:
+    st.session_state.username = 'Guest'  # or handle the case where username is not set
+if 'email' not in st.session_state:
+    st.session_state.email = 'guest@example.com'  # or handle the case where email is not set
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False  # or handle the case where logged_in is not set
+
+if st.session_state.logged_in:
+    display_watchlist()
+else:
+    st.write("Please log in to view your watchlist.")
