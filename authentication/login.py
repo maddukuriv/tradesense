@@ -16,5 +16,6 @@ def login():
             st.session_state.username = user['name']
             st.session_state.email = user['email']
             st.session_state.user_id = user['_id']
+            st.experimental_rerun()
         else:
             st.error("Invalid email or password.")

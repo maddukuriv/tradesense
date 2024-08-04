@@ -1,77 +1,10 @@
-import os
+
 import streamlit as st
-import random
-import string
-from datetime import datetime, timedelta
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.exc import NoResultFound
 
-
-import bcrypt  # for password hashing
 from dotenv import load_dotenv
-from password_validator import PasswordValidator
-import pandas_ta as ta
-import yfinance as yf
-import pandas as pd
-import pandas_ta as pta
-import numpy as np
-import plotly.graph_objs as go
-import ta
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-
-
-
-
-# technical analysis
-import streamlit as st
-import pandas as pd
-import yfinance as yf
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import numpy as np
-import pandas_ta as ta
-from datetime import datetime, timedelta
-
-
-
-# news
-import streamlit as st
-from newsapi.newsapi_client import NewsApiClient
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-import pandas as pd
-from datetime import datetime, timedelta
-import yfinance as yf
-from wordcloud import WordCloud
-import plotly.express as px
-import plotly.graph_objects as go
-import matplotlib.pyplot as plt
-
-# time series 
-import yfinance as yf
-import pandas as pd
-import numpy as np
-import itertools
-from ta import add_all_ta_features
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-from sklearn.model_selection import TimeSeriesSplit, GridSearchCV
-from sklearn.metrics import mean_squared_error
-import streamlit as st
-import plotly.graph_objects as go
-from pmdarima import auto_arima
-from datetime import timedelta, datetime
-from scipy.signal import cwt, ricker, hilbert
-
 
 #Database
-from utils.mongodb import users_collection, watchlists_collection, portfolios_collection, init_db
-from bson.objectid import ObjectId
-
+from utils.mongodb import init_db
 
 #Authentication
 from authentication import login, signup, forgot_password
@@ -114,9 +47,7 @@ def logout():
     st.session_state.username = ""
     st.session_state.email = ""
     st.session_state.user_id = None
-
-
-
+    st.experimental_rerun()
 
 
 # Main menu function

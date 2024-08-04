@@ -14,9 +14,9 @@ def get_mongo_client():
         uri = f'mongodb+srv://{username}:{password}@tradesense.uq6adbz.mongodb.net/?retryWrites=true&w=majority&appName=tradesense'
 
       
-        print(f"MongoDB URI: {uri}, {username} :: {password}")  # Print URI for debugging
+        # print(f"MongoDB URI: {uri}, {username} :: {password}")  # Print URI for debugging
         client = pymongo.MongoClient(uri)
-        print("MongoDB Client:", client)
+        # print("MongoDB Client:", client)
         return client
     except Exception as e:
         print(f"Error connecting to MongoDB: {e}")
