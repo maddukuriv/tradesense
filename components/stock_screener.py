@@ -50,8 +50,8 @@ def stock_screener_app():
     def check_bollinger_low_cross(data):
         recent_data = data[-5:]
         for i in range(1, len(recent_data)):
-            if (recent_data['Close'].iloc[i] < recent_data['BB_Low'].iloc[i] and
-                recent_data['Close'].iloc[i-1] >= recent_data['BB_Low'].iloc[i-1]):
+            if (recent_data['Close'].iloc[i] > recent_data['BB_Low'].iloc[i] and
+                recent_data['Close'].iloc[i-1] <= recent_data['BB_Low'].iloc[i-1]):
                 return recent_data.index[i]
         return None
 
