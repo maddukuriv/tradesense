@@ -2,6 +2,21 @@ import streamlit as st
 from utils.mongodb import users_collection
 from utils.hash_utils import hash_password
 from bson.objectid import ObjectId
+import re
+
+# Password validation function
+def is_valid_password(password):
+    if len(password) < 8:
+        return False
+    if not re.search(r'[A-Z]', password):
+        return False
+    if not re.search(r'[a-z]', password):
+        return False
+    if not re.search(r'[0-9]', password):
+        return False
+    if not re.search(r'[@$!%*?&]', password):
+        return False
+    return True
 
 # Forgot password function
 def forgot_password():
