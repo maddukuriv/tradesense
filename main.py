@@ -35,6 +35,8 @@ if 'email' not in st.session_state:
     st.session_state.email = ""
 if 'user_id' not in st.session_state:
     st.session_state.user_id = None
+if 'identity_verified' not in st.session_state:
+    st.session_state.identity_verified = False
 
 
 

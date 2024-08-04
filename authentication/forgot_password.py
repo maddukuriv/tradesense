@@ -8,11 +8,11 @@ from bson.objectid import ObjectId
 def forgot_password():
     st.subheader("Forgot Password")
     email = st.text_input("Enter your email", key='forgot_email')
-    dob = st.date_input("Enter your date of birth", key='forgot_dob')
+    # dob = st.date_input("Enter your date of birth", key='forgot_dob')
     pob = st.text_input("Enter your place of birth", key='forgot_pob')
 
     if st.button("Submit"):
-        user = users_collection.find_one({"email": email, "dob": dob, "pob": pob})
+        user = users_collection.find_one({"email": email, "pob": pob})
         if user:
             st.session_state.email = email
             st.session_state.user_id = user['_id']
@@ -33,3 +33,4 @@ def forgot_password():
                 users_collection.update_one({"_id": ObjectId(st.session_state.user_id)}, {"$set": {"password": hashed_password}})
                 st.success("Password reset successfully. You can now log in with the new password.")
                 st.session_state.identity_verified = False
+                st.rerun()
