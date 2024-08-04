@@ -4,6 +4,7 @@ from utils.mongodb import watchlists_collection
 import yfinance as yf
 import pandas as pd
 import ta
+from st_aggrid import AgGrid, GridOptionsBuilder
 
 # Helper function to calculate indicators
 def calculate_indicators(data):
@@ -34,6 +35,15 @@ def fetch_ticker_data(ticker):
     except Exception as e:
         raise ValueError(f"Error fetching data for ticker {ticker}: {str(e)}")
 
+# Helper function to fetch company info from yfinance
+def get_company_info(ticker):
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        return info.get('longName', 'N/A'), info.get('sector', 'N/A'), info.get('industry', 'N/A')
+    except Exception as e:
+        return 'N/A', 'N/A', 'N/A'
+
 # Watchlist feature
 def display_watchlist():
     st.header(f"{st.session_state.username}'s Watchlist")
@@ -62,7 +72,11 @@ def display_watchlist():
                 data = fetch_ticker_data(ticker)
                 data = calculate_indicators(data)
                 latest_data = data.iloc[-1]
+                company_name, sector, industry = get_company_info(ticker)
                 watchlist_data[ticker] = {
+                    'Company Name': company_name,
+                    'Sector': sector,
+                    'Industry': industry,
                     'Close': latest_data['Close'],
                     '5_day_EMA': latest_data['5_day_EMA'],
                     '15_day_EMA': latest_data['15_day_EMA'],
@@ -80,8 +94,16 @@ def display_watchlist():
 
         if watchlist_data:
             watchlist_df = pd.DataFrame.from_dict(watchlist_data, orient='index')
+            watchlist_df.reset_index(inplace=True)
+            watchlist_df.rename(columns={'index': 'Ticker'}, inplace=True)
+
             st.write("Your Watchlist:")
-            st.dataframe(watchlist_df)
+            gb = GridOptionsBuilder.from_dataframe(watchlist_df)
+            gb.configure_pagination(paginationAutoPageSize=True) # Add pagination
+            gb.configure_default_column(width=150) # Adjust column widths
+            gridOptions = gb.build()
+
+            AgGrid(watchlist_df, gridOptions=gridOptions)
         else:
             st.write("No valid data found for the tickers in your watchlist.")
 
