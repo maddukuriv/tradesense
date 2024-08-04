@@ -103,7 +103,7 @@ def display_portfolio():
         with col2:
             fig2 = go.Figure()
             fig2.add_trace(go.Bar(x=portfolio_df['Ticker'], y=portfolio_df['P&L (%)']))
-            fig2.update_layout(title_text='Profit Percentage of Each Stock', xaxis_title='Ticker', yaxis_title='P&L (%)')
+            fig2.update_layout(title_text='Profit/Loss Percentage of Each Stock', xaxis_title='Ticker', yaxis_title='P&L (%)')
             st.plotly_chart(fig2)
 
         col3, col4 = st.columns(2)
