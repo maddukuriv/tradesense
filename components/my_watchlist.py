@@ -4,7 +4,6 @@ from utils.mongodb import watchlists_collection
 import yfinance as yf
 import pandas as pd
 import ta
-from st_aggrid import AgGrid, GridOptionsBuilder
 
 # Helper function to calculate indicators
 def calculate_indicators(data):
@@ -98,12 +97,9 @@ def display_watchlist():
             watchlist_df.rename(columns={'index': 'Ticker'}, inplace=True)
 
             st.write("Your Watchlist:")
-            gb = GridOptionsBuilder.from_dataframe(watchlist_df)
-            gb.configure_pagination(paginationAutoPageSize=True) # Add pagination
-            gb.configure_default_column(width=150) # Adjust column widths
-            gridOptions = gb.build()
-
-            AgGrid(watchlist_df, gridOptions=gridOptions)
+            st.dataframe(watchlist_df.style.set_properties(**{'text-align': 'center'}).set_table_styles(
+                [{'selector': 'th', 'props': [('text-align', 'center')]}]
+            ))
         else:
             st.write("No valid data found for the tickers in your watchlist.")
 

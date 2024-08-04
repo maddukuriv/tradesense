@@ -119,4 +119,3 @@ zipp==3.19.0
 pmdarima==2.0.3
 newsapi-python==0.2.7
 vaderSentiment==3.3.2
-streamlit-aggrid == 1.0.5
