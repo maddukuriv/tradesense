@@ -2,6 +2,7 @@ import streamlit as st
 from utils.mongodb import users_collection
 from utils.hash_utils import hash_password
 import re
+from datetime import datetime
 
 # Email validation function
 def is_valid_email(email):
@@ -27,7 +28,7 @@ def signup():
     st.subheader("Sign Up")
     name = st.text_input("Enter your name", key='signup_name')
     email = st.text_input("Enter your email", key='signup_email')
-    dob = st.date_input("Enter your date of birth", key='signup_dob')
+    dob = st.date_input("Enter your date of birth", min_value=datetime(1950, 1, 1), max_value=datetime.now(), key='signup_dob')
     pob = st.text_input("Enter your place of birth", key='signup_pob')
     password = st.text_input("Enter a new password", type="password", key='signup_password')
     confirm_password = st.text_input("Confirm your password", type="password", key='signup_confirm_password')
