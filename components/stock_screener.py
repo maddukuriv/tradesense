@@ -4,13 +4,13 @@ import pandas_ta as ta
 import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
-from utils.constants import bse_largecap, bse_smallcap, bse_midcap
+from utils.constants import bse_largecap, bse_smallcap, bse_midcap,sp500_tickers,ftse100_tickers
 
 def stock_screener_app():
     st.sidebar.subheader("Stock Screener")
 
     # Dropdown for selecting ticker category
-    ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap"])
+    ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap","S&P 500","FTSE 100"])
 
     # Dropdown for Strategies
     submenu = st.sidebar.selectbox("Select Strategy", ["MACD", "Moving Average", "Bollinger Bands", "Volume"])
@@ -24,8 +24,12 @@ def stock_screener_app():
         tickers = bse_largecap
     elif ticker_category == "BSE-MidCap":
         tickers = bse_midcap
-    else:
+    elif ticker_category == "BSE-SmallCap":
         tickers = bse_smallcap
+    elif ticker_category == "S&P 500":
+        tickers = sp500_tickers
+    elif ticker_category == "FTSE 100":
+        tickers = ftse100_tickers
 
     # Define functions for strategy logic
     def calculate_macd(data):

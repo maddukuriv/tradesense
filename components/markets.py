@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from utils.constants import bse_largecap, bse_midcap, bse_smallcap
+from utils.constants import bse_largecap, bse_midcap, bse_smallcap,sp500_tickers,ftse100_tickers
 from datetime import datetime
 
 # Function to download data and calculate moving averages with caching
@@ -86,7 +86,7 @@ def markets_app():
 
     if submenu == "Equities":
         ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap"])
-        tickers = {"BSE-LargeCap": bse_largecap, "BSE-MidCap": bse_midcap, "BSE-SmallCap": bse_smallcap}[ticker_category]
+        tickers = {"BSE-LargeCap": bse_largecap, "BSE-MidCap": bse_midcap, "BSE-SmallCap": bse_smallcap,"S&P 500":sp500_tickers,"FTSE 100":ftse100_tickers }[ticker_category]
 
         @st.cache_data(ttl=60)
         def get_sector_industry_price_changes(tickers, timestamp):
