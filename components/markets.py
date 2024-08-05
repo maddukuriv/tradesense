@@ -85,7 +85,7 @@ def markets_app():
     submenu = st.sidebar.selectbox("Select Option", ["Equities", "Commodities", "Currencies", "Cryptocurrencies", "Insights"])
 
     if submenu == "Equities":
-        ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap"])
+        ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap","S&P 500","FTSE 100"])
         tickers = {"BSE-LargeCap": bse_largecap, "BSE-MidCap": bse_midcap, "BSE-SmallCap": bse_smallcap,"S&P 500":sp500_tickers,"FTSE 100":ftse100_tickers }[ticker_category]
 
         @st.cache_data(ttl=60)
