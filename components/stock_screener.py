@@ -570,13 +570,128 @@ def stock_screener_app():
 
     df_signals = fetch_latest_data(tickers_with_signals)
 
+    def add_scoring(df):
+        # Customize scoring for each indicator
+        volume_score_conditions = {
+            'AD': df['AD'] > df['AD'].shift(1),
+            'BoP': df['BoP'] > 0,
+            'CMF': df['CMF'] > 0,
+            'CO': df['CO'] > df['CO'].shift(1),
+            'EMV': df['EMV'] > 0,
+            'EFI': (df['EFI'] > 0) & (df['EFI'] > df['EFI'].shift(1)) ,
+            'KVO': (df['KVO'] > 0) & (df['KVO'] > df['KVO'].shift(1)),
+            'MFI': df['MFI'] > 50,
+            'Net_Volume': (df['Net_Volume'] > 0) & (df['Net_Volume'] > df['Net_Volume'].shift(1)),
+            'OBV': df['OBV'] > df['OBV'].shift(1),
+            'PVT': df['PVT'] > df['PVT'].shift(1),
+            'VWAP': df['Close'] > df['VWAP'],
+            'VWMA': df['Close'] > df['VWMA'],
+            'VO': df['VO'] > 0,
+            'VPFR': df['VPFR'] > 0,
+            'VPVR': df['VPVR'] > 0,
+            'Vortex_Pos': df['Vortex_Pos'] > df['Vortex_Neg']
+
+            
+        }
+        trend_score_conditions = {
+            'ALMA': df['ALMA'] < df['Close'],
+            'Aroon_Up': df['Aroon_Up'] > 70,
+            'Aroon_Down': df['Aroon_Down'] < 30,
+            'ADX': df['ADX'] > 25,
+            'BB_High': df['Close'] < df['BB_High'],
+            'SMA_20': df['Close'] > df['SMA_20'],
+            'DEMA': df['Close'] > df['DEMA'],
+            'Envelope_High': df['Close'] < df['Envelope_High'],
+            'GMMA_Short': df['GMMA_Short'] > df['GMMA_Long'],
+            'HMA': df['HMA'] < df['Close'],
+            'Ichimoku_Tenkan': df['Close'] > df['Ichimoku_Tenkan'],
+            'Ichimoku_Kijun': df['Close'] > df['Ichimoku_Kijun'],
+            'Ichimoku_Senkou_Span_A': df['Close'] > df['Ichimoku_Senkou_Span_A'],
+            'Ichimoku_Senkou_Span_B': df['Close'] > df['Ichimoku_Senkou_Span_B'],
+            'KC_High': df['Close'] < df['KC_High'],
+            'LSMA': df['Close'] > df['LSMA'],
+            'EMA_20': df['Close'] > df['EMA_20'],
+            'MACD': df['MACD'] > df['MACD_signal'],
+            'MACD_hist': df['MACD_hist'] > 0,
+            'Parabolic_SAR': df['Close'] > df['Parabolic_SAR'],
+            'SuperTrend': df['Close'] > df['SuperTrend'],
+            'MAC_Upper': df['Close'] > df['MAC_Upper'],
+            'Price_Channel_Upper': df['Close'] > df['Price_Channel_Upper'],
+            'TEMA_20': df['Close'] > df['TEMA_20']
+        }
+        momentum_score_conditions = {
+            'AO': df['AO'] > 0,
+            'AC': df['AC'] > 0,
+            'CMO': df['CMO'] > 0,
+            'CCI': df['CCI'] > 100,
+            'CRSI': (df['CRSI'] > 30) & (df['CRSI'] > df['CRSI'].shift(1)),
+            'Coppock': (df['Coppock'] > 0) & (df['Coppock'] > df['Coppock'].shift(1)),
+            'DPO': df['DPO'] > 0,
+            'KST': df['KST'] > 0,
+            'Momentum': df['Momentum'] > 0,
+            'RSI': (df['RSI'] > 30) & (df['RSI'] < 70),
+            'ROC': df['ROC'] > 0,
+            'Stochastic_%K': df['Stochastic_%K'] > 20,
+            'Stochastic_%D': df['Stochastic_%D'] > 20,
+            'Stochastic_RSI': df['Stochastic_RSI'] < 80,
+            'TRIX': df['TRIX'] > 0,
+            'TSI': df['TSI'] > 0,
+            'Ultimate_Oscillator': df['Ultimate_Oscillator'] > 50
+        }
+        volatility_score_conditions = {
+            'BB_%B': df['BB_%B'] < 1,
+            'BB_Width': df['BB_Width'] > df['BB_Width'].mean(),
+            'Chaikin_Volatility': df['Chaikin_Volatility'] > df['Chaikin_Volatility'].mean(),
+            'Choppiness_Index': df['Choppiness_Index'] < 61.8,
+            'Hist_Vol_Annualized': df['Hist_Vol_Annualized'] > df['Hist_Vol_Annualized'].mean(),
+            'Mass_Index': df['Mass_Index'] > 27,
+            'RVI': df['RVI'] > 50,
+            'Standard_Deviation': df['Standard_Deviation'] > df['Standard_Deviation'].mean(),
+            'Vol_CtC': df['Vol_CtC'] > df['Vol_CtC'].mean(),
+            'Vol_ZtC': df['Vol_ZtC'] > df['Vol_ZtC'].mean(),
+            'Vol_OHLC': df['Vol_OHLC'] > df['Vol_OHLC'].mean(),
+            'Vol_Index': df['Vol_Index'] > df['Vol_Index'].mean()
+        }
+        support_resistance_score_conditions = {
+            'Pivot_Point': df['Close'] > df['Pivot_Point'],
+            'Resistance_1': df['Close'] > df['Resistance_1'],
+            'Support_1': df['Close'] > df['Support_1'],
+            'Resistance_2': df['Close'] > df['Resistance_2'],
+            'Support_2': df['Close'] > df['Support_2'],
+            'Resistance_3': df['Close'] > df['Resistance_3'],
+            'Support_3': df['Close'] > df['Support_3'],
+            'Fractal_Up': df['Fractal_Up'] > 0,
+            'Fractal_Down': df['Fractal_Down'] > 0
+        }
+
+        # Calculate scores based on conditions
+        df['Volume_Score'] = sum([cond.astype(int) for cond in volume_score_conditions.values()])
+        df['Trend_Score'] = sum([cond.astype(int) for cond in trend_score_conditions.values()])
+        df['Momentum_Score'] = sum([cond.astype(int) for cond in momentum_score_conditions.values()])
+        df['Volatility_Score'] = sum([cond.astype(int) for cond in volatility_score_conditions.values()])
+        df['Support_Resistance_Score'] = sum([cond.astype(int) for cond in support_resistance_score_conditions.values()])
+
+        # Normalize scores to be between -1 and 1
+        df['Volume_Score'] = df['Volume_Score'] / df['Volume_Score'].abs().max()
+        df['Trend_Score'] = df['Trend_Score'] / df['Trend_Score'].abs().max()
+        df['Momentum_Score'] = df['Momentum_Score'] / df['Momentum_Score'].abs().max()
+        df['Volatility_Score'] = df['Volatility_Score'] / df['Volatility_Score'].abs().max()
+        df['Support_Resistance_Score'] = df['Support_Resistance_Score'] / df['Support_Resistance_Score'].abs().max()
+
+        # Overall score as an average of the five categories
+        df['Overall_Score'] = (df['Volume_Score'] + df['Trend_Score'] + df['Momentum_Score'] + df['Volatility_Score'] + df['Support_Resistance_Score']) / 5
+
+        return df
+
     if not df_signals.empty:
+        df_signals = add_scoring(df_signals)
         table1_columns = ['Ticker', 'Date of Occurrence', 'Company Name', 'Sector', 'Industry', 'Close', 'Volume']
         trend_columns = ['Ticker', 'Close','ALMA','Aroon_Up', 'Aroon_Down','ADX', 'BB_High', 'SMA_20','BB_Low', 'DEMA', 'Envelope_High', 'Envelope_Low', 'GMMA_Short', 'GMMA_Long', 'HMA', 'Ichimoku_Tenkan', 'Ichimoku_Kijun', 'Ichimoku_Senkou_Span_A', 'Ichimoku_Senkou_Span_B', 'KC_High', 'KC_Low', 'LSMA','EMA_20','MACD', 'MACD_signal', 'MACD_hist', 'Parabolic_SAR', 'SuperTrend','MAC_Upper','MAC_Lower','Price_Channel_Upper','Price_Channel_Lower','TEMA_20']
         momentum_columns = ['Ticker','AO', 'AC', 'CMO', 'CCI', 'CRSI', 'Coppock', 'DPO', 'KST', 'Momentum', 'RSI','ROC', 'Stochastic_%K', 'Stochastic_%D', 'Stochastic_RSI', 'TRIX', 'TSI', 'Ultimate_Oscillator']
         volume_columns = ['Ticker','AD', 'BoP', 'CMF', 'CO', 'EMV', 'EFI', 'KVO', 'MFI', 'Net_Volume','OBV', 'PVT', 'VWAP','VWMA', 'VO','VPFR','VPVR', 'Vortex_Pos', 'Vortex_Neg', 'Volume']
         volatility_columns = ['Ticker','ATR','BB_%B', 'BB_Width', 'Chaikin_Volatility', 'Choppiness_Index', 'Hist_Vol_Annualized', 'Mass_Index', 'RVI', 'Standard_Deviation','Vol_CtC','Vol_ZtC','Vol_OHLC','Vol_Index']
         support_resistance_columns = ['Ticker', 'Close','Pivot_Point', 'Resistance_1', 'Support_1', 'Resistance_2', 'Support_2', 'Resistance_3', 'Support_3','Fractal_Up','Fractal_Down']
+        
         st.title("Stocks Based on Selected Strategy")
         st.write(f"Stocks with {submenu} signal in the last 5 days:")
 
@@ -598,10 +713,11 @@ def stock_screener_app():
         st.subheader("Support and Resistance Levels")
         st.dataframe(df_signals[support_resistance_columns])
 
+        st.subheader("Scoring System")
+        st.dataframe(df_signals[['Ticker', 'Volume_Score', 'Trend_Score', 'Momentum_Score', 'Volatility_Score', 'Support_Resistance_Score', 'Overall_Score']])
+
     else:
         st.write("No data available for the selected tickers and date range.")
 
 if __name__ == "__main__":
     stock_screener_app()
-
-
