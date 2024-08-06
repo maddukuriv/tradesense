@@ -386,21 +386,7 @@ def stock_screener_app():
             return pp, r1, s1, r2, s2, r3, s3
 
         df['Pivot_Point'], df['Resistance_1'], df['Support_1'], df['Resistance_2'], df['Support_2'], df['Resistance_3'], df['Support_3'] = pivot_points(df['High'], df['Low'], df['Close'])
-        
-        # Other Indicators
-        df['Advance_Decline'] = ta.ad(df['High'], df['Low'], df['Close'], df['Volume'])
-        df['Chop_Zone'] = ta.chop(df['High'], df['Low'], df['Close'])
-        df['Chande_Kroll_Stop'] = ta.ckst(df['High'], df['Low'], df['Close'])
-        df['Fisher_Transform'] = ta.fisher(df['High'], df['Low'])
-        df['Majority_Rule'] = df['Close'].rolling(window=20).apply(lambda x: np.sign(x.diff().sum()))
-        df['Median_Price'] = ta.median_price(df['High'], df['Low'])
-        df['Ratio'] = df['Close'] / df['Close'].shift(1)
-        df['Relative_Vigor_Index'] = ta.rvi(df['High'], df['Low'], df['Close'])
-        df['SMI'] = ta.smi(df['High'], df['Low'], df['Close'])
-        df['Spread'] = df['High'] - df['Low']
-        df['Typical_Price'] = ta.typical_price(df['High'], df['Low'], df['Close'])
-        df['ZigZag'] = ta.zigzag(df['High'], df['Low'], df['Close'], percent=5)
-        
+
         
         return df
 
@@ -521,18 +507,6 @@ def stock_screener_app():
                     'Vol_Index':latest_data['Vol_Index'],
                     'Fractal_Up':latest_data['Fractal_Up'],
                     'Fractal_Down':latest_data['Fractal_Down'],
-                    'Advance_Decline': latest_data['Advance_Decline'],
-                    'Chop_Zone': latest_data['Chop_Zone'],
-                    'Chande_Kroll_Stop': latest_data['Chande_Kroll_Stop'],
-                    'Fisher_Transform': latest_data['Fisher_Transform'],
-                    'Majority_Rule': latest_data['Majority_Rule'],
-                    'Median_Price': latest_data['Median_Price'],
-                    'Ratio': latest_data['Ratio'],
-                    'Relative_Vigor_Index': latest_data['Relative_Vigor_Index'],
-                    'SMI': latest_data['SMI'],
-                    'Spread': latest_data['Spread'],
-                    'Typical_Price': latest_data['Typical_Price'],
-                    'ZigZag': latest_data['ZigZag']
 
 
                 })
@@ -603,11 +577,6 @@ def stock_screener_app():
         volume_columns = ['Ticker','AD', 'BoP', 'CMF', 'CO', 'EMV', 'EFI', 'KVO', 'MFI', 'Net_Volume','OBV', 'PVT', 'VWAP','VWMA', 'VO','VPFR','VPVR', 'Vortex_Pos', 'Vortex_Neg', 'Volume']
         volatility_columns = ['Ticker','ATR','BB_%B', 'BB_Width', 'Chaikin_Volatility', 'Choppiness_Index', 'Hist_Vol_Annualized', 'Mass_Index', 'RVI', 'Standard_Deviation','Vol_CtC','Vol_ZtC','Vol_OHLC','Vol_Index']
         support_resistance_columns = ['Ticker', 'Close','Pivot_Point', 'Resistance_1', 'Support_1', 'Resistance_2', 'Support_2', 'Resistance_3', 'Support_3','Fractal_Up','Fractal_Down']
-        other_columns = [
-        'Ticker', 'Advance_Decline', 'Chop_Zone', 'Chande_Kroll_Stop', 'Fisher_Transform', 'Majority_Rule', 'Median_Price', 
-        'Ratio', 'Relative_Vigor_Index', 'SMI', 'Spread', 'Typical_Price', 'ZigZag'
-    ]
-
         st.title("Stocks Based on Selected Strategy")
         st.write(f"Stocks with {submenu} signal in the last 5 days:")
 
@@ -628,9 +597,6 @@ def stock_screener_app():
 
         st.subheader("Support and Resistance Levels")
         st.dataframe(df_signals[support_resistance_columns])
-
-        st.subheader("Other Indicators")
-        st.dataframe(df_signals[other_columns])
 
     else:
         st.write("No data available for the selected tickers and date range.")
