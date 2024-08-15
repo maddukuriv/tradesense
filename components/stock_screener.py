@@ -5,6 +5,9 @@ import yfinance as yf
 from datetime import datetime, timedelta
 from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
 import pandas_ta as ta
+from plotly.subplots import make_subplots
+import plotly.graph_objs as go
+
 
 def stock_screener_app():
     st.sidebar.subheader("Stock Screener")
@@ -716,8 +719,111 @@ def stock_screener_app():
         st.subheader("Scoring System")
         st.dataframe(df_signals[['Ticker', 'Volume_Score', 'Trend_Score', 'Momentum_Score', 'Volatility_Score', 'Support_Resistance_Score', 'Overall_Score']])
 
+        # Dropdown for stock selection
+        st.subheader("Interactive Plots")
+        selected_stock = st.selectbox("Select Stock", df_signals['Ticker'].tolist())
+
+        # Define technical indicator categories
+        indicator_groups = {
+            "Trend Indicators": ['ALMA','Aroon_Up', 'Aroon_Down','ADX', 'BB_High', 'SMA_20','BB_Low', 'DEMA', 'Envelope_High', 'Envelope_Low', 'GMMA_Short', 'GMMA_Long', 'HMA', 'Ichimoku_Tenkan', 'Ichimoku_Kijun', 'Ichimoku_Senkou_Span_A', 'Ichimoku_Senkou_Span_B', 'KC_High', 'KC_Low', 'LSMA','EMA_20','MACD', 'MACD_signal', 'MACD_hist', 'Parabolic_SAR', 'SuperTrend','MAC_Upper','MAC_Lower','Price_Channel_Upper','Price_Channel_Lower','TEMA_20'],
+            "Momentum Indicators": ['AO', 'AC', 'CMO', 'CCI', 'CRSI', 'Coppock', 'DPO', 'KST', 'Momentum', 'RSI','ROC', 'Stochastic_%K', 'Stochastic_%D', 'Stochastic_RSI', 'TRIX', 'TSI', 'Ultimate_Oscillator'],
+            "Volume Indicators": ['AD', 'BoP', 'CMF', 'CO', 'EMV', 'EFI', 'KVO', 'MFI', 'Net_Volume','OBV', 'PVT', 'VWAP','VWMA', 'VO','VPFR','VPVR', 'Vortex_Pos', 'Vortex_Neg', 'Volume'],
+            "Volatility Indicators": ['ATR','BB_%B', 'BB_Width', 'Chaikin_Volatility', 'Choppiness_Index', 'Hist_Vol_Annualized', 'Mass_Index', 'RVI', 'Standard_Deviation','Vol_CtC','Vol_ZtC','Vol_OHLC','Vol_Index'],
+            "Support & Resistance Indicators": ['Pivot_Point', 'Resistance_1', 'Support_1', 'Resistance_2', 'Support_2', 'Resistance_3', 'Support_3','Fractal_Up','Fractal_Down']
+        }
+        # Create multiselect options for each indicator group
+        selected_indicators = []
+        for group_name, indicators in indicator_groups.items():
+            with st.expander(group_name):
+                selected_indicators.extend(st.multiselect(f'Select {group_name}', indicators))
+
+        show_candlestick = st.sidebar.checkbox('Heikin-Ashi Candles')
+
+        def get_macd_hist_colors(macd_hist):
+            colors = []
+            for i in range(1, len(macd_hist)):
+                if macd_hist.iloc[i] > 0:
+                    color = 'green' if macd_hist.iloc[i] > macd_hist.iloc[i - 1] else 'lightgreen'
+                else:
+                    color = 'red' if macd_hist.iloc[i] < macd_hist.iloc[i - 1] else 'lightcoral'
+                colors.append(color)
+            return colors
+
+        fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
+                            specs=[[{"secondary_y": True}], [{"secondary_y": True}], [{}]], 
+                            row_heights=[0.5, 0.3, 0.2], vertical_spacing=0.02)
+
+        data = yf.download(selected_stock, start=start_date, end=end_date)
+        data = calculate_indicators(data)
+
+        if show_candlestick:
+            fig.add_trace(go.Candlestick(x=data.index,
+                                        open=data['Open'],
+                                        high=data['High'],
+                                        low=data['Low'],
+                                        close=data['Close'],
+                                        name='Candlestick'), row=1, col=1)
+        else:
+            fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Close'), row=1, col=1)
+
+        for i, indicator in enumerate(selected_indicators):
+            if indicator == 'MACD_hist':
+                macd_hist_colors = get_macd_hist_colors(data[indicator])
+                fig.add_trace(go.Bar(x=data.index[1:], y=data[indicator][1:], name='MACD Histogram', marker_color=macd_hist_colors), row=1, col=1, secondary_y=True)
+            elif 'Fib' in indicator or 'Gann' in indicator:
+                fig.add_trace(go.Scatter(x=data.index, y=data[indicator], mode='lines', name=indicator, line=dict(dash='dash')), row=1, col=1)
+            else:
+                fig.add_trace(go.Scatter(x=data.index, y=data[indicator], mode='lines', name=indicator), row=1, col=1, secondary_y=True)
+
+            fig.update_layout(**{
+                f'yaxis{i+2}': go.layout.YAxis(
+                    title=indicator,
+                    overlaying='y',
+                    side='right',
+                    position=1 - (i * 0.05)
+                )
+            })
+
+        fig.update_layout(
+            title={
+                'text': f'{selected_stock} Price and Technical Indicators',
+                'y': 0.97,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
+            height=800,
+            margin=dict(t=100, b=10, l=50, r=50),
+            yaxis=dict(title='Price'),
+            yaxis2=dict(title='Indicators', overlaying='y', side='right'),
+            xaxis=dict(
+                rangeslider=dict(visible=True),
+                rangeselector=dict(
+                    buttons=list([
+                        dict(count=7, label='7d', step='day', stepmode='backward'),
+                        dict(count=14, label='14d', step='day', stepmode='backward'),
+                        dict(count=1, label='1m', step='month', stepmode='backward'),
+                        dict(count=3, label='3m', step='month', stepmode='backward'),
+                        dict(count=6, label='6m', step='month', stepmode='backward'),
+                        dict(count=1, label='1y', step='year', stepmode='backward'),
+                        dict(step='all')
+                    ])
+                ),
+                type='date'
+            ),
+            legend=dict(x=0.5, y=0.3, orientation='h', xanchor='center', yanchor='top')
+        )
+
+        fig.update_layout(
+            hovermode='x unified',
+            hoverlabel=dict(bgcolor="light blue", font_size=16, font_family="Rockwell")
+        )
+
+        st.plotly_chart(fig)
+
     else:
         st.write("No data available for the selected tickers and date range.")
+
 
 if __name__ == "__main__":
     stock_screener_app()
