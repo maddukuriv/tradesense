@@ -720,8 +720,8 @@ def stock_screener_app():
         st.dataframe(df_signals[['Ticker', 'Volume_Score', 'Trend_Score', 'Momentum_Score', 'Volatility_Score', 'Support_Resistance_Score', 'Overall_Score']])
 
         # Dropdown for stock selection
-        st.subheader("Interactive Plots")
-        selected_stock = st.selectbox("Select Stock", df_signals['Ticker'].tolist())
+        st.sidebar.subheader("Interactive Plots")
+        selected_stock = st.sidebar.selectbox("Select Stock", df_signals['Ticker'].tolist())
 
         # Define technical indicator categories
         indicator_groups = {
@@ -734,8 +734,8 @@ def stock_screener_app():
         # Create multiselect options for each indicator group
         selected_indicators = []
         for group_name, indicators in indicator_groups.items():
-            with st.expander(group_name):
-                selected_indicators.extend(st.multiselect(f'Select {group_name}', indicators))
+            with st.sidebar.expander(group_name):
+                selected_indicators.extend(st.sidebar.multiselect(f'Select {group_name}', indicators))
 
         show_candlestick = st.sidebar.checkbox('Heikin-Ashi Candles')
 
