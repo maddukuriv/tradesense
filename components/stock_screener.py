@@ -7,6 +7,7 @@ from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_ticker
 import pandas_ta as ta
 from plotly.subplots import make_subplots
 import plotly.graph_objs as go
+from scipy.stats import linregress
 
 
 def stock_screener_app():
@@ -220,6 +221,151 @@ def stock_screener_app():
 
         return df[['Fractal_Up', 'Fractal_Down']]
 
+    # Calculate Correlation Coefficient
+    def correlation_coefficient(series1, series2, n=14):
+        return series1.rolling(window=n).corr(series2)
+
+    # Calculate Log Correlation
+    def log_correlation(series1, series2, n=14):
+        log_series1 = np.log(series1)
+        log_series2 = np.log(series2)
+        return correlation_coefficient(log_series1, log_series2, n)
+
+    # Calculate Linear Regression Curve
+    def linear_regression_curve(series, n=14):
+        lr_curve = pd.Series(index=series.index, dtype='float64')
+        for i in range(n, len(series)):
+            y = series[i-n:i]
+            x = np.arange(n)
+            slope, intercept, _, _, _ = linregress(x, y)
+            lr_curve[i] = intercept + slope * (n-1)
+        return lr_curve
+
+    # Calculate Linear Regression Slope
+    def linear_regression_slope(series, n=14):
+        lr_slope = pd.Series(index=series.index, dtype='float64')
+        for i in range(n, len(series)):
+            y = series[i-n:i]
+            x = np.arange(n)
+            slope, _, _, _, _ = linregress(x, y)
+            lr_slope[i] = slope
+        return lr_slope
+
+
+    # Calculate Standard Error
+    def standard_error(series, n=14):
+        std_err = pd.Series(index=series.index, dtype='float64')
+        for i in range(n, len(series)):
+            y = series[i-n:i]
+            x = np.arange(n)
+            _, _, _, _, stderr = linregress(x, y)
+            std_err[i] = stderr
+        return std_err
+
+
+    # Calculate Standard Error Bands
+    def standard_error_bands(series, n=14, num_std=2):
+        lr_curve = linear_regression_curve(series, n)
+        stderr = standard_error(series, n)
+        upper_band = lr_curve + num_std * stderr
+        lower_band = lr_curve - num_std * stderr
+        return upper_band, lower_band
+
+
+    # Calculate Choppiness Index
+    def choppiness_index(high, low, close, n=14):
+        tr1 = pd.DataFrame(high - low)
+        tr2 = pd.DataFrame(abs(high - close.shift(1)))
+        tr3 = pd.DataFrame(abs(low - close.shift(1)))
+        true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        atr = true_range.rolling(n).sum()
+        high_low_range = high.rolling(n).max() - low.rolling(n).min()
+        chop = 100 * np.log10(atr / high_low_range) / np.log10(n)
+        return chop
+
+    
+
+    # Calculate Chande Kroll Stop
+    def chande_kroll_stop(high, low, close, n=10, m=1):
+        atr = (high - low).rolling(n).mean()
+        long_stop = close - (m * atr)
+        short_stop = close + (m * atr)
+        return long_stop, short_stop
+
+    
+
+    # Calculate Fisher Transform
+    def fisher_transform(price, n=10):
+        median_price = price.rolling(window=n).median()
+        min_low = price.rolling(window=n).min()
+        max_high = price.rolling(window=n).max()
+        value = 2 * ((median_price - min_low) / (max_high - min_low) - 0.5)
+        fish = 0.5 * np.log((1 + value) / (1 - value))
+        fish_signal = fish.shift(1)
+        return fish, fish_signal
+
+    
+
+
+
+    # Calculate Relative Vigor Index (RVI)
+    def relative_vigor_index(open, high, low, close, n=10):
+        numerator = close - open
+        denominator = high - low
+        rvi = (numerator.rolling(n).sum()) / (denominator.rolling(n).sum())
+        return rvi
+
+    
+
+    # Calculate SMI Ergodic Indicator/Oscillator
+    def smi_ergodic(close, n=14, m=5, signal_n=3):
+        smi = (close - close.shift(n)) / (close.rolling(n).std())
+        signal = smi.rolling(signal_n).mean()
+        return smi, signal
+
+    
+
+
+
+    # Calculate Williams %R
+    def williams_r(high, low, close, n=14):
+        highest_high = high.rolling(n).max()
+        lowest_low = low.rolling(n).min()
+        r = (highest_high - close) / (highest_high - lowest_low) * -100
+        return r
+
+    
+
+    # Calculate Williams Alligator
+    def alligator(high, low, close, jaw_n=13, teeth_n=8, lips_n=5):
+        jaw = close.rolling(window=jaw_n).mean().shift(8)
+        teeth = close.rolling(window=teeth_n).mean().shift(5)
+        lips = close.rolling(window=lips_n).mean().shift(3)
+        return jaw, teeth, lips
+
+    
+
+    # Calculate ZigZag
+    def zigzag(close, percentage=5):
+        zz = [0]
+        for i in range(1, len(close)):
+            change = (close[i] - close[zz[-1]]) / close[zz[-1]] * 100
+            if abs(change) > percentage:
+                zz.append(i)
+        zigzag_series = pd.Series(index=close.index, data=np.nan)
+        zigzag_series.iloc[zz] = close.iloc[zz]
+        return zigzag_series.ffill()
+
+    
+    
+
+
+    @st.cache_data
+    def fetch_and_calculate_data(ticker, start_date, end_date):
+        data = yf.download(ticker, start=start_date, end=end_date)
+        if not data.empty:
+            data = calculate_indicators(data)
+        return data
 
     def calculate_indicators(df):
 
@@ -246,6 +392,7 @@ def stock_screener_app():
 
         # ADX calculation
         df['ADX'] = calculate_adx(df)
+     
         
         # On-Balance Volume (OBV)
         df['OBV'] = (np.sign(df['Close'].diff()) * df['Volume']).cumsum()
@@ -310,6 +457,7 @@ def stock_screener_app():
         df['Coppock'] = df['Close'].diff(14).ewm(span=10, adjust=False).mean() + df['Close'].diff(11).ewm(span=10, adjust=False).mean()
         df['DPO'] = df['Close'].shift(int(20 / 2 + 1)) - df['Close'].rolling(window=20).mean()
         df['KST'] = df['Close'].rolling(window=10).mean() + df['Close'].rolling(window=15).mean() + df['Close'].rolling(window=20).mean() + df['Close'].rolling(window=30).mean()
+        df['KST_Signal'] = df['KST'].rolling(window=9).mean()
         df['Momentum'] = df['Close'] - df['Close'].shift(10)
         df['RSI'] = rsi(df['Close'])
         df['ROC'] = df['Close'].pct_change(12)
@@ -318,6 +466,7 @@ def stock_screener_app():
         df['Stochastic_RSI'] = (rsi(df['Close'], window=14) - rsi(df['Close'], window=14).rolling(window=14).min()) / (rsi(df['Close'], window=14).rolling(window=14).max() - rsi(df['Close'], window=14).rolling(window=14).min())
         df['TRIX'] = df['Close'].ewm(span=15, adjust=False).mean().pct_change(1)
         df['TSI'] = df['Close'].diff(1).ewm(span=25, adjust=False).mean() / df['Close'].diff(1).abs().ewm(span=13, adjust=False).mean()
+        df['TSI_Signal'] = df['TSI'].ewm(span=9, adjust=False).mean()
         df['Ultimate_Oscillator'] = (4 * (df['Close'] - df['Low']).rolling(window=7).sum() + 2 * (df['Close'] - df['Low']).rolling(window=14).sum() + (df['Close'] - df['Low']).rolling(window=28).sum()) / ((df['High'] - df['Low']).rolling(window=7).sum() + (df['High'] - df['Low']).rolling(window=14).sum() + (df['High'] - df['Low']).rolling(window=28).sum()) * 100
 
         # Volume Indicators
@@ -328,6 +477,7 @@ def stock_screener_app():
         df['EMV'] = (df['High'] - df['Low']) / df['Volume']
         df['EFI'] = df['Close'].diff(1) * df['Volume']
         df['KVO'] = (df['High'] - df['Low']).ewm(span=34, adjust=False).mean() - (df['High'] - df['Low']).ewm(span=55, adjust=False).mean()
+        df['KVO_Signal'] = df['KVO'].ewm(span=13, adjust=False).mean()
         df['MFI'] = (df['Close'].diff(1) / df['Close'].shift(1) * df['Volume']).rolling(window=14).mean()
         df['OBV'] = (np.sign(df['Close'].diff()) * df['Volume']).cumsum()
         df['PVT'] = (df['Close'].pct_change(1) * df['Volume']).cumsum()
@@ -389,9 +539,39 @@ def stock_screener_app():
             return pp, r1, s1, r2, s2, r3, s3
 
         df['Pivot_Point'], df['Resistance_1'], df['Support_1'], df['Resistance_2'], df['Support_2'], df['Resistance_3'], df['Support_3'] = pivot_points(df['High'], df['Low'], df['Close'])
+        
+        # Statistical indicators
+        df['Correlation_Coefficient'] = correlation_coefficient(df['Close'], df['Close'].shift(1))
+        df['Log_Correlation'] = log_correlation(df['Close'], df['Close'].shift(1))
+        df['Linear_Regression_Curve'] = linear_regression_curve(df['Close'])
+        df['Linear_Regression_Slope'] = linear_regression_slope(df['Close'])
+        df['Standard_Error'] = standard_error(df['Close'])
+        df['Standard_Error_Band_Upper'], df['Standard_Error_Band_Lower'] = standard_error_bands(df['Close'])
+
+
+        # Calculate Advance/Decline
+        df['Advance_Decline'] = df['Close'].diff().apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0)).cumsum()
+        df['Chop_Zone'] = choppiness_index(df['High'], df['Low'], df['Close'])
+        df['Chande_Kroll_Stop_Long'], df['Chande_Kroll_Stop_Short'] = chande_kroll_stop(df['High'], df['Low'], df['Close'])
+        df['Fisher_Transform'], df['Fisher_Transform_Signal'] = fisher_transform(df['Close'])
+        # Calculate Median Price
+        df['Median_Price'] = (df['High'] + df['Low']) / 2
+        df['Relative_Vigor_Index'] = relative_vigor_index(df['Open'], df['High'], df['Low'], df['Close'])
+        df['SMI_Ergodic'], df['SMI_Ergodic_Signal'] = smi_ergodic(df['Close'])
+        # Calculate Spread
+        df['Spread'] = df['High'] - df['Low']
+
+        # Calculate Typical Price
+        df['Typical_Price'] = (df['High'] + df['Low'] + df['Close']) / 3
+        df['Williams_%R'] = williams_r(df['High'], df['Low'], df['Close'])
+        df['Williams_Alligator_Jaw'], df['Williams_Alligator_Teeth'], df['Williams_Alligator_Lips'] = alligator(df['High'], df['Low'], df['Close'])
+        df['ZigZag'] = zigzag(df['Close'])
+
+
+        return df
 
         
-        return df
+        
 
     def fetch_company_info(ticker):
         try:
@@ -420,6 +600,7 @@ def stock_screener_app():
                     'Sector': sector,
                     'Industry': industry,
                     'Close': latest_data['Close'],
+                    'Open':latest_data['Open'],
                     'Volume': latest_data['Volume'],
                     'SMA_20': latest_data['SMA_20'],
                     'EMA_20': latest_data['EMA_20'],
@@ -458,6 +639,7 @@ def stock_screener_app():
                     'Coppock': latest_data['Coppock'],
                     'DPO': latest_data['DPO'],
                     'KST': latest_data['KST'],
+                    'KST_Signal': latest_data['KST_Signal'],
                     'Momentum': latest_data['Momentum'],
                     'ROC': latest_data['ROC'],
                     'Stochastic_%K': latest_data['Stochastic_%K'],
@@ -465,6 +647,7 @@ def stock_screener_app():
                     'Stochastic_RSI': latest_data['Stochastic_RSI'],
                     'TRIX': latest_data['TRIX'],
                     'TSI': latest_data['TSI'],
+                    'TSI_Signal': latest_data['TSI_Signal'],
                     'Ultimate_Oscillator': latest_data['Ultimate_Oscillator'],
                     'AD': latest_data['AD'],
                     'BoP': latest_data['BoP'],
@@ -473,6 +656,7 @@ def stock_screener_app():
                     'EMV': latest_data['EMV'],
                     'EFI': latest_data['EFI'],
                     'KVO': latest_data['KVO'],
+                    'KVO_Signal': latest_data['KVO_Signal'],
                     'MFI': latest_data['MFI'],
                     'PVT': latest_data['PVT'],
                     'VWAP': latest_data['VWAP'],
@@ -510,6 +694,32 @@ def stock_screener_app():
                     'Vol_Index':latest_data['Vol_Index'],
                     'Fractal_Up':latest_data['Fractal_Up'],
                     'Fractal_Down':latest_data['Fractal_Down'],
+                    'Correlation_Coefficient':latest_data['Correlation_Coefficient'],
+                    'Log_Correlation':latest_data['Log_Correlation'],
+                    'Linear_Regression_Curve':latest_data['Linear_Regression_Curve'],
+                    'Linear_Regression_Slope':latest_data['Linear_Regression_Slope'],
+                    'Standard_Error':latest_data['Standard_Error'],
+                    'Standard_Error_Band_Upper':latest_data['Standard_Error_Band_Upper'],
+                    'Standard_Error_Band_Lower':latest_data['Standard_Error_Band_Lower'],
+                    'Advance_Decline':latest_data['Advance_Decline'],
+                    'Chop_Zone':latest_data['Chop_Zone'],
+                    'Chande_Kroll_Stop_Long':latest_data['Chande_Kroll_Stop_Long'],
+                    'Chande_Kroll_Stop_Short':latest_data['Chande_Kroll_Stop_Short'],
+                    'Fisher_Transform':latest_data['Fisher_Transform'],
+                    'Fisher_Transform_Signal':latest_data['Fisher_Transform_Signal'],
+                    'Median_Price':latest_data['Median_Price'],
+                    'Relative_Vigor_Index':latest_data['Relative_Vigor_Index'],
+                    'SMI_Ergodic':latest_data['SMI_Ergodic'],
+                    'SMI_Ergodic_Signal':latest_data['SMI_Ergodic_Signal'],
+                    'Spread':latest_data['Spread'],
+                    'Typical_Price':latest_data['Typical_Price'],
+                    'Williams_%R':latest_data['Williams_%R'],
+                    'Williams_Alligator_Jaw':latest_data['Williams_Alligator_Jaw'],
+                    'Williams_Alligator_Teeth':latest_data['Williams_Alligator_Teeth'],
+                    'Williams_Alligator_Lips':latest_data['Williams_Alligator_Lips'],
+                    'ZigZag':latest_data['ZigZag'],
+                  
+
 
 
                 })
@@ -576,95 +786,296 @@ def stock_screener_app():
     def add_scoring(df):
         # Customize scoring for each indicator
         volume_score_conditions = {
-            'AD': df['AD'] > df['AD'].shift(1),
-            'BoP': df['BoP'] > 0,
-            'CMF': df['CMF'] > 0,
-            'CO': df['CO'] > df['CO'].shift(1),
-            'EMV': df['EMV'] > 0,
-            'EFI': (df['EFI'] > 0) & (df['EFI'] > df['EFI'].shift(1)) ,
-            'KVO': (df['KVO'] > 0) & (df['KVO'] > df['KVO'].shift(1)),
-            'MFI': df['MFI'] > 50,
-            'Net_Volume': (df['Net_Volume'] > 0) & (df['Net_Volume'] > df['Net_Volume'].shift(1)),
-            'OBV': df['OBV'] > df['OBV'].shift(1),
-            'PVT': df['PVT'] > df['PVT'].shift(1),
-            'VWAP': df['Close'] > df['VWAP'],
-            'VWMA': df['Close'] > df['VWMA'],
-            'VO': df['VO'] > 0,
-            'VPFR': df['VPFR'] > 0,
-            'VPVR': df['VPVR'] > 0,
-            'Vortex_Pos': df['Vortex_Pos'] > df['Vortex_Neg']
+            # When the A/D line rises, indicating accumulation over multiple periods
+            'AD': (df['AD'] > df['AD'].shift(1)) & (df['AD'].rolling(window=3).mean() > df['AD'].rolling(window=3).mean().shift(1)),
 
-            
+            # When BOP turns positive, confirming over the last few periods
+            'BoP': (df['BoP'] > 0) & (df['BoP'].rolling(window=3).mean() > 0),
+
+            # When CMF crosses above the zero line with confirmation
+            'CMF': (df['CMF'] > 0) & (df['CMF'].rolling(window=3).mean() > 0),
+
+            # When the Chaikin Oscillator crosses above the zero line with trend confirmation
+            'CO': (df['CO'] > 0) & (df['CO'].rolling(window=3).mean() > 0),
+
+            # When EMV crosses above the zero line with confirmation
+            'EMV': (df['EMV'] > 0) & (df['EMV'].rolling(window=3).mean() > 0),
+
+            # When EFI turns positive and is trending upward over the last few periods
+            'EFI': (df['EFI'] > 0) & (df['EFI'] > df['EFI'].shift(1)) & (df['EFI'].rolling(window=3).mean() > df['EFI'].rolling(window=3).mean().shift(1)),
+
+            # When the Klinger Oscillator crosses above its signal line with trend confirmation
+            'KVO': (df['KVO'] > df['KVO_Signal']) & (df['KVO'].rolling(window=3).mean() > df['KVO_Signal'].rolling(window=3).mean()),
+
+            # When MFI moves from oversold territory (below 20) upward, confirmed by trend
+            'MFI': (df['MFI'] > 20) & (df['MFI'].shift(1) <= 20) & (df['MFI'].rolling(window=3).mean() > 20),
+
+            # When net volume is consistently positive over multiple periods
+            'Net_Volume': (df['Net_Volume'] > 0) & (df['Net_Volume'].rolling(window=3).mean() > 0),
+
+            # When OBV trends upward, confirmed over multiple periods
+            'OBV': (df['OBV'] > df['OBV'].shift(1)) & (df['OBV'].rolling(window=3).mean() > df['OBV'].rolling(window=3).mean().shift(1)),
+
+            # When PVT trends upward, confirmed over multiple periods
+            'PVT': (df['PVT'] > df['PVT'].shift(1)) & (df['PVT'].rolling(window=3).mean() > df['PVT'].rolling(window=3).mean().shift(1)),
+
+            # When the price is below VWAP, indicating a potential buy opportunity, with trend confirmation
+            'VWAP_Below_Price': (df['Close'] < df['VWAP']) & (df['Close'].rolling(window=3).mean() < df['VWAP'].rolling(window=3).mean()),
+
+            # When the price crosses above the VWMA, confirmed by trend
+            'VWMA_Cross': (df['Close'] > df['VWMA']) & (df['Close'].rolling(window=3).mean() > df['VWMA'].rolling(window=3).mean()),
+
+            # When the volume oscillator crosses above the zero line, confirmed by trend
+            'VO': (df['VO'] > 0) & (df['VO'].rolling(window=3).mean() > 0),
+
+            # When the price is near a high-volume node in the VPFR, confirmed by close proximity
+            'VPFR_Near_High_Volume_Node': (df['VPFR'] == df['VPFR'].max()) & (df['Close'] > df['VPFR'].shift(1)),
+
+            # When the price is near a high-volume node in the VPVR, confirmed by close proximity
+            'VPVR_Near_High_Volume_Node': (df['VPVR'] == df['VPVR'].max()) & (df['Close'] > df['VPVR'].shift(1)),
+
+            # When the positive VI crosses above the negative VI, confirmed by trend
+            'Vortex_Positive_Cross': (df['Vortex_Pos'] > df['Vortex_Neg']) & (df['Vortex_Pos'].rolling(window=3).mean() > df['Vortex_Neg'].rolling(window=3).mean()),
+
+            # When a price rise is accompanied by higher-than-average volume, confirmed over multiple periods
+            'Price_Volume_Rise': (df['Close'] > df['Close'].shift(1)) & (df['Volume'] > df['Volume'].rolling(window=20).mean()) & (df['Volume'].rolling(window=3).mean() > df['Volume'].rolling(window=20).mean()),
+
+            # Narrow spreads can indicate liquidity and good entry points
+            'Spread_Narrow': df['Spread'] < df['Spread'].rolling(window=20).mean(),
         }
+
+
+        # Customize scoring for each trend indicator
         trend_score_conditions = {
-            'ALMA': df['ALMA'] < df['Close'],
-            'Aroon_Up': df['Aroon_Up'] > 70,
-            'Aroon_Down': df['Aroon_Down'] < 30,
-            'ADX': df['ADX'] > 25,
-            'BB_High': df['Close'] < df['BB_High'],
-            'SMA_20': df['Close'] > df['SMA_20'],
-            'DEMA': df['Close'] > df['DEMA'],
-            'Envelope_High': df['Close'] < df['Envelope_High'],
-            'GMMA_Short': df['GMMA_Short'] > df['GMMA_Long'],
-            'HMA': df['HMA'] < df['Close'],
-            'Ichimoku_Tenkan': df['Close'] > df['Ichimoku_Tenkan'],
-            'Ichimoku_Kijun': df['Close'] > df['Ichimoku_Kijun'],
-            'Ichimoku_Senkou_Span_A': df['Close'] > df['Ichimoku_Senkou_Span_A'],
-            'Ichimoku_Senkou_Span_B': df['Close'] > df['Ichimoku_Senkou_Span_B'],
-            'KC_High': df['Close'] < df['KC_High'],
-            'LSMA': df['Close'] > df['LSMA'],
-            'EMA_20': df['Close'] > df['EMA_20'],
-            'MACD': df['MACD'] > df['MACD_signal'],
-            'MACD_hist': df['MACD_hist'] > 0,
-            'Parabolic_SAR': df['Close'] > df['Parabolic_SAR'],
-            'SuperTrend': df['Close'] > df['SuperTrend'],
-            'MAC_Upper': df['Close'] > df['MAC_Upper'],
-            'Price_Channel_Upper': df['Close'] > df['Price_Channel_Upper'],
-            'TEMA_20': df['Close'] > df['TEMA_20']
+            # When the stock price crosses above the ALMA and ALMA is sloping upwards (for trend confirmation)
+            'ALMA': (df['Close'] > df['ALMA']) & (df['ALMA'].diff() > 0),
+
+            # When the Aroon Up crosses above the Aroon Down and both indicate a strong trend (up > 70, down < 30)
+            'Aroon': (df['Aroon_Up'] > df['Aroon_Down']) & (df['Aroon_Up'] > 70) & (df['Aroon_Down'] < 30),
+
+            # ADX confirms a strong trend; ensure ADX is rising for continued momentum
+            'ADX': (df['ADX'] > 25) & (df['ADX'].diff() > 0),
+
+            # Price touches the lower Bollinger Band and starts moving up; also check for price bounce (close > open)
+            'BB_Low': (df['Close'] > df['BB_Low']) & (df['Close'] > df['Open']),
+
+            # When the price crosses above the DEMA and DEMA is trending upwards
+            'DEMA': (df['Close'] > df['DEMA']) & (df['DEMA'].diff() > 0),
+
+            # When the price moves above the lower envelope, with an additional check for a recent upward price momentum
+            'Envelope_Low': (df['Close'] > df['Envelope_Low']) & (df['Close'].diff() > 0),
+
+            # Short-term moving averages cross above long-term moving averages, and the long-term average is also trending upwards
+            'GMMA': (df['GMMA_Short'] > df['GMMA_Long']) & (df['GMMA_Long'].diff() > 0),
+
+            # When the price crosses above the HMA, and the HMA itself is sloping upwards
+            'HMA': (df['Close'] > df['HMA']) & (df['HMA'].diff() > 0),
+
+            # When the price crosses above the Ichimoku cloud, and the cloud is showing a bullish sentiment (Senkou Span A > Senkou Span B)
+            'Ichimoku_Cloud': (df['Close'] > df[['Ichimoku_Senkou_Span_A', 'Ichimoku_Senkou_Span_B']].max(axis=1)) & 
+                            (df['Ichimoku_Senkou_Span_A'] > df['Ichimoku_Senkou_Span_B']),
+
+            # Price bounces off the lower Keltner Channel band, confirmed with a bullish candlestick (close > open)
+            'KC_Low': (df['Close'] > df['KC_Low']) & (df['Close'] > df['Open']),
+
+            # When the price crosses above the LSMA, with LSMA trending upwards
+            'LSMA': (df['Close'] > df['LSMA']) & (df['LSMA'].diff() > 0),
+
+            # When the price rebounds off the lower channel line, ensure the price is also above the open
+            'Price_Channel_Lower': (df['Close'] > df['Price_Channel_Lower']) & (df['Close'] > df['Open']),
+
+            # MACD line crosses above the signal line, with MACD histogram also positive and increasing
+            'MACD': (df['MACD'] > df['MACD_signal']) & (df['MACD_hist'] > 0) & (df['MACD_hist'].diff() > 0),
+
+            # When the price crosses above the Parabolic SAR, confirming with an upward price momentum
+            'Parabolic_SAR': (df['Close'] > df['Parabolic_SAR']) & (df['Close'].diff() > 0),
+
+            # When the price breaks above the upper channel, confirmed by a bullish candlestick
+            'Price_Channel_Upper': (df['Close'] > df['Price_Channel_Upper']) & (df['Close'] > df['Open']),
+
+            # When the price crosses above the SuperTrend line, with SuperTrend indicating a bullish trend
+            'SuperTrend': (df['Close'] > df['SuperTrend']) & (df['SuperTrend'].diff() < 0),
+
+            # When the price crosses above the TEMA, with TEMA trending upwards
+            'TEMA_20': (df['Close'] > df['TEMA_20']) & (df['TEMA_20'].diff() > 0),
+
+            # A rising A/D line indicates broad market strength
+            'Advance_Decline': df['Advance_Decline'] > df['Advance_Decline'].shift(1),
+
+            # When the price crosses above the Chande Kroll Stop (using the Long Stop as reference)
+            'Chande_Kroll_Stop_Cross_Long': df['Median_Price'] > df['Chande_Kroll_Stop_Long'],
+
+            # When the Williams Alligator Lips cross above the Teeth and Jaw, indicating a new trend
+            'Williams_Alligator_Cross': (df['Williams_Alligator_Lips'] > df['Williams_Alligator_Teeth']) & (df['Williams_Alligator_Teeth'] > df['Williams_Alligator_Jaw']),
         }
+
+        # Customize scoring for each momentum indicator
         momentum_score_conditions = {
-            'AO': df['AO'] > 0,
+            # When the AC turns positive, indicating momentum is building
             'AC': df['AC'] > 0,
+
+            # When AO crosses above the zero line, indicating bullish momentum
+            'AO': df['AO'] > 0,
+
+            # When CMO crosses above the zero line from negative territory
             'CMO': df['CMO'] > 0,
-            'CCI': df['CCI'] > 100,
-            'CRSI': (df['CRSI'] > 30) & (df['CRSI'] > df['CRSI'].shift(1)),
-            'Coppock': (df['Coppock'] > 0) & (df['Coppock'] > df['Coppock'].shift(1)),
+
+            # When CCI moves from negative to positive territory (crosses zero)
+            'CCI': df['CCI'] > 0,
+
+            # When the Connors RSI drops to oversold levels (below 20) and turns upward
+            'CRSI': (df['CRSI'] < 20) & (df['CRSI'] > df['CRSI'].shift(1)),
+
+            # When the Coppock Curve turns upward from below zero
+            'Coppock': (df['Coppock'] < 0) & (df['Coppock'].diff() > 0),
+
+            # When DPO crosses above the zero line
             'DPO': df['DPO'] > 0,
-            'KST': df['KST'] > 0,
+
+            # When the +DI line crosses above the -DI line (Directional Movement)
+            #'DI_Plus_Minus': df['DI_Plus'] > df['DI_Minus'],
+
+            # When KST crosses above its signal line
+            'KST': df['KST'] > df['KST_Signal'],
+
+            # When the momentum indicator turns positive
             'Momentum': df['Momentum'] > 0,
-            'RSI': (df['RSI'] > 30) & (df['RSI'] < 70),
+
+            # When RSI moves from oversold territory (below 30) upward
+            'RSI': (df['RSI'] < 30) & (df['RSI'] > df['RSI'].shift(1)),
+
+            # When ROC turns positive from negative territory
             'ROC': df['ROC'] > 0,
-            'Stochastic_%K': df['Stochastic_%K'] > 20,
-            'Stochastic_%D': df['Stochastic_%D'] > 20,
-            'Stochastic_RSI': df['Stochastic_RSI'] < 80,
+
+            # When the %K line crosses above the %D line from oversold levels
+            'Stochastic_%K_D_Cross': df['Stochastic_%K'] > df['Stochastic_%D'],
+
+            # When Stochastic RSI crosses above the 20 level from oversold conditions
+            'Stochastic_RSI': (df['Stochastic_RSI'] < 20) & (df['Stochastic_RSI'] > df['Stochastic_RSI'].shift(1)),
+
+            # When TRIX crosses above the zero line
             'TRIX': df['TRIX'] > 0,
-            'TSI': df['TSI'] > 0,
-            'Ultimate_Oscillator': df['Ultimate_Oscillator'] > 50
+
+            # When TSI crosses above its signal line
+            'TSI': df['TSI'] > df['TSI_Signal'],
+
+            # When the Ultimate Oscillator moves from below 30 to above 50
+            'Ultimate_Oscillator': (df['Ultimate_Oscillator'] > 30) & (df['Ultimate_Oscillator'] > df['Ultimate_Oscillator'].shift(1)) & (df['Ultimate_Oscillator'] > 50),
+
+            # When Williams %R moves from oversold territory (below -80) to above -80
+            'Williams_%R_Oversold': (df['Williams_%R'] > -80) & (df['Williams_%R'].shift(1) <= -80),
+
+            # When the Fisher Transform turns positive from negative territory
+            'Fisher_Transform': (df['Fisher_Transform'] > 0) & (df['Fisher_Transform'].shift(1) <= 0),
+
+            # When RVI crosses above its signal line (SMI Ergodic is used here, which is similar)
+            'SMI_Ergodic_Cross': df['SMI_Ergodic'] > df['SMI_Ergodic_Signal'],
         }
+
+
         volatility_score_conditions = {
-            'BB_%B': df['BB_%B'] < 1,
-            'BB_Width': df['BB_Width'] > df['BB_Width'].mean(),
-            'Chaikin_Volatility': df['Chaikin_Volatility'] > df['Chaikin_Volatility'].mean(),
-            'Choppiness_Index': df['Choppiness_Index'] < 61.8,
-            'Hist_Vol_Annualized': df['Hist_Vol_Annualized'] > df['Hist_Vol_Annualized'].mean(),
-            'Mass_Index': df['Mass_Index'] > 27,
+            # When %B is near 0, indicating the price is near the lower band (potential for reversal)
+            'BB_%B': df['BB_%B'] < 0.2,
+
+            # Narrowing Bollinger Bands may indicate a period of consolidation before a breakout
+            'BB_Width': df['BB_Width'] < df['BB_Width'].rolling(window=20).mean(),
+
+            # A spike in Chaikin Volatility following a decline may indicate a reversal
+            'Chaikin_Volatility': (df['Chaikin_Volatility'] > df['Chaikin_Volatility'].rolling(window=5).mean()) & (df['Chaikin_Volatility'].diff() > 0),
+
+            # Lower Choppiness Index values indicate a trending market, which may precede a strong move
+            'Choppiness_Index': df['Choppiness_Index'] < 50,
+
+            # Historical Volatility below average might indicate consolidation before a breakout
+            'Hist_Vol_Annualized': df['Hist_Vol_Annualized'] < df['Hist_Vol_Annualized'].rolling(window=20).mean(),
+
+            # When the Mass Index rises above 27 and then falls below 26.5, signaling a potential reversal
+            'Mass_Index': (df['Mass_Index'] > 27) & (df['Mass_Index'] < 26.5),
+
+            # When RVI crosses above 50, indicating increasing volatility in a bullish direction
             'RVI': df['RVI'] > 50,
-            'Standard_Deviation': df['Standard_Deviation'] > df['Standard_Deviation'].mean(),
-            'Vol_CtC': df['Vol_CtC'] > df['Vol_CtC'].mean(),
-            'Vol_ZtC': df['Vol_ZtC'] > df['Vol_ZtC'].mean(),
-            'Vol_OHLC': df['Vol_OHLC'] > df['Vol_OHLC'].mean(),
-            'Vol_Index': df['Vol_Index'] > df['Vol_Index'].mean()
+
+            # Low standard deviation can indicate consolidation before a breakout
+            'Standard_Deviation': df['Standard_Deviation'] < df['Standard_Deviation'].rolling(window=20).mean(),
+
+            # Decreasing Close-to-Close volatility can indicate a potential breakout
+            'Vol_CtC': df['Vol_CtC'] < df['Vol_CtC'].rolling(window=20).mean(),
+
+            # Decreasing Zero-to-Close volatility can indicate a potential breakout
+            'Vol_ZtC': df['Vol_ZtC'] < df['Vol_ZtC'].rolling(window=20).mean(),
+
+            # Decreasing OHLC (Open, High, Low, Close) volatility can indicate a potential breakout
+            'Vol_OHLC': df['Vol_OHLC'] < df['Vol_OHLC'].rolling(window=20).mean(),
+
+            # Lower VIX values often correlate with rising markets, indicating potential bullish conditions
+            'Vol_Index': df['Vol_Index'] < df['Vol_Index'].rolling(window=20).mean(),
+
+            # Indicates low chop when a strong trend might be forming
+            'Chop_Zone': df['Chop_Zone'] < 50,
+            
+            # When the ZigZag indicator turns upward, indicating a potential reversal
+            'ZigZag_Upturn': df['ZigZag'] > df['ZigZag'].shift(1)
         }
+
+
+
         support_resistance_score_conditions = {
+            # When the price is above the pivot point, suggesting a bullish bias
             'Pivot_Point': df['Close'] > df['Pivot_Point'],
+
+            # When the price is above Resistance 1, indicating further bullish momentum
             'Resistance_1': df['Close'] > df['Resistance_1'],
+
+            # When the price is above Support 1, indicating a potential bounce from support
             'Support_1': df['Close'] > df['Support_1'],
+
+            # When the price is above Resistance 2, indicating strong bullish momentum
             'Resistance_2': df['Close'] > df['Resistance_2'],
+
+            # When the price is above Support 2, indicating another potential bounce from a deeper support
             'Support_2': df['Close'] > df['Support_2'],
+
+            # When the price is above Resistance 3, indicating very strong bullish momentum
             'Resistance_3': df['Close'] > df['Resistance_3'],
+
+            # When the price is above Support 3, indicating a strong bounce from a significant support level
             'Support_3': df['Close'] > df['Support_3'],
-            'Fractal_Up': df['Fractal_Up'] > 0,
+
+            # When a down fractal is formed, it could indicate a bottoming out (buy signal)
             'Fractal_Down': df['Fractal_Down'] > 0
+        }
+
+        statistical_score_conditions = {
+            # Positive correlation with a leading indicator may suggest buying opportunities
+            'Correlation_Coefficient': df['Correlation_Coefficient'] > 0,
+
+            # Logarithmic correlation is positive, indicating a buying opportunity
+            'Log_Correlation': df['Log_Correlation'] > 0,
+
+            # When the price is below the linear regression curve and starts to turn upward
+            'Price_Below_Regression_Curve': (df['Close'] < df['Linear_Regression_Curve']) & (df['Close'].shift(1) >= df['Close'].shift(2)),
+
+            # A positive slope suggests an upward trend
+            'Linear_Regression_Slope': df['Linear_Regression_Slope'] > 0,
+
+            # Lower standard error indicates stronger confidence in the trend
+            'Standard_Error': df['Standard_Error'] < df['Standard_Error'].rolling(window=20).mean(),
+
+            # When the price touches the lower standard error band and starts moving up
+            'Standard_Error_Band_Lower_Touch': (df['Close'] <= df['Standard_Error_Band_Lower']) & (df['Close'].shift(1) < df['Close'].shift(2))
+        }
+
+ 
+
+        # Define weightages for each category
+        weightage = {
+            'Volume_Score': 0.20,             # 15% weight
+            'Trend_Score': 0.25,              # 20% weight
+            'Momentum_Score': 0.25,           # 20% weight
+            'Volatility_Score': 0.15,         # 15% weight
+            'Support_Resistance_Score': 0.10, # 10% weight
+            'Statistical_Score': 0.05,        # 10% weight
+           
         }
 
         # Calculate scores based on conditions
@@ -673,6 +1084,8 @@ def stock_screener_app():
         df['Momentum_Score'] = sum([cond.astype(int) for cond in momentum_score_conditions.values()])
         df['Volatility_Score'] = sum([cond.astype(int) for cond in volatility_score_conditions.values()])
         df['Support_Resistance_Score'] = sum([cond.astype(int) for cond in support_resistance_score_conditions.values()])
+        df['Statistical_Score'] = sum([cond.astype(int) for cond in statistical_score_conditions.values()])
+     
 
         # Normalize scores to be between -1 and 1
         df['Volume_Score'] = df['Volume_Score'] / df['Volume_Score'].abs().max()
@@ -680,21 +1093,34 @@ def stock_screener_app():
         df['Momentum_Score'] = df['Momentum_Score'] / df['Momentum_Score'].abs().max()
         df['Volatility_Score'] = df['Volatility_Score'] / df['Volatility_Score'].abs().max()
         df['Support_Resistance_Score'] = df['Support_Resistance_Score'] / df['Support_Resistance_Score'].abs().max()
+        df['Statistical_Score'] = df['Statistical_Score'] / df['Statistical_Score'].abs().max()
+    
 
-        # Overall score as an average of the five categories
-        df['Overall_Score'] = (df['Volume_Score'] + df['Trend_Score'] + df['Momentum_Score'] + df['Volatility_Score'] + df['Support_Resistance_Score']) / 5
+        # Calculate the overall score as a weighted sum of the scores
+        df['Overall_Score'] = (
+            df['Volume_Score'] * weightage['Volume_Score'] +
+            df['Trend_Score'] * weightage['Trend_Score'] +
+            df['Momentum_Score'] * weightage['Momentum_Score'] +
+            df['Volatility_Score'] * weightage['Volatility_Score'] +
+            df['Support_Resistance_Score'] * weightage['Support_Resistance_Score'] +
+            df['Statistical_Score'] * weightage['Statistical_Score'] 
+        )
 
         return df
+
 
     if not df_signals.empty:
         df_signals = add_scoring(df_signals)
         table1_columns = ['Ticker', 'Date of Occurrence', 'Company Name', 'Sector', 'Industry', 'Close', 'Volume']
         trend_columns = ['Ticker', 'Close','ALMA','Aroon_Up', 'Aroon_Down','ADX', 'BB_High', 'SMA_20','BB_Low', 'DEMA', 'Envelope_High', 'Envelope_Low', 'GMMA_Short', 'GMMA_Long', 'HMA', 'Ichimoku_Tenkan', 'Ichimoku_Kijun', 'Ichimoku_Senkou_Span_A', 'Ichimoku_Senkou_Span_B', 'KC_High', 'KC_Low', 'LSMA','EMA_20','MACD', 'MACD_signal', 'MACD_hist', 'Parabolic_SAR', 'SuperTrend','MAC_Upper','MAC_Lower','Price_Channel_Upper','Price_Channel_Lower','TEMA_20']
-        momentum_columns = ['Ticker','AO', 'AC', 'CMO', 'CCI', 'CRSI', 'Coppock', 'DPO', 'KST', 'Momentum', 'RSI','ROC', 'Stochastic_%K', 'Stochastic_%D', 'Stochastic_RSI', 'TRIX', 'TSI', 'Ultimate_Oscillator']
-        volume_columns = ['Ticker','AD', 'BoP', 'CMF', 'CO', 'EMV', 'EFI', 'KVO', 'MFI', 'Net_Volume','OBV', 'PVT', 'VWAP','VWMA', 'VO','VPFR','VPVR', 'Vortex_Pos', 'Vortex_Neg', 'Volume']
+        momentum_columns = ['Ticker','AO', 'AC', 'CMO', 'CCI', 'CRSI', 'Coppock', 'DPO', 'KST','KST_Signal', 'Momentum', 'RSI','ROC', 'Stochastic_%K', 'Stochastic_%D', 'Stochastic_RSI', 'TRIX', 'TSI','TSI_Signal', 'Ultimate_Oscillator']
+        volume_columns = ['Ticker','AD', 'BoP', 'CMF', 'CO', 'EMV', 'EFI', 'KVO','KVO_Signal', 'MFI', 'Net_Volume','OBV', 'PVT', 'VWAP','VWMA', 'VO','VPFR','VPVR', 'Vortex_Pos', 'Vortex_Neg', 'Volume']
         volatility_columns = ['Ticker','ATR','BB_%B', 'BB_Width', 'Chaikin_Volatility', 'Choppiness_Index', 'Hist_Vol_Annualized', 'Mass_Index', 'RVI', 'Standard_Deviation','Vol_CtC','Vol_ZtC','Vol_OHLC','Vol_Index']
         support_resistance_columns = ['Ticker', 'Close','Pivot_Point', 'Resistance_1', 'Support_1', 'Resistance_2', 'Support_2', 'Resistance_3', 'Support_3','Fractal_Up','Fractal_Down']
-        
+        statitical_columns=['Ticker','Correlation_Coefficient','Log_Correlation','Linear_Regression_Curve','Linear_Regression_Slope','Standard_Error','Standard_Error_Band_Upper','Standard_Error_Band_Lower']
+        other_columns = ['Ticker','Advance_Decline', 'Chop_Zone', 'Chande_Kroll_Stop_Long', 'Chande_Kroll_Stop_Short','Fisher_Transform', 'Fisher_Transform_Signal', 'Median_Price', 
+            'Relative_Vigor_Index', 'SMI_Ergodic', 'SMI_Ergodic_Signal', 'Spread', 'Typical_Price', 'Williams_%R', 'Williams_Alligator_Jaw', 'Williams_Alligator_Teeth', 'Williams_Alligator_Lips', 'ZigZag']
+
         st.title("Stocks Based on Selected Strategy")
         st.write(f"Stocks with {submenu} signal in the last 5 days:")
 
@@ -716,8 +1142,14 @@ def stock_screener_app():
         st.subheader("Support and Resistance Levels")
         st.dataframe(df_signals[support_resistance_columns])
 
+        st.subheader("Statisical Indicators")
+        st.dataframe(df_signals[statitical_columns])
+
+        st.subheader("Other Indicators")
+        st.dataframe(df_signals[other_columns])
+
         st.subheader("Scoring System")
-        st.dataframe(df_signals[['Ticker', 'Volume_Score', 'Trend_Score', 'Momentum_Score', 'Volatility_Score', 'Support_Resistance_Score', 'Overall_Score']])
+        st.dataframe(df_signals[['Ticker','Overall_Score','Trend_Score', 'Momentum_Score', 'Volume_Score','Volatility_Score', 'Support_Resistance_Score', 'Statistical_Score']])
 
         # Dropdown for stock selection
         st.sidebar.subheader("Interactive Plots")
@@ -726,10 +1158,14 @@ def stock_screener_app():
         # Define technical indicator categories
         indicator_groups = {
             "Trend Indicators": ['ALMA','Aroon_Up', 'Aroon_Down','ADX', 'BB_High', 'SMA_20','BB_Low', 'DEMA', 'Envelope_High', 'Envelope_Low', 'GMMA_Short', 'GMMA_Long', 'HMA', 'Ichimoku_Tenkan', 'Ichimoku_Kijun', 'Ichimoku_Senkou_Span_A', 'Ichimoku_Senkou_Span_B', 'KC_High', 'KC_Low', 'LSMA','EMA_20','MACD', 'MACD_signal', 'MACD_hist', 'Parabolic_SAR', 'SuperTrend','MAC_Upper','MAC_Lower','Price_Channel_Upper','Price_Channel_Lower','TEMA_20'],
-            "Momentum Indicators": ['AO', 'AC', 'CMO', 'CCI', 'CRSI', 'Coppock', 'DPO', 'KST', 'Momentum', 'RSI','ROC', 'Stochastic_%K', 'Stochastic_%D', 'Stochastic_RSI', 'TRIX', 'TSI', 'Ultimate_Oscillator'],
-            "Volume Indicators": ['AD', 'BoP', 'CMF', 'CO', 'EMV', 'EFI', 'KVO', 'MFI', 'Net_Volume','OBV', 'PVT', 'VWAP','VWMA', 'VO','VPFR','VPVR', 'Vortex_Pos', 'Vortex_Neg', 'Volume'],
+            "Momentum Indicators": ['AO', 'AC', 'CMO', 'CCI', 'CRSI', 'Coppock', 'DPO', 'KST','KST_Signal', 'Momentum', 'RSI','ROC', 'Stochastic_%K', 'Stochastic_%D', 'Stochastic_RSI', 'TRIX', 'TSI','TSI_Signal', 'Ultimate_Oscillator'],
+            "Volume Indicators": ['AD', 'BoP', 'CMF', 'CO', 'EMV', 'EFI', 'KVO','KVO_Signal', 'MFI', 'Net_Volume','OBV', 'PVT', 'VWAP','VWMA', 'VO','VPFR','VPVR', 'Vortex_Pos', 'Vortex_Neg', 'Volume'],
             "Volatility Indicators": ['ATR','BB_%B', 'BB_Width', 'Chaikin_Volatility', 'Choppiness_Index', 'Hist_Vol_Annualized', 'Mass_Index', 'RVI', 'Standard_Deviation','Vol_CtC','Vol_ZtC','Vol_OHLC','Vol_Index'],
-            "Support & Resistance Indicators": ['Pivot_Point', 'Resistance_1', 'Support_1', 'Resistance_2', 'Support_2', 'Resistance_3', 'Support_3','Fractal_Up','Fractal_Down']
+            "Support & Resistance Indicators": ['Pivot_Point', 'Resistance_1', 'Support_1', 'Resistance_2', 'Support_2', 'Resistance_3', 'Support_3','Fractal_Up','Fractal_Down'],
+            "Statistical Indicators": ['Correlation_Coefficient','Log_Correlation','Linear_Regression_Curve','Linear_Regression_Slope','Standard_Error','Standard_Error_Band_Upper','Standard_Error_Band_Lower'],
+            "Other Indicators": ['Advance_Decline', 'Chop_Zone', 'Chande_Kroll_Stop_Long', 'Chande_Kroll_Stop_Short','Fisher_Transform', 'Fisher_Transform_Signal', 'Median_Price', 
+            'Relative_Vigor_Index', 'SMI_Ergodic', 'SMI_Ergodic_Signal', 'Spread', 'Typical_Price', 'Williams_%R', 'Williams_Alligator_Jaw', 'Williams_Alligator_Teeth', 'Williams_Alligator_Lips', 'ZigZag']
+
         }
         # Create multiselect options for each indicator group
         selected_indicators = []
