@@ -8,15 +8,14 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.stats import linregress
 from newsapi.newsapi_client import NewsApiClient
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-import nltk
+
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import requests
 
 import plotly.express as px
 
-nltk.download('vader_lexicon')
+
 
 
 
