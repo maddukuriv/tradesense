@@ -14,6 +14,7 @@ from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import requests
 
+import nltk
 import plotly.express as px
 
 nltk.download('vader_lexicon')
