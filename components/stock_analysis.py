@@ -13,7 +13,7 @@ import nltk
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import requests
-
+from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
 import nltk
 import plotly.express as px
 
@@ -27,10 +27,27 @@ analyzer = SentimentIntensityAnalyzer()
 
 # Helper functions
 
+# Function to get company names from tickers
+def get_company_name(ticker):
+    try:
+        company_info = yf.Ticker(ticker)
+        return company_info.info['shortName']
+    except:
+        return ticker  # Return ticker if company name not found
+
+# Generate the ticker to company mapping
+ticker_to_company = {ticker: get_company_name(ticker) for ticker in bse_largecap + bse_midcap+bse_smallcap}
+
+# Convert the ticker_to_company dictionary to a list of company names
+company_names = list(ticker_to_company.values())
+
+
 @st.cache_data(ttl=300)
 def download_data(ticker, start_date, end_date):
     data = yf.download(ticker, start=start_date, end=end_date, interval="1d")
     return data
+
+
 
 # manual technical formaulas
 def atr(high, low, close, window=14):
@@ -2099,10 +2116,17 @@ def sentiment_analysis_section(ticker, start_date, end_date):
         st.write("Invalid ticker symbol.")
 
 
+
 # Main Streamlit App
 def stock_analysis_app():
     st.sidebar.subheader("Stock Analysis")
-    ticker = st.sidebar.text_input('Enter Stock Ticker (e.g., BAJAJFINSV.NS): ', 'BAJAJFINSV.NS')
+
+    # Replace text input with a selectbox for company name auto-suggestion
+    selected_company = st.sidebar.selectbox('Select or Enter Company Name:', company_names)
+
+    # Retrieve the corresponding ticker for the selected company
+    ticker = [ticker for ticker, company in ticker_to_company.items() if company == selected_company][0]
+
     submenu = st.sidebar.selectbox("Select Analysis Type", ["Technical Analysis", "Sentiment Analysis", "Price Forecast"])
     start_date, end_date = st.sidebar.date_input("Start Date", value=datetime.now() - timedelta(days=365)), st.sidebar.date_input("End Date", value=datetime.now() + timedelta(days=1))
 
@@ -2201,7 +2225,6 @@ def stock_analysis_app():
 
     elif submenu == "Price Forecast":
         pass
-
 
 if __name__ == '__main__':
     stock_analysis_app()

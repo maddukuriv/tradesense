@@ -3,22 +3,64 @@ from components.my_portfolio import get_user_id
 from utils.mongodb import watchlists_collection
 import yfinance as yf
 import pandas as pd
-import ta
+
+# Helper function to calculate RSI
+def rsi(series, window=14):
+    delta = series.diff(1)
+    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+    rs = gain / loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+# Helper function to calculate ADX
+def calculate_adx(df):
+    plus_dm = df['High'].diff()
+    minus_dm = df['Low'].diff()
+    plus_dm[plus_dm < 0] = 0
+    minus_dm[minus_dm > 0] = 0
+    tr = pd.concat([df['High'] - df['Low'], 
+                    (df['High'] - df['Close'].shift()).abs(), 
+                    (df['Low'] - df['Close'].shift()).abs()], axis=1).max(axis=1)
+    atr = tr.rolling(window=14).mean()
+    plus_di = 100 * (plus_dm.ewm(alpha=1/14).mean() / atr)
+    minus_di = abs(100 * (minus_dm.ewm(alpha=1/14).mean() / atr))
+    adx = 100 * (abs(plus_di - minus_di) / (plus_di + minus_di)).ewm(alpha=1/14).mean()
+    return adx, plus_di, minus_di
+
+# Helper function to calculate Bollinger Bands
+def calculate_bollinger_bands(df, window=20):
+    df['BB_Middle'] = df['Close'].rolling(window=window).mean()
+    df['BB_Std'] = df['Close'].rolling(window=window).std()
+    df['Bollinger_High'] = df['BB_Middle'] + (df['BB_Std'] * 2)
+    df['Bollinger_Low'] = df['BB_Middle'] - (df['BB_Std'] * 2)
+    return df['Bollinger_High'], df['Bollinger_Low']
 
 # Helper function to calculate indicators
 def calculate_indicators(data):
     try:
-        data['5_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=5)
-        data['15_day_EMA'] = ta.trend.ema_indicator(data['Close'], window=15)
-        macd = ta.trend.MACD(data['Close'])
-        data['MACD'] = macd.macd()
-        data['MACD_Hist'] = macd.macd_diff()
-        data['RSI'] = ta.momentum.rsi(data['Close'])
-        data['ADX'] = ta.trend.adx(data['High'], data['Low'], data['Close'])
-        bollinger = ta.volatility.BollingerBands(data['Close'])
-        data['Bollinger_High'] = bollinger.bollinger_hband()
-        data['Bollinger_Low'] = bollinger.bollinger_lband()
+        data['5_day_EMA'] = data['Close'].ewm(span=5, adjust=False).mean()
+        data['15_day_EMA'] = data['Close'].ewm(span=15, adjust=False).mean()
+        
+        # MACD calculations
+        exp1 = data['Close'].ewm(span=12, adjust=False).mean()
+        exp2 = data['Close'].ewm(span=26, adjust=False).mean()
+        data['MACD'] = exp1 - exp2
+        data['MACD_Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
+        data['MACD_Hist'] = data['MACD'] - data['MACD_Signal']
+
+        # Manual RSI calculation
+        data['RSI'] = rsi(data['Close'])
+
+        # Manual ADX calculation
+        data['ADX'], data['+DI'], data['-DI'] = calculate_adx(data)
+
+        # Manual Bollinger Bands calculation
+        data['Bollinger_High'], data['Bollinger_Low'] = calculate_bollinger_bands(data)
+
+        # Volume MA calculation
         data['20_day_vol_MA'] = data['Volume'].rolling(window=20).mean()
+        
         return data
     except Exception as e:
         raise ValueError(f"Error calculating indicators: {str(e)}")
@@ -80,6 +122,7 @@ def display_watchlist():
                     '5_day_EMA': latest_data['5_day_EMA'],
                     '15_day_EMA': latest_data['15_day_EMA'],
                     'MACD': latest_data['MACD'],
+                    'MACD_Signal': latest_data['MACD_Signal'],
                     'MACD_Hist': latest_data['MACD_Hist'],
                     'RSI': latest_data['RSI'],
                     'ADX': latest_data['ADX'],
@@ -96,8 +139,11 @@ def display_watchlist():
             watchlist_df.reset_index(inplace=True)
             watchlist_df.rename(columns={'index': 'Ticker'}, inplace=True)
 
+            # Use Styler to format the DataFrame
+            styled_df = watchlist_df.style.format(precision=2)
+
             st.write("Your Watchlist:")
-            st.dataframe(watchlist_df.style.set_properties(**{'text-align': 'center'}).set_table_styles(
+            st.dataframe(styled_df.set_properties(**{'text-align': 'center'}).set_table_styles(
                 [{'selector': 'th', 'props': [('text-align', 'center')]}]
             ))
         else:
