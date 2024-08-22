@@ -203,19 +203,28 @@ def stock_screener_app():
         df['Hist_Vol_Annualized'] = df['Hist_Vol'] * np.sqrt(window)
         
         return df['Hist_Vol_Annualized']    
+    
 
     def williams_fractal(df):
         def fractal_high(df, n):
-            return df['High'][(df['High'] == df['High'].rolling(window=n, center=True).max()) & (df['High'].shift(-n // 2) < df['High']) & (df['High'].shift(n // 2) < df['High'])]
+            return df['High'][(df['High'] == df['High'].rolling(window=n, center=True).max()) &
+                            (df['High'] > df['High'].shift(1)) &
+                            (df['High'] > df['High'].shift(2)) &
+                            (df['High'] > df['High'].shift(-1)) &
+                            (df['High'] > df['High'].shift(-2))]
 
         def fractal_low(df, n):
-            return df['Low'][(df['Low'] == df['Low'].rolling(window=n, center=True).min()) & (df['Low'].shift(-n // 2) > df['Low']) & (df['Low'].shift(n // 2) > df['Low'])]
+            return df['Low'][(df['Low'] == df['Low'].rolling(window=n, center=True).min()) &
+                            (df['Low'] < df['Low'].shift(1)) &
+                            (df['Low'] < df['Low'].shift(2)) &
+                            (df['Low'] < df['Low'].shift(-1)) &
+                            (df['Low'] < df['Low'].shift(-2))]
 
         n = 5  # Number of periods, typical value for Williams Fractal
         df['Fractal_Up'] = fractal_high(df, n)
         df['Fractal_Down'] = fractal_low(df, n)
 
-        # Fill NaNs with 0 for convenience, indicating no fractal at these points
+        # Replace NaN with 0, indicating no fractal at these points
         df['Fractal_Up'] = df['Fractal_Up'].fillna(0)
         df['Fractal_Down'] = df['Fractal_Down'].fillna(0)
 
@@ -504,7 +513,7 @@ def stock_screener_app():
         df['BB_Width'] = (df['BB_High'] - df['BB_Low']) / df['Close']
         df['Chaikin_Volatility'] = (df['High'] - df['Low']).ewm(span=10, adjust=False).mean()
         df['Choppiness_Index'] = np.log10((df['High'] - df['Low']).rolling(window=14).sum() / (df['High'].rolling(window=14).max() - df['Low'].rolling(window=14).min())) * 100
-        df['Hist_Vol_Annualized'] = historical_volatility(df, window=252)
+        df['Hist_Vol_Annualized'] = historical_volatility(df)
         df['Mass_Index'] = (df['High'] - df['Low']).rolling(window=25).sum() / (df['High'] - df['Low']).rolling(window=9).sum()
         df['RVI'] = df['Close'].rolling(window=10).mean() / df['Close'].rolling(window=10).std()
         df['Standard_Deviation'] = df['Close'].rolling(window=20).std()
@@ -1070,11 +1079,11 @@ def stock_screener_app():
         # Define weightages for each category
         weightage = {
             'Volume_Score': 0.20,             # 15% weight
-            'Trend_Score': 0.25,              # 20% weight
-            'Momentum_Score': 0.25,           # 20% weight
+            'Trend_Score': 0.25,              # 25% weight
+            'Momentum_Score': 0.25,           # 25% weight
             'Volatility_Score': 0.15,         # 15% weight
             'Support_Resistance_Score': 0.10, # 10% weight
-            'Statistical_Score': 0.05,        # 10% weight
+            'Statistical_Score': 0.05,        # 5% weight
            
         }
 
@@ -1112,14 +1121,13 @@ def stock_screener_app():
     if not df_signals.empty:
         df_signals = add_scoring(df_signals)
         table1_columns = ['Ticker', 'Date of Occurrence', 'Company Name', 'Sector', 'Industry', 'Close', 'Volume']
-        trend_columns = ['Ticker', 'Close','ALMA','Aroon_Up', 'Aroon_Down','ADX', 'BB_High', 'SMA_20','BB_Low', 'DEMA', 'Envelope_High', 'Envelope_Low', 'GMMA_Short', 'GMMA_Long', 'HMA', 'Ichimoku_Tenkan', 'Ichimoku_Kijun', 'Ichimoku_Senkou_Span_A', 'Ichimoku_Senkou_Span_B', 'KC_High', 'KC_Low', 'LSMA','EMA_20','MACD', 'MACD_signal', 'MACD_hist', 'Parabolic_SAR', 'SuperTrend','MAC_Upper','MAC_Lower','Price_Channel_Upper','Price_Channel_Lower','TEMA_20']
-        momentum_columns = ['Ticker','AO', 'AC', 'CMO', 'CCI', 'CRSI', 'Coppock', 'DPO', 'KST','KST_Signal', 'Momentum', 'RSI','ROC', 'Stochastic_%K', 'Stochastic_%D', 'Stochastic_RSI', 'TRIX', 'TSI','TSI_Signal', 'Ultimate_Oscillator']
-        volume_columns = ['Ticker','AD', 'BoP', 'CMF', 'CO', 'EMV', 'EFI', 'KVO','KVO_Signal', 'MFI', 'Net_Volume','OBV', 'PVT', 'VWAP','VWMA', 'VO','VPFR','VPVR', 'Vortex_Pos', 'Vortex_Neg', 'Volume']
-        volatility_columns = ['Ticker','ATR','BB_%B', 'BB_Width', 'Chaikin_Volatility', 'Choppiness_Index', 'Hist_Vol_Annualized', 'Mass_Index', 'RVI', 'Standard_Deviation','Vol_CtC','Vol_ZtC','Vol_OHLC','Vol_Index']
-        support_resistance_columns = ['Ticker', 'Close','Pivot_Point', 'Resistance_1', 'Support_1', 'Resistance_2', 'Support_2', 'Resistance_3', 'Support_3','Fractal_Up','Fractal_Down']
-        statitical_columns=['Ticker','Correlation_Coefficient','Log_Correlation','Linear_Regression_Curve','Linear_Regression_Slope','Standard_Error','Standard_Error_Band_Upper','Standard_Error_Band_Lower']
-        other_columns = ['Ticker','Advance_Decline', 'Chop_Zone', 'Chande_Kroll_Stop_Long', 'Chande_Kroll_Stop_Short','Fisher_Transform', 'Fisher_Transform_Signal', 'Median_Price', 
-            'Relative_Vigor_Index', 'SMI_Ergodic', 'SMI_Ergodic_Signal', 'Spread', 'Typical_Price', 'Williams_%R', 'Williams_Alligator_Jaw', 'Williams_Alligator_Teeth', 'Williams_Alligator_Lips', 'ZigZag']
+        trend_columns = ['Ticker', 'Close','ALMA','Aroon_Up', 'Aroon_Down','ADX', 'BB_High', 'SMA_20','BB_Low', 'DEMA', 'Envelope_High', 'Envelope_Low', 'GMMA_Short', 'GMMA_Long', 'HMA', 'Ichimoku_Tenkan', 'Ichimoku_Kijun', 'Ichimoku_Senkou_Span_A', 'Ichimoku_Senkou_Span_B', 'KC_High', 'KC_Low', 'LSMA','EMA_20','MACD', 'MACD_signal', 'MACD_hist', 'Parabolic_SAR', 'SuperTrend','MAC_Upper','MAC_Lower','Price_Channel_Upper','Price_Channel_Lower','TEMA_20','Advance_Decline','Chande_Kroll_Stop_Long', 'Chande_Kroll_Stop_Short','Williams_Alligator_Jaw', 'Williams_Alligator_Teeth', 'Williams_Alligator_Lips']
+        momentum_columns = ['Ticker','AO', 'AC', 'CMO', 'CCI', 'CRSI', 'Coppock', 'DPO', 'KST','KST_Signal', 'Momentum', 'RSI','ROC', 'Stochastic_%K', 'Stochastic_%D', 'Stochastic_RSI', 'TRIX', 'TSI','TSI_Signal', 'Ultimate_Oscillator','Relative_Vigor_Index', 'SMI_Ergodic', 'SMI_Ergodic_Signal','Fisher_Transform', 'Fisher_Transform_Signal', 'Williams_%R']
+        volume_columns = ['Ticker','AD', 'BoP', 'CMF', 'CO', 'EMV', 'EFI', 'KVO','KVO_Signal', 'MFI', 'Net_Volume','OBV', 'PVT', 'VWAP','VWMA', 'VO','VPFR','VPVR', 'Vortex_Pos', 'Vortex_Neg', 'Volume', 'Spread']
+        volatility_columns = ['Ticker','ATR','BB_%B', 'BB_Width', 'Chaikin_Volatility', 'Choppiness_Index', 'Hist_Vol_Annualized', 'Mass_Index', 'RVI', 'Standard_Deviation','Vol_CtC','Vol_ZtC','Vol_OHLC','Vol_Index','Chop_Zone' , 'ZigZag']
+        support_resistance_columns = ['Ticker', 'Close','Pivot_Point', 'Resistance_1', 'Support_1', 'Resistance_2', 'Support_2', 'Resistance_3', 'Support_3','Fractal_Up','Fractal_Down','Typical_Price']
+        statitical_columns=['Ticker','Correlation_Coefficient','Log_Correlation','Linear_Regression_Curve','Linear_Regression_Slope','Standard_Error','Standard_Error_Band_Upper','Standard_Error_Band_Lower', 'Median_Price']
+        
 
         st.title("Stocks Based on Selected Strategy")
         st.write(f"Stocks with {submenu} signal in the last 5 days:")
@@ -1145,10 +1153,7 @@ def stock_screener_app():
         st.subheader("Statisical Indicators")
         st.dataframe(df_signals[statitical_columns])
 
-        st.subheader("Other Indicators")
-        st.dataframe(df_signals[other_columns])
-
-        st.subheader("Scoring System")
+        st.subheader("Stock Comparision")
         st.dataframe(df_signals[['Ticker','Overall_Score','Trend_Score', 'Momentum_Score', 'Volume_Score','Volatility_Score', 'Support_Resistance_Score', 'Statistical_Score']])
 
         # Dropdown for stock selection
@@ -1157,15 +1162,13 @@ def stock_screener_app():
 
         # Define technical indicator categories
         indicator_groups = {
-            "Trend Indicators": ['ALMA','Aroon_Up', 'Aroon_Down','ADX', 'BB_High', 'SMA_20','BB_Low', 'DEMA', 'Envelope_High', 'Envelope_Low', 'GMMA_Short', 'GMMA_Long', 'HMA', 'Ichimoku_Tenkan', 'Ichimoku_Kijun', 'Ichimoku_Senkou_Span_A', 'Ichimoku_Senkou_Span_B', 'KC_High', 'KC_Low', 'LSMA','EMA_20','MACD', 'MACD_signal', 'MACD_hist', 'Parabolic_SAR', 'SuperTrend','MAC_Upper','MAC_Lower','Price_Channel_Upper','Price_Channel_Lower','TEMA_20'],
-            "Momentum Indicators": ['AO', 'AC', 'CMO', 'CCI', 'CRSI', 'Coppock', 'DPO', 'KST','KST_Signal', 'Momentum', 'RSI','ROC', 'Stochastic_%K', 'Stochastic_%D', 'Stochastic_RSI', 'TRIX', 'TSI','TSI_Signal', 'Ultimate_Oscillator'],
-            "Volume Indicators": ['AD', 'BoP', 'CMF', 'CO', 'EMV', 'EFI', 'KVO','KVO_Signal', 'MFI', 'Net_Volume','OBV', 'PVT', 'VWAP','VWMA', 'VO','VPFR','VPVR', 'Vortex_Pos', 'Vortex_Neg', 'Volume'],
-            "Volatility Indicators": ['ATR','BB_%B', 'BB_Width', 'Chaikin_Volatility', 'Choppiness_Index', 'Hist_Vol_Annualized', 'Mass_Index', 'RVI', 'Standard_Deviation','Vol_CtC','Vol_ZtC','Vol_OHLC','Vol_Index'],
-            "Support & Resistance Indicators": ['Pivot_Point', 'Resistance_1', 'Support_1', 'Resistance_2', 'Support_2', 'Resistance_3', 'Support_3','Fractal_Up','Fractal_Down'],
-            "Statistical Indicators": ['Correlation_Coefficient','Log_Correlation','Linear_Regression_Curve','Linear_Regression_Slope','Standard_Error','Standard_Error_Band_Upper','Standard_Error_Band_Lower'],
-            "Other Indicators": ['Advance_Decline', 'Chop_Zone', 'Chande_Kroll_Stop_Long', 'Chande_Kroll_Stop_Short','Fisher_Transform', 'Fisher_Transform_Signal', 'Median_Price', 
-            'Relative_Vigor_Index', 'SMI_Ergodic', 'SMI_Ergodic_Signal', 'Spread', 'Typical_Price', 'Williams_%R', 'Williams_Alligator_Jaw', 'Williams_Alligator_Teeth', 'Williams_Alligator_Lips', 'ZigZag']
-
+            "Trend Indicators": ['ALMA','Aroon_Up', 'Aroon_Down','ADX', 'BB_High', 'SMA_20','BB_Low', 'DEMA', 'Envelope_High', 'Envelope_Low', 'GMMA_Short', 'GMMA_Long', 'HMA', 'Ichimoku_Tenkan', 'Ichimoku_Kijun', 'Ichimoku_Senkou_Span_A', 'Ichimoku_Senkou_Span_B', 'KC_High', 'KC_Low', 'LSMA','EMA_20','MACD', 'MACD_signal', 'MACD_hist', 'Parabolic_SAR', 'SuperTrend','MAC_Upper','MAC_Lower','Price_Channel_Upper','Price_Channel_Lower','TEMA_20','Advance_Decline','Chande_Kroll_Stop_Long', 'Chande_Kroll_Stop_Short','Williams_Alligator_Jaw', 'Williams_Alligator_Teeth', 'Williams_Alligator_Lips'],
+            "Momentum Indicators": ['AO', 'AC', 'CMO', 'CCI', 'CRSI', 'Coppock', 'DPO', 'KST','KST_Signal', 'Momentum', 'RSI','ROC', 'Stochastic_%K', 'Stochastic_%D', 'Stochastic_RSI', 'TRIX', 'TSI','TSI_Signal', 'Ultimate_Oscillator','Relative_Vigor_Index', 'SMI_Ergodic', 'SMI_Ergodic_Signal','Fisher_Transform', 'Fisher_Transform_Signal', 'Williams_%R'],
+            "Volume Indicators": ['AD', 'BoP', 'CMF', 'CO', 'EMV', 'EFI', 'KVO','KVO_Signal', 'MFI', 'Net_Volume','OBV', 'PVT', 'VWAP','VWMA', 'VO','VPFR','VPVR', 'Vortex_Pos', 'Vortex_Neg', 'Volume', 'Spread'],
+            "Volatility Indicators": ['ATR','BB_%B', 'BB_Width', 'Chaikin_Volatility', 'Choppiness_Index', 'Hist_Vol_Annualized', 'Mass_Index', 'RVI', 'Standard_Deviation','Vol_CtC','Vol_ZtC','Vol_OHLC','Vol_Index','Chop_Zone' , 'ZigZag'],
+            "Support & Resistance Indicators": ['Pivot_Point', 'Resistance_1', 'Support_1', 'Resistance_2', 'Support_2', 'Resistance_3', 'Support_3','Fractal_Up','Fractal_Down','Typical_Price'],
+            "Statistical Indicators": ['Correlation_Coefficient','Log_Correlation','Linear_Regression_Curve','Linear_Regression_Slope','Standard_Error','Standard_Error_Band_Upper','Standard_Error_Band_Lower', 'Median_Price']
+           
         }
         # Create multiselect options for each indicator group
         selected_indicators = []
@@ -1228,7 +1231,7 @@ def stock_screener_app():
                 'xanchor': 'center',
                 'yanchor': 'top'
             },
-            height=800,
+            height=500,
             margin=dict(t=100, b=10, l=50, r=50),
             yaxis=dict(title='Price'),
             yaxis2=dict(title='Indicators', overlaying='y', side='right'),
@@ -1252,7 +1255,7 @@ def stock_screener_app():
 
         fig.update_layout(
             hovermode='x unified',
-            hoverlabel=dict(bgcolor="light blue", font_size=16, font_family="Rockwell")
+            hoverlabel=dict(bgcolor="light blue", font_size=11, font_family="Rockwell")
         )
 
         st.plotly_chart(fig)
