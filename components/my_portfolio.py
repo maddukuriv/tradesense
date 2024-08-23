@@ -4,11 +4,14 @@ import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
 
+# Helper function to get user ID from email
 def get_user_id(email):
     user = users_collection.find_one({"email": email})
     return user['_id'] if user else None
 
+# Helper function to get company info
 def get_company_info(ticker):
     try:
         stock = yf.Ticker(ticker)
@@ -16,6 +19,19 @@ def get_company_info(ticker):
         return info.get('longName', 'N/A'), info.get('sector', 'N/A'), info.get('industry', 'N/A')
     except Exception as e:
         return 'N/A', 'N/A', 'N/A'
+
+# Function to get company names from tickers
+def get_company_name(ticker):
+    try:
+        stock = yf.Ticker(ticker)
+        return stock.info.get('shortName', ticker)
+    except:
+        return ticker  # Return ticker if company name not found
+
+# Assuming a list of tickers (this could be from an index or predefined list)
+all_tickers = bse_largecap + bse_smallcap + bse_midcap
+ticker_to_company = {ticker: get_company_name(ticker) for ticker in all_tickers}
+company_names = list(ticker_to_company.values())
 
 # Portfolio feature
 def display_portfolio():
@@ -25,28 +41,29 @@ def display_portfolio():
 
     # Add new stock to portfolio
     st.sidebar.subheader("Add to Portfolio")
-    new_ticker = st.sidebar.text_input("Ticker Symbol")
+    selected_company = st.sidebar.selectbox('Select or Enter Company Name:', company_names)
+    ticker = [ticker for ticker, company in ticker_to_company.items() if company == selected_company][0]
     shares = st.sidebar.number_input("Number of Shares", min_value=0.0, step=0.01)
     bought_price = st.sidebar.number_input("Bought Price per Share", min_value=0.0, step=0.01)
     if st.sidebar.button("Add to Portfolio"):
         try:
-            current_data = yf.download(new_ticker, period='1d')
+            current_data = yf.download(ticker, period='1d')
             if current_data.empty:
                 raise ValueError("Ticker not found")
 
-            if not portfolios_collection.find_one({"user_id": user_id, "ticker": new_ticker}):
+            if not portfolios_collection.find_one({"user_id": user_id, "ticker": ticker}):
                 portfolios_collection.insert_one({
                     "user_id": user_id,
-                    "ticker": new_ticker,
+                    "ticker": ticker,
                     "shares": shares,
                     "bought_price": bought_price,
                     "date_added": pd.Timestamp.now()
                 })
-                st.success(f"{new_ticker} added to your portfolio!")
+                st.success(f"{selected_company} ({ticker}) added to your portfolio!")
             else:
-                st.warning(f"{new_ticker} is already in your portfolio.")
+                st.warning(f"{selected_company} ({ticker}) is already in your portfolio.")
         except Exception as e:
-            st.error(f"Error adding ticker: {e}")
+            st.error(f"Error adding stock: {e}")
 
     # Display portfolio
     if portfolio:
@@ -55,6 +72,7 @@ def display_portfolio():
         current_values = []
         sectors = []
         industries = []
+        ticker_to_name_map = {}
         for entry in portfolio:
             try:
                 current_data = yf.download(entry['ticker'], period='1d')
@@ -83,6 +101,7 @@ def display_portfolio():
                 current_values.append(current_value)
                 sectors.append(sector)
                 industries.append(industry)
+                ticker_to_name_map[entry['ticker']] = company_name
             except Exception as e:
                 st.error(f"Error retrieving data for {entry['ticker']}: {e}")
 
@@ -94,7 +113,7 @@ def display_portfolio():
         col1, col2 = st.columns(2)
 
         with col1:
-            labels = portfolio_df['Ticker']
+            labels = portfolio_df['Company Name']
             values = portfolio_df['Current Value']
             fig1 = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.3)])
             fig1.update_layout(title_text="Portfolio Distribution")
@@ -102,17 +121,17 @@ def display_portfolio():
 
         with col2:
             fig2 = go.Figure()
-            fig2.add_trace(go.Bar(x=portfolio_df['Ticker'], y=portfolio_df['P&L (%)']))
-            fig2.update_layout(title_text='Profit Percentage of Each Stock', xaxis_title='Ticker', yaxis_title='P&L (%)')
+            fig2.add_trace(go.Bar(x=portfolio_df['Company Name'], y=portfolio_df['P&L (%)']))
+            fig2.update_layout(title_text='Profit Percentage of Each Stock', xaxis_title='Company', yaxis_title='P&L (%)')
             st.plotly_chart(fig2)
 
         col3, col4 = st.columns(2)
 
         with col3:
             fig3 = go.Figure()
-            fig3.add_trace(go.Bar(x=portfolio_df['Ticker'], y=portfolio_df['Invested Value'], name='Invested Value'))
-            fig3.add_trace(go.Bar(x=portfolio_df['Ticker'], y=portfolio_df['Current Value'], name='Current Value'))
-            fig3.update_layout(barmode='group', title_text='Invested Value vs Current Value', xaxis_title='Ticker', yaxis_title='Value')
+            fig3.add_trace(go.Bar(x=portfolio_df['Company Name'], y=portfolio_df['Invested Value'], name='Invested Value'))
+            fig3.add_trace(go.Bar(x=portfolio_df['Company Name'], y=portfolio_df['Current Value'], name='Current Value'))
+            fig3.update_layout(barmode='group', title_text='Invested Value vs Current Value', xaxis_title='Company', yaxis_title='Value')
             st.plotly_chart(fig3)
 
         with col4:
@@ -135,10 +154,36 @@ def display_portfolio():
             fig6 = px.histogram(total_values_df, x='Type', y='Value', title='Total Invested Value vs Total Current Value')
             st.plotly_chart(fig6)
 
-        ticker_to_remove = st.sidebar.selectbox("Select a ticker to remove", [entry['ticker'] for entry in portfolio])
+        # Edit stock in portfolio
+        st.sidebar.subheader("Edit Portfolio")
+        company_names_in_portfolio = [ticker_to_name_map[entry['ticker']] for entry in portfolio]
+        company_to_edit = st.sidebar.selectbox("Select a company to edit", company_names_in_portfolio)
+        ticker_to_edit = [ticker for ticker, name in ticker_to_name_map.items() if name == company_to_edit][0]
+        
+        # Fetch current values for the selected company
+        entry_to_edit = next(item for item in portfolio if item["ticker"] == ticker_to_edit)
+        current_shares = entry_to_edit['shares']
+        current_bought_price = entry_to_edit['bought_price']
+        
+        # Display current values and allow editing
+        new_shares = st.sidebar.number_input("Number of Shares", value=current_shares, min_value=0.0, step=0.01)
+        new_bought_price = st.sidebar.number_input("Bought Price per Share", value=current_bought_price, min_value=0.0, step=0.01)
+
+        if st.sidebar.button("Save Changes"):
+            portfolios_collection.update_one(
+                {"user_id": user_id, "ticker": ticker_to_edit},
+                {"$set": {"shares": new_shares, "bought_price": new_bought_price}}
+            )
+            st.success(f"{company_to_edit} ({ticker_to_edit}) updated in your portfolio.")
+            st.experimental_rerun()  # Refresh the app to reflect changes
+
+        # Remove stock by company name
+        st.sidebar.subheader("Remove from Portfolio")
+        company_to_remove = st.sidebar.selectbox("Select a company to remove", company_names_in_portfolio)
+        ticker_to_remove = [ticker for ticker, name in ticker_to_name_map.items() if name == company_to_remove][0]
         if st.sidebar.button("Remove from Portfolio"):
             portfolios_collection.delete_one({"user_id": user_id, "ticker": ticker_to_remove})
-            st.success(f"{ticker_to_remove} removed from your portfolio.")
+            st.success(f"{company_to_remove} removed from your portfolio.")
             st.experimental_rerun()  # Refresh the app to reflect changes
     else:
         st.write("Your portfolio is empty.")

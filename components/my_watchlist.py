@@ -3,6 +3,7 @@ from components.my_portfolio import get_user_id
 from utils.mongodb import watchlists_collection
 import yfinance as yf
 import pandas as pd
+from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
 
 # Helper function to calculate RSI
 def rsi(series, window=14):
@@ -85,28 +86,51 @@ def get_company_info(ticker):
     except Exception as e:
         return 'N/A', 'N/A', 'N/A'
 
+# Function to get company names from tickers
+def get_company_name(ticker):
+    try:
+        company_info = yf.Ticker(ticker)
+        return company_info.info['shortName']
+    except:
+        return ticker  # Return ticker if company name not found
+
+
+
+# Generate the ticker to company mapping
+ticker_to_company = {ticker: get_company_name(ticker) for ticker in bse_largecap + bse_midcap + bse_smallcap}
+
+# Convert the ticker_to_company dictionary to a list of company names
+company_names = list(ticker_to_company.values())
+
+
 # Watchlist feature
 def display_watchlist():
     st.header(f"{st.session_state.username}'s Watchlist")
     user_id = get_user_id(st.session_state.email)
     watchlist = list(watchlists_collection.find({"user_id": user_id}))
 
+    # Replace text input with a selectbox for company name auto-suggestion
+    selected_company = st.sidebar.selectbox('Select or Enter Company Name:', company_names)
+
+    # Retrieve the corresponding ticker for the selected company
+    ticker = [ticker for ticker, company in ticker_to_company.items() if company == selected_company][0]
+
     # Add new ticker to watchlist
-    new_ticker = st.sidebar.text_input("Add a new ticker to your watchlist")
     if st.sidebar.button("Add Ticker"):
         try:
-            fetch_ticker_data(new_ticker)
-            if not watchlists_collection.find_one({"user_id": user_id, "ticker": new_ticker}):
-                watchlists_collection.insert_one({"user_id": user_id, "ticker": new_ticker})
-                st.success(f"{new_ticker} added to your watchlist!")
+            fetch_ticker_data(ticker)
+            if not watchlists_collection.find_one({"user_id": user_id, "ticker": ticker}):
+                watchlists_collection.insert_one({"user_id": user_id, "ticker": ticker})
+                st.success(f"{ticker} ({selected_company}) added to your watchlist!")
             else:
-                st.warning(f"{new_ticker} is already in your watchlist.")
+                st.warning(f"{ticker} ({selected_company}) is already in your watchlist.")
         except ValueError as ve:
             st.error(ve)
 
     # Display watchlist
     if watchlist:
         watchlist_data = {}
+        ticker_to_name_map = {}
         for entry in watchlist:
             ticker = entry['ticker']
             try:
@@ -131,6 +155,7 @@ def display_watchlist():
                     'Volume': latest_data['Volume'],
                     '20_day_vol_MA': latest_data['20_day_vol_MA']
                 }
+                ticker_to_name_map[ticker] = company_name
             except ValueError as ve:
                 st.error(f"Error fetching data for {ticker}: {ve}")
 
@@ -146,15 +171,17 @@ def display_watchlist():
             st.dataframe(styled_df.set_properties(**{'text-align': 'center'}).set_table_styles(
                 [{'selector': 'th', 'props': [('text-align', 'center')]}]
             ))
+
+            # Option to remove ticker from watchlist
+            company_names_in_watchlist = [ticker_to_name_map[entry['ticker']] for entry in watchlist]
+            company_to_remove = st.sidebar.selectbox("Select a company to remove", company_names_in_watchlist)
+            ticker_to_remove = [ticker for ticker, name in ticker_to_name_map.items() if name == company_to_remove][0]
+            if st.sidebar.button("Remove Ticker"):
+                watchlists_collection.delete_one({"user_id": user_id, "ticker": ticker_to_remove})
+                st.success(f"{company_to_remove} removed from your watchlist.")
+                st.experimental_rerun()  # Refresh the app to reflect changes
         else:
             st.write("No valid data found for the tickers in your watchlist.")
-
-        # Option to remove ticker from watchlist
-        ticker_to_remove = st.sidebar.selectbox("Select a ticker to remove", [entry['ticker'] for entry in watchlist])
-        if st.sidebar.button("Remove Ticker"):
-            watchlists_collection.delete_one({"user_id": user_id, "ticker": ticker_to_remove})
-            st.success(f"{ticker_to_remove} removed from your watchlist.")
-            st.experimental_rerun()  # Refresh the app to reflect changes
     else:
         st.write("Your watchlist is empty.")
 
