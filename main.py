@@ -24,6 +24,8 @@ if 'user_id' not in st.session_state:
     st.session_state.user_id = None
 if 'identity_verified' not in st.session_state:
     st.session_state.identity_verified = False
+if 'is_admin' not in st.session_state:
+    st.session_state.is_admin = False  # Default to non-admin until proven otherwise
 
 # Logout function
 def logout():
@@ -36,8 +38,20 @@ def logout():
 # Main menu function
 def main_menu():
     st.subheader("Main Menu")
-    menu_options = [f"{st.session_state.username}'s Portfolio", f"{st.session_state.username}'s Watchlist", "Stock Screener", "Stock Analysis",
-                    "Markets", "My Account", "Database Admin Page"]
+    # Define the options based on admin status
+    menu_options = [
+        f"{st.session_state.username}'s Portfolio",
+        f"{st.session_state.username}'s Watchlist",
+        "Stock Screener",
+        "Stock Analysis",
+        "Markets",
+        "My Account"
+    ]
+
+    # Add Database Admin Page only if the user is an admin
+    if st.session_state.is_admin:
+        menu_options.append("Database Admin Page")
+
     choice = st.selectbox("Select an option", menu_options)
     return choice
 
@@ -78,5 +92,7 @@ else:
             stock_screener.stock_screener_app()
         elif choice == "Stock Analysis":
             stock_analysis.stock_analysis_app()
-        elif choice == "Database Admin Page":
+        elif choice == "Database Admin Page" and st.session_state.is_admin:
             admin.display_tables()
+        else:
+            st.error("You don't have permission to access this page.")
