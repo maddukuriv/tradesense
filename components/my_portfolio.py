@@ -29,7 +29,7 @@ def get_company_name(ticker):
         return ticker  # Return ticker if company name not found
 
 # Assuming a list of tickers (this could be from an index or predefined list)
-all_tickers = bse_largecap + bse_smallcap + bse_midcap,
+all_tickers = bse_largecap + bse_smallcap + bse_midcap
 ticker_to_company = {ticker: get_company_name(ticker) for ticker in all_tickers}
 company_names = list(ticker_to_company.values())
 
