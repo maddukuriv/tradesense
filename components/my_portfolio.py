@@ -5,7 +5,7 @@ import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import timedelta, datetime
+from datetime import datetime
 
 # Helper function to get user ID from email
 def get_user_id(email):
@@ -41,7 +41,7 @@ def display_portfolio():
 
     # Refresh portfolio data
     portfolio = list(portfolios_collection.find({"user_id": user_id}))
-    print(portfolio)
+
     # Add new stock to portfolio
     st.sidebar.subheader("Add to Portfolio")
     selected_company = st.sidebar.selectbox('Select or Enter Company Name:', company_names)
@@ -129,7 +129,7 @@ def display_portfolio():
         # Handle deleted rows
         if len(edited_portfolio_df) < len(portfolio_df):
             deleted_rows = portfolio_df[~portfolio_df.index.isin(edited_portfolio_df.index)]
-            for index, row in deleted_rows.iterrows():
+            for _, row in deleted_rows.iterrows():
                 portfolios_collection.delete_one(
                     {"user_id": user_id, "ticker": row['Ticker'], "date_added": row['Date Added']}
                 )
@@ -237,13 +237,13 @@ def display_portfolio():
         # Detect changes and update the P&L database
         for index, row in edited_p_l_df.iterrows():
             original_row = p_l_df.loc[index]
-            if (
-                row["Shares Sold"] != original_row["Shares Sold"] or
-                row["Buy Price (Avg)"] != original_row["Buy Price (Avg)"] or
-                row["Sell Price"] != original_row["Sell Price"] or
-                row["Buy Brokerage (Per Share)"] != original_row["Buy Brokerage (Per Share)"] or
+            if any([
+                row["Shares Sold"] != original_row["Shares Sold"],
+                row["Buy Price (Avg)"] != original_row["Buy Price (Avg)"],
+                row["Sell Price"] != original_row["Sell Price"],
+                row["Buy Brokerage (Per Share)"] != original_row["Buy Brokerage (Per Share)"],
                 row["Sell Brokerage"] != original_row["Sell Brokerage"]
-            ):
+            ]):
                 sell_trades_collection.update_one(
                     {"user_id": user_id, "ticker": row['Ticker'], "date": original_row.name},
                     {"$set": {
@@ -257,7 +257,7 @@ def display_portfolio():
         # Handle deleted rows in P&L table
         if len(edited_p_l_df) < len(p_l_df):
             deleted_rows = p_l_df[~p_l_df.index.isin(edited_p_l_df.index)]
-            for index, row in deleted_rows.iterrows():
+            for _, row in deleted_rows.iterrows():
                 sell_trades_collection.delete_one(
                     {"user_id": user_id, "ticker": row['Ticker'], "date": row.name}
                 )
