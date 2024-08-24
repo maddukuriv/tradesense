@@ -41,7 +41,7 @@ def display_portfolio():
 
     # Refresh portfolio data
     portfolio = list(portfolios_collection.find({"user_id": user_id}))
-
+    print(portfolio)
     # Add new stock to portfolio
     st.sidebar.subheader("Add to Portfolio")
     selected_company = st.sidebar.selectbox('Select or Enter Company Name:', company_names)
