@@ -32,7 +32,7 @@ def signup():
     pob = st.text_input("Enter your place of birth", key='signup_pob')
     password = st.text_input("Enter a new password", type="password", key='signup_password')
     confirm_password = st.text_input("Confirm your password", type="password", key='signup_confirm_password')
-
+    
     if st.button("Sign Up"):
         if not is_valid_email(email):
             st.error("Invalid email format.")
@@ -49,7 +49,8 @@ def signup():
                 "email": email,
                 "password": hashed_password,
                 "dob": dob.strftime('%Y-%m-%d'), 
-                "pob": pob
+                "pob": pob,
+                "is_admin": False
             }
             users_collection.insert_one(new_user)
             st.success("User registered successfully!")
