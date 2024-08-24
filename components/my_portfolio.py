@@ -4,6 +4,7 @@ import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
 
 # Helper function to get user ID from email
 def get_user_id(email):
@@ -28,7 +29,7 @@ def get_company_name(ticker):
         return ticker  # Return ticker if company name not found
 
 # Assuming a list of tickers (this could be from an index or predefined list)
-all_tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN']  # Replace with actual list of tickers
+all_tickers = bse_largecap + bse_smallcap + bse_midcap,
 ticker_to_company = {ticker: get_company_name(ticker) for ticker in all_tickers}
 company_names = list(ticker_to_company.values())
 
