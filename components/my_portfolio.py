@@ -1,10 +1,9 @@
 import streamlit as st
-from utils.mongodb import portfolios_collection, users_collection
+from utils.mongodb import portfolios_collection, users_collection, buy_trades_collection, sell_trades_collection
 import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
 
 # Helper function to get user ID from email
 def get_user_id(email):
@@ -29,7 +28,7 @@ def get_company_name(ticker):
         return ticker  # Return ticker if company name not found
 
 # Assuming a list of tickers (this could be from an index or predefined list)
-all_tickers = bse_largecap + bse_smallcap + bse_midcap
+all_tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN']  # Replace with actual list of tickers
 ticker_to_company = {ticker: get_company_name(ticker) for ticker in all_tickers}
 company_names = list(ticker_to_company.values())
 
@@ -45,12 +44,24 @@ def display_portfolio():
     ticker = [ticker for ticker, company in ticker_to_company.items() if company == selected_company][0]
     shares = st.sidebar.number_input("Number of Shares", min_value=0.0, step=0.01)
     bought_price = st.sidebar.number_input("Bought Price per Share", min_value=0.0, step=0.01)
+    buy_brokerage = st.sidebar.number_input("Buy Brokerage Charges", min_value=0.0, step=0.01)
     if st.sidebar.button("Add to Portfolio"):
         try:
             current_data = yf.download(ticker, period='1d')
             if current_data.empty:
                 raise ValueError("Ticker not found")
 
+            # Log the buy trade
+            buy_trades_collection.insert_one({
+                "user_id": user_id,
+                "ticker": ticker,
+                "shares": shares,
+                "bought_price": bought_price,
+                "brokerage": buy_brokerage,
+                "date": pd.Timestamp.now()
+            })
+
+            # Add to portfolio
             if not portfolios_collection.find_one({"user_id": user_id, "ticker": ticker}):
                 portfolios_collection.insert_one({
                     "user_id": user_id,
@@ -59,9 +70,16 @@ def display_portfolio():
                     "bought_price": bought_price,
                     "date_added": pd.Timestamp.now()
                 })
-                st.success(f"{selected_company} ({ticker}) added to your portfolio!")
             else:
-                st.warning(f"{selected_company} ({ticker}) is already in your portfolio.")
+                # Update existing portfolio entry
+                existing_entry = portfolios_collection.find_one({"user_id": user_id, "ticker": ticker})
+                new_shares = existing_entry['shares'] + shares
+                avg_bought_price = ((existing_entry['shares'] * existing_entry['bought_price']) + (shares * bought_price)) / new_shares
+                portfolios_collection.update_one(
+                    {"user_id": user_id, "ticker": ticker},
+                    {"$set": {"shares": new_shares, "bought_price": avg_bought_price}}
+                )
+            st.success(f"{selected_company} ({ticker}) added to your portfolio!")
         except Exception as e:
             st.error(f"Error adding stock: {e}")
 
@@ -161,7 +179,7 @@ def display_portfolio():
         ticker_to_edit = [ticker for ticker, name in ticker_to_name_map.items() if name == company_to_edit][0]
         
         # Fetch current values for the selected company
-        entry_to_edit = next(item for item in portfolio if item["ticker"] == ticker_to_edit)
+        entry_to_edit = next(item for item in portfolio if item['ticker'] == ticker_to_edit)
         current_shares = entry_to_edit['shares']
         current_bought_price = entry_to_edit['bought_price']
         
@@ -177,14 +195,51 @@ def display_portfolio():
             st.success(f"{company_to_edit} ({ticker_to_edit}) updated in your portfolio.")
             st.experimental_rerun()  # Refresh the app to reflect changes
 
-        # Remove stock by company name
-        st.sidebar.subheader("Remove from Portfolio")
-        company_to_remove = st.sidebar.selectbox("Select a company to remove", company_names_in_portfolio)
-        ticker_to_remove = [ticker for ticker, name in ticker_to_name_map.items() if name == company_to_remove][0]
-        if st.sidebar.button("Remove from Portfolio"):
-            portfolios_collection.delete_one({"user_id": user_id, "ticker": ticker_to_remove})
-            st.success(f"{company_to_remove} removed from your portfolio.")
-            st.experimental_rerun()  # Refresh the app to reflect changes
+        # Sell stock from portfolio
+        st.sidebar.subheader("Sell from Portfolio")
+        company_to_sell = st.sidebar.selectbox("Select a company to sell", company_names_in_portfolio)
+        ticker_to_sell = [ticker for ticker, name in ticker_to_name_map.items() if name == company_to_sell][0]
+        
+        # Fetch current values for the selected company
+        entry_to_sell = next(item for item in portfolio if item['ticker'] == ticker_to_sell)
+        sell_shares = st.sidebar.number_input("Number of Shares to Sell", min_value=0.0, max_value=entry_to_sell['shares'], step=0.01)
+        sell_price = st.sidebar.number_input("Sell Price per Share", min_value=0.0, step=0.01)
+        sell_brokerage = st.sidebar.number_input("Sell Brokerage Charges", min_value=0.0, step=0.01)
+
+        if st.sidebar.button("Sell Stock"):
+            if sell_shares > entry_to_sell['shares']:
+                st.error(f"Cannot sell more shares than you own for {company_to_sell}.")
+            else:
+                # Log the sell trade
+                sell_trades_collection.insert_one({
+                    "user_id": user_id,
+                    "ticker": ticker_to_sell,
+                    "shares": sell_shares,
+                    "sell_price": sell_price,
+                    "brokerage": sell_brokerage,
+                    "date": pd.Timestamp.now()
+                })
+
+                # Calculate net profit/loss
+                total_sell_value = sell_shares * sell_price - sell_brokerage
+                total_invested_value = sell_shares * entry_to_sell['bought_price'] + entry_to_sell['brokerage']
+                net_profit_loss = total_sell_value - total_invested_value
+                
+                st.success(f"Sold {sell_shares} shares of {company_to_sell} for a net {'profit' if net_profit_loss >= 0 else 'loss'} of {net_profit_loss:.2f}.")
+
+                # Update the portfolio
+                remaining_shares = entry_to_sell['shares'] - sell_shares
+                if remaining_shares > 0:
+                    portfolios_collection.update_one(
+                        {"user_id": user_id, "ticker": ticker_to_sell},
+                        {"$set": {"shares": remaining_shares}}
+                    )
+                else:
+                    portfolios_collection.delete_one({"user_id": user_id, "ticker": ticker_to_sell})
+                    st.success(f"{company_to_sell} removed from your portfolio.")
+
+                st.experimental_rerun()  # Refresh the app to reflect changes
+
     else:
         st.write("Your portfolio is empty.")
 
@@ -200,3 +255,4 @@ if st.session_state.logged_in:
     display_portfolio()
 else:
     st.write("Please log in to view your portfolio.")
+
