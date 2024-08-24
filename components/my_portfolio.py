@@ -196,50 +196,54 @@ def display_portfolio():
             st.success(f"{company_to_edit} ({ticker_to_edit}) updated in your portfolio.")
             st.experimental_rerun()  # Refresh the app to reflect changes
 
-        # Sell stock from portfolio
-        st.sidebar.subheader("Sell from Portfolio")
-        company_to_sell = st.sidebar.selectbox("Select a company to sell", company_names_in_portfolio)
-        ticker_to_sell = [ticker for ticker, name in ticker_to_name_map.items() if name == company_to_sell][0]
-        
-        # Fetch current values for the selected company
-        entry_to_sell = next(item for item in portfolio if item['ticker'] == ticker_to_sell)
-        sell_shares = st.sidebar.number_input("Number of Shares to Sell", min_value=0.0, max_value=entry_to_sell['shares'], step=0.01)
-        sell_price = st.sidebar.number_input("Sell Price per Share", min_value=0.0, step=0.01)
-        sell_brokerage = st.sidebar.number_input("Sell Brokerage Charges", min_value=0.0, step=0.01)
+    # Sell stock from portfolio
+    st.sidebar.subheader("Sell from Portfolio")
+    company_to_sell = st.sidebar.selectbox("Select a company to sell", company_names_in_portfolio)
+    ticker_to_sell = [ticker for ticker, name in ticker_to_name_map.items() if name == company_to_sell][0]
 
-        if st.sidebar.button("Sell Stock"):
-            if sell_shares > entry_to_sell['shares']:
-                st.error(f"Cannot sell more shares than you own for {company_to_sell}.")
+    # Fetch current values for the selected company
+    entry_to_sell = next(item for item in portfolio if item['ticker'] == ticker_to_sell)
+    sell_shares = st.sidebar.number_input("Number of Shares to Sell", min_value=0.0, max_value=entry_to_sell['shares'], step=0.01)
+    sell_price = st.sidebar.number_input("Sell Price per Share", min_value=0.0, step=0.01)
+    sell_brokerage = st.sidebar.number_input("Sell Brokerage Charges", min_value=0.0, step=0.01)
+
+    if st.sidebar.button("Sell Stock"):
+        if sell_shares > entry_to_sell['shares']:
+            st.error(f"Cannot sell more shares than you own for {company_to_sell}.")
+        else:
+            # Log the sell trade
+            sell_trades_collection.insert_one({
+                "user_id": user_id,
+                "ticker": ticker_to_sell,
+                "shares": sell_shares,
+                "sell_price": sell_price,
+                "brokerage": sell_brokerage,
+                "date": pd.Timestamp.now()
+            })
+
+            # Calculate net profit/loss
+            bought_price = entry_to_sell['bought_price']
+            buy_brokerage = entry_to_sell.get('brokerage', 0)  # Use .get to provide a default value of 0 if 'brokerage' is missing
+
+            total_sell_value = sell_shares * sell_price - sell_brokerage
+            total_invested_value = sell_shares * bought_price + buy_brokerage
+            net_profit_loss = total_sell_value - total_invested_value
+            
+            st.success(f"Sold {sell_shares} shares of {company_to_sell} for a net {'profit' if net_profit_loss >= 0 else 'loss'} of {net_profit_loss:.2f}.")
+
+            # Update the portfolio
+            remaining_shares = entry_to_sell['shares'] - sell_shares
+            if remaining_shares > 0:
+                portfolios_collection.update_one(
+                    {"user_id": user_id, "ticker": ticker_to_sell},
+                    {"$set": {"shares": remaining_shares}}
+                )
             else:
-                # Log the sell trade
-                sell_trades_collection.insert_one({
-                    "user_id": user_id,
-                    "ticker": ticker_to_sell,
-                    "shares": sell_shares,
-                    "sell_price": sell_price,
-                    "brokerage": sell_brokerage,
-                    "date": pd.Timestamp.now()
-                })
+                portfolios_collection.delete_one({"user_id": user_id, "ticker": ticker_to_sell})
+                st.success(f"{company_to_sell} removed from your portfolio.")
 
-                # Calculate net profit/loss
-                total_sell_value = sell_shares * sell_price - sell_brokerage
-                total_invested_value = sell_shares * entry_to_sell['bought_price'] + entry_to_sell['brokerage']
-                net_profit_loss = total_sell_value - total_invested_value
-                
-                st.success(f"Sold {sell_shares} shares of {company_to_sell} for a net {'profit' if net_profit_loss >= 0 else 'loss'} of {net_profit_loss:.2f}.")
+            st.experimental_rerun()  # Refresh the app to reflect changes
 
-                # Update the portfolio
-                remaining_shares = entry_to_sell['shares'] - sell_shares
-                if remaining_shares > 0:
-                    portfolios_collection.update_one(
-                        {"user_id": user_id, "ticker": ticker_to_sell},
-                        {"$set": {"shares": remaining_shares}}
-                    )
-                else:
-                    portfolios_collection.delete_one({"user_id": user_id, "ticker": ticker_to_sell})
-                    st.success(f"{company_to_sell} removed from your portfolio.")
-
-                st.experimental_rerun()  # Refresh the app to reflect changes
 
     else:
         st.write("Your portfolio is empty.")
