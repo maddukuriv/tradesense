@@ -80,7 +80,7 @@ def display_portfolio():
         except Exception as e:
             st.error(f"Error adding stock: {e}")
 
-    # Display portfolio
+    # Display and edit portfolio
     if portfolio:
         portfolio_data = []
         for entry in portfolio:
@@ -113,8 +113,28 @@ def display_portfolio():
 
         portfolio_df = pd.DataFrame(portfolio_data)
 
-        st.write("Your Portfolio:")
-        st.dataframe(portfolio_df)
+        st.write("Editable Portfolio:")
+        edited_portfolio_df = st.data_editor(portfolio_df, num_rows="dynamic")
+
+        # Detect changes and update the database
+        for index, row in edited_portfolio_df.iterrows():
+            original_row = portfolio_df.loc[index]
+            if row["Shares"] != original_row["Shares"] or row["Bought Price"] != original_row["Bought Price"]:
+                portfolios_collection.update_one(
+                    {"user_id": user_id, "ticker": row['Ticker'], "date_added": original_row['Date Added']},
+                    {"$set": {"shares": row['Shares'], "bought_price": row['Bought Price']}}
+                )
+                st.success(f"Updated {row['Company Name']} in your portfolio.")
+
+        # Handle deleted rows
+        if len(edited_portfolio_df) < len(portfolio_df):
+            deleted_rows = portfolio_df[~portfolio_df.index.isin(edited_portfolio_df.index)]
+            for index, row in deleted_rows.iterrows():
+                portfolios_collection.delete_one(
+                    {"user_id": user_id, "ticker": row['Ticker'], "date_added": row['Date Added']}
+                )
+                st.success(f"Removed {row['Company Name']} from your portfolio.")
+            st.experimental_rerun()  # Refresh the app to reflect changes
 
         col1, col2 = st.columns(2)
 
@@ -131,45 +151,20 @@ def display_portfolio():
             fig2.update_layout(title_text='Profit Percentage of Each Stock', xaxis_title='Company', yaxis_title='P&L (%)')
             st.plotly_chart(fig2)
 
-        # Edit stock in portfolio
-        st.sidebar.subheader("Edit Portfolio")
-        company_names_in_portfolio = [entry['Company Name'] for entry in portfolio_data]
-        company_to_edit = st.sidebar.selectbox("Select a company to edit", company_names_in_portfolio)
-        ticker_to_edit = [entry['Ticker'] for entry in portfolio_data if entry['Company Name'] == company_to_edit][0]
-
-        # Fetch current values for the selected company
-        entry_to_edit = next(item for item in portfolio if item['ticker'] == ticker_to_edit)
-        current_shares = entry_to_edit['shares']
-        current_bought_price = entry_to_edit['bought_price']
-        current_date_added = entry_to_edit.get('date_added', pd.Timestamp.now())
-
-        # Display current values and allow editing
-        new_shares = st.sidebar.number_input("Number of Shares", value=current_shares, min_value=0.0, step=0.01)
-        new_bought_price = st.sidebar.number_input("Bought Price per Share", value=current_bought_price, min_value=0.0, step=0.01)
-        new_date_added = st.sidebar.date_input("Buy Date", current_date_added, key="edit_date")
-
-        if st.sidebar.button("Save Changes"):
-            portfolios_collection.update_one(
-                {"user_id": user_id, "ticker": ticker_to_edit, "date_added": current_date_added},
-                {"$set": {"shares": new_shares, "bought_price": new_bought_price, "date_added": pd.Timestamp(new_date_added)}}
-            )
-            st.success(f"{company_to_edit} ({ticker_to_edit}) updated in your portfolio.")
-            st.experimental_rerun()  # Refresh the app to reflect changes
-
         # Sell stock from portfolio
         st.sidebar.subheader("Sell from Portfolio")
-        company_to_sell = st.sidebar.selectbox("Select a company to sell", company_names_in_portfolio)
-        ticker_to_sell = [entry['Ticker'] for entry in portfolio_data if entry['Company Name'] == company_to_sell][0]
+        company_to_sell = st.sidebar.selectbox("Select a company to sell", portfolio_df['Company Name'])
+        ticker_to_sell = portfolio_df[portfolio_df['Company Name'] == company_to_sell]['Ticker'].values[0]
 
         # Fetch current values for the selected company
-        entry_to_sell = next(item for item in portfolio if item['ticker'] == ticker_to_sell)
-        sell_shares = st.sidebar.number_input("Number of Shares to Sell", min_value=0.0, max_value=entry_to_sell['shares'], step=0.01)
+        entry_to_sell = portfolio_df[portfolio_df['Ticker'] == ticker_to_sell].iloc[0]
+        sell_shares = st.sidebar.number_input("Number of Shares to Sell", min_value=0.0, max_value=entry_to_sell['Shares'], step=0.01)
         sell_price = st.sidebar.number_input("Sell Price per Share", min_value=0.0, step=0.01)
         sell_brokerage = st.sidebar.number_input("Sell Brokerage Charges", min_value=0.0, step=0.01)
         sell_date = st.sidebar.date_input("Sell Date", pd.Timestamp.now(), key="sell_date")
 
         if st.sidebar.button("Sell Stock"):
-            if sell_shares > entry_to_sell['shares']:
+            if sell_shares > entry_to_sell['Shares']:
                 st.error(f"Cannot sell more shares than you own for {company_to_sell}.")
             else:
                 # Log the sell trade
@@ -183,11 +178,11 @@ def display_portfolio():
                 })
 
                 # Calculate net profit/loss
-                bought_price = entry_to_sell['bought_price']
-                buy_brokerage = entry_to_sell.get('brokerage', 0)  # Use .get to provide a default value of 0 if 'brokerage' is missing
+                bought_price = entry_to_sell['Bought Price']
+                buy_brokerage = portfolio_df[portfolio_df['Ticker'] == ticker_to_sell]['Buy Brokerage'].values[0]
 
                 # Calculate the brokerage cost per share
-                brokerage_per_share = buy_brokerage / entry_to_sell['shares']
+                brokerage_per_share = buy_brokerage / entry_to_sell['Shares']
 
                 total_sell_value = sell_shares * sell_price - sell_brokerage
                 total_invested_value = sell_shares * (bought_price + brokerage_per_share)
@@ -196,14 +191,14 @@ def display_portfolio():
                 st.success(f"Sold {sell_shares} shares of {company_to_sell} for a net {'profit' if net_profit_loss >= 0 else 'loss'} of {net_profit_loss:.2f}.")
 
                 # Update the portfolio
-                remaining_shares = entry_to_sell['shares'] - sell_shares
+                remaining_shares = entry_to_sell['Shares'] - sell_shares
                 if remaining_shares > 0:
                     portfolios_collection.update_one(
-                        {"user_id": user_id, "ticker": ticker_to_sell, "date_added": entry_to_sell['date_added']},
+                        {"user_id": user_id, "ticker": ticker_to_sell, "date_added": entry_to_sell['Date Added']},
                         {"$set": {"shares": remaining_shares}}
                     )
                 else:
-                    portfolios_collection.delete_one({"user_id": user_id, "ticker": ticker_to_sell, "date_added": entry_to_sell['date_added']})
+                    portfolios_collection.delete_one({"user_id": user_id, "ticker": ticker_to_sell, "date_added": entry_to_sell['Date Added']})
                     st.success(f"{company_to_sell} removed from your portfolio.")
 
                 st.experimental_rerun()  # Refresh the app to reflect changes
@@ -238,6 +233,36 @@ def display_portfolio():
 
         st.write("Editable P&L Statement:")
         edited_p_l_df = st.data_editor(p_l_df, num_rows="dynamic")
+
+        # Detect changes and update the P&L database
+        for index, row in edited_p_l_df.iterrows():
+            original_row = p_l_df.loc[index]
+            if (
+                row["Shares Sold"] != original_row["Shares Sold"] or
+                row["Buy Price (Avg)"] != original_row["Buy Price (Avg)"] or
+                row["Sell Price"] != original_row["Sell Price"] or
+                row["Buy Brokerage (Per Share)"] != original_row["Buy Brokerage (Per Share)"] or
+                row["Sell Brokerage"] != original_row["Sell Brokerage"]
+            ):
+                sell_trades_collection.update_one(
+                    {"user_id": user_id, "ticker": row['Ticker'], "date": original_row.name},
+                    {"$set": {
+                        "shares": row["Shares Sold"],
+                        "sell_price": row["Sell Price"],
+                        "brokerage": row["Sell Brokerage"]
+                    }}
+                )
+                st.success(f"Updated P&L for {row['Ticker']}.")
+
+        # Handle deleted rows in P&L table
+        if len(edited_p_l_df) < len(p_l_df):
+            deleted_rows = p_l_df[~p_l_df.index.isin(edited_p_l_df.index)]
+            for index, row in deleted_rows.iterrows():
+                sell_trades_collection.delete_one(
+                    {"user_id": user_id, "ticker": row['Ticker'], "date": row.name}
+                )
+                st.success(f"Removed P&L entry for {row['Ticker']}.")
+            st.experimental_rerun()  # Refresh the app to reflect changes
 
         # Generate plots for P&L with dates on the x-axis
         if not p_l_df.empty:
