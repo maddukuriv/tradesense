@@ -16,6 +16,7 @@ def login():
             st.session_state.username = user['name']
             st.session_state.email = user['email']
             st.session_state.user_id = str(user['_id'])  # Ensure user_id is a string
+            st.session_state.is_admin = user["is_admin"]
             st.experimental_rerun()
         else:
             st.error("Invalid email or password.")
