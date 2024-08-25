@@ -3,6 +3,8 @@ from utils.mongodb import users_collection
 from utils.hash_utils import hash_password
 from bson.objectid import ObjectId
 import re
+from datetime import datetime
+import time  # Import time module for delay
 
 # Password validation function
 def is_valid_password(password):
@@ -22,13 +24,17 @@ def is_valid_password(password):
 def forgot_password():
     st.subheader("Forgot Password")
     email = st.text_input("Enter your email", key='forgot_email')
+    dob = st.date_input("Enter your date of birth", min_value=datetime(1950, 1, 1), max_value=datetime.now(), key='forgot_dob')
     pob = st.text_input("Enter your place of birth", key='forgot_pob')
 
     if 'identity_verified' not in st.session_state:
         st.session_state.identity_verified = False
 
     if st.button("Submit"):
-        user = users_collection.find_one({"email": email, "pob": pob})
+        # Convert DOB to string format to match database format
+        dob_str = dob.strftime('%Y-%m-%d')
+        user = users_collection.find_one({"email": email, "dob": dob_str, "pob": pob})
+        
         if user:
             st.session_state.email = email
             st.session_state.user_id = str(user['_id'])  # Ensure user_id is a string
@@ -50,5 +56,8 @@ def forgot_password():
                 hashed_password = hash_password(new_password)
                 users_collection.update_one({"_id": ObjectId(st.session_state.user_id)}, {"$set": {"password": hashed_password}})
                 st.success("Password reset successfully. You can now log in with the new password.")
+                
+                # Delay before rerun to allow message to be seen
+                time.sleep(2)  # 2-second delay
                 st.session_state.identity_verified = False
                 st.experimental_rerun()
