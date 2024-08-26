@@ -2145,18 +2145,20 @@ def stock_analysis_app():
             scores, details = calculate_scores(data)
 
             # Define columns for each category
-            trend_columns = ["5_day_EMA", "10_day_EMA", "20_day_EMA", "MACD", "MACD_signal", "MACD_hist",  "Parabolic_SAR", "SuperTrend", "Donchian_High", "Donchian_Low", "Vortex_Pos", "Vortex_Neg", "ADX"]
-            momentum_columns = ["RSI", "Stochastic_%K", "Stochastic_%D", "ROC", "DPO", "Williams_%R", "CMO", "CCI", "RVI", "RVI_Signal", "Ultimate_Oscillator",  "Klinger"]
-            volatility_columns = ["ATR", "BB_High", "BB_Low",  "Keltner_High", "Keltner_Low"]
-            volume_columns = ["OBV", "Price_to_Volume", "TRIN",  "McClellan_Oscillator", "Volume_Profile",  "Williams_AD", "Ease_of_Movement", "MFI", "Elder_Ray_Bull", "Elder_Ray_Bear", "VWAP"]
-            support_resistance_columns = ['Pivot_Point', 'Resistance_1', 'Support_1', 'Resistance_2', 'Support_2', 'Resistance_3', 'Support_3','Fractal_Up','Fractal_Down','Typical_Price','Darvas_High','Darvas_Low','Fib_0.618','Fib_0.382','Fib_0.236']
+            trend_columns = ["MACD_hist","5_day_EMA", "10_day_EMA", "20_day_EMA", "ALMA", "Aroon_Up", "Aroon_Down", "ADX", "Plus_DI", "Minus_DI", "BB_Middle", "BB_Std", "BB_High", "BB_Low", "DEMA", "Envelope_High", "Envelope_Low", "GMMA_Short", "GMMA_Long", "HMA", "Ichimoku_Tenkan", "Ichimoku_Kijun", "Ichimoku_Senkou_Span_A", "Ichimoku_Senkou_Span_B", "KC_Middle", "ATR_10", "KC_High", "KC_Low", "LSMA", "MAC_Upper", "MAC_Lower", "EMA_12", "EMA_26", "MACD", "MACD_signal",  "Parabolic_SAR", "SuperTrend", "Price_Channel_Upper", "Price_Channel_Lower", "TEMA_20", "Advance_Decline", "Chande_Kroll_Stop_Long", "Chande_Kroll_Stop_Short", "Williams_Alligator_Jaw", "Williams_Alligator_Teeth", "Williams_Alligator_Lips", "Donchian_High", "Donchian_Low"]
+            momentum_columns = ["RSI","AO", "AC", "CMO", "CCI", "CRSI", "Coppock", "DPO", "KST", "KST_Signal", "Momentum",  "ROC",  "Stochastic_%K", "Stochastic_%D", "Stochastic_RSI", "TRIX", "TRIX_Signal", "TSI", "TSI_Signal", "Ultimate_Oscillator", "Relative_Vigor_Index", "RVI_Signal", "SMI_Ergodic", "SMI_Ergodic_Signal", "Fisher_Transform", "Fisher_Transform_Signal", "Williams_%R", "Klinger"]
+            volatility_columns = ["ATR", "BB_%B", "BB_Width", "Chaikin_Volatility",  "Choppiness_Index", "Hist_Vol_Annualized", "Mass_Index", "RVI", "Standard_Deviation", "Vol_CtC", "Vol_ZtC", "Vol_OHLC", "Vol_Index", "Chop_Zone", "ZigZag", "Keltner_High", "Keltner_Low"]
+            volume_columns = ["AD", "BoP", "CMF", "CO", "EMV", "EFI", "KVO", "KVO_Signal", "MFI", "Net_Volume", "OBV", "PVT", "VWAP", "VO", "Vortex_Pos", "Vortex_Neg", "Volume", "VWMA", "VPFR", "VPVR", "Spread", "Elder_Ray_Bull", "Elder_Ray_Bear", "Volume_Profile", "Price_to_Volume", "McClellan_Oscillator", "TRIN", "Williams_AD", "Ease_of_Movement"]
+            support_resistance_columns = ["Pivot_Point","Fractal_Up", "Fractal_Down",  "Resistance_1", "Support_1", "Resistance_2", "Support_2", "Resistance_3", "Support_3", "Typical_Price", "Darvas_High", "Darvas_Low", "Fib_0.0", "Fib_0.236", "Fib_0.382", "Fib_0.5", "Fib_0.618", "Fib_1.0"]
+            #statistical_columns = ["Correlation_Coefficient", "Log_Correlation", "Linear_Regression_Curve", "Linear_Regression_Slope", "Standard_Error", "Standard_Error_Band_Upper",  "Standard_Error_Band_Lower", "Median_Price"]
 
             indicator_groups = {
                 "Trend": trend_columns,
                 "Momentum": momentum_columns,
                 "Volatility": volatility_columns,
                 "Volume": volume_columns,
-                "Support_Resistance": support_resistance_columns
+                "Support_Resistance": support_resistance_columns,
+                #"Statistics":statistical_columns
             }
 
             # Checkbox to toggle candlestick chart
