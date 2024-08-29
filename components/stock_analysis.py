@@ -373,7 +373,7 @@ def calculate_technical_indicators(df):
     # Aroon Indicator
     df['Aroon_Up'], df['Aroon_Down'] = aroon_up_down(df['High'], df['Low'])
     # ADX calculation
-    df['ADX'], df['Plus_DI'], df['Minus_DI'] = calculate_adx(df)
+    df['ADX'], df['Plus_DI'], df['Minus_DI'] = calculate_adx(df) 
     # Bollinger Bands
     df['BB_Middle'] = df['Close'].rolling(window=20).mean()
     df['BB_Std'] = df['Close'].rolling(window=20).std()
@@ -481,9 +481,7 @@ def calculate_technical_indicators(df):
     df['Fisher_Transform'], df['Fisher_Transform_Signal'] = fisher_transform(df['Close'])
     # William %R
     df['Williams_%R'] = williams_r(df['High'], df['Low'], df['Close'])
-    # Klinger
-    kvo = ta.kvo(df['High'], df['Low'], df['Close'], df['Volume'])
-    df['Klinger'] = kvo['KVO_34_55_13']
+  
 
 
     ## Volume Indicators--------------------------------------------------------------
@@ -645,8 +643,6 @@ def calculate_technical_indicators(df):
     df = df.loc[:, ~df.columns.duplicated()]  # Remove any duplicate columns
     return df
 
-
-
 def calculate_scores(df):
     scores = {
         'Trend': 0,
@@ -665,37 +661,35 @@ def calculate_scores(df):
 
     ## Trend Indicators-------------------------------
     trend_score = 0
-    details['Trend'] = ""
+
+    # 1. EMA Crossover (5-day, 10-day, 20-day)
     if df['5_day_EMA'].iloc[-1] > df['10_day_EMA'].iloc[-1] > df['20_day_EMA'].iloc[-1]:
-        trend_score += 2
+        trend_score += 1
         details['Trend'] += "EMA: Strong Bullish; "
-    elif df['5_day_EMA'].iloc[-1] > df['10_day_EMA'].iloc[-1] and df['10_day_EMA'].iloc[-1] < df['20_day_EMA'].iloc[-1]:
-        trend_score += 1.5
+    elif df['5_day_EMA'].iloc[-1] > df['10_day_EMA'].iloc[-1]:
+        trend_score += 0.5
         details['Trend'] += "EMA: Moderate Bullish; "
     elif df['5_day_EMA'].iloc[-1] < df['10_day_EMA'].iloc[-1] < df['20_day_EMA'].iloc[-1]:
         trend_score += 0
         details['Trend'] += "EMA: Bearish; "
 
-    # ALMA (Arnaud Legoux Moving Average)
-    alma = df['ALMA'].iloc[-1]
-    if df['Close'].iloc[-1] > alma:
+    # 2. ALMA (Arnaud Legoux Moving Average)
+    if df['Close'].iloc[-1] > df['ALMA'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "ALMA: Bullish; "
     else:
         trend_score += 0
         details['Trend'] += "ALMA: Bearish; "
 
-    # Aroon
-    aroon_up = df['Aroon_Up'].iloc[-1]
-    aroon_down = df['Aroon_Down'].iloc[-1]
-    if aroon_up > aroon_down:
+    # 3. Aroon
+    if df['Aroon_Up'].iloc[-1] > df['Aroon_Down'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "Aroon: Bullish; "
     else:
         trend_score += 0
         details['Trend'] += "Aroon: Bearish; "
 
-    # ADX
+    # 4. ADX (Average Directional Index)
     adx = df['ADX'].iloc[-1]
     if adx > 25 and adx > df['ADX'].iloc[-2]:
         trend_score += 1
@@ -710,138 +704,112 @@ def calculate_scores(df):
         trend_score += 0.25
         details['Trend'] += "ADX: Weak Trend; "
 
-    # Bollinger Bands
-    bb_high = df['BB_High'].iloc[-1]
-    bb_low = df['BB_Low'].iloc[-1]
+    # 5. Bollinger Bands
     current_price = df['Close'].iloc[-1]
-
-    if current_price > bb_high:
+    if current_price > df['BB_High'].iloc[-1]:
         trend_score += 0
         details['Trend'] += "Bollinger Bands: Overbought (Bearish); "
-    elif current_price < bb_low:
+    elif current_price < df['BB_Low'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "Bollinger Bands: Oversold (Bullish); "
     else:
         trend_score += 0.5
         details['Trend'] += "Bollinger Bands: Neutral; "
 
-    # DEMA (Double Exponential Moving Average)
-    dema = df['DEMA'].iloc[-1]
-    if df['Close'].iloc[-1] > dema:
+    # 6. DEMA (Double Exponential Moving Average)
+    if current_price > df['DEMA'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "DEMA: Bullish; "
     else:
         trend_score += 0
         details['Trend'] += "DEMA: Bearish; "
 
-    # Envelope Indicator
-    envelope_high = df['Envelope_High'].iloc[-1]
-    envelope_low = df['Envelope_Low'].iloc[-1]
-    current_price = df['Close'].iloc[-1]
-
-    if current_price > envelope_high:
+    # 7. Envelope Indicator
+    if current_price > df['Envelope_High'].iloc[-1]:
         trend_score += 0
         details['Trend'] += "Envelope: Overbought (Bearish); "
-    elif current_price < envelope_low:
+    elif current_price < df['Envelope_Low'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "Envelope: Oversold (Bullish); "
     else:
         trend_score += 0.5
-        details['Trend'] += "Envelope: Within range (Neutral); "
+        details['Trend'] += "Envelope: Neutral; "
 
-    # GMMA (Guppy Multiple Moving Average)
-    gmma_short = df['GMMA_Short'].iloc[-1]
-    gmma_long = df['GMMA_Long'].iloc[-1]
-    if gmma_short > gmma_long:
+    # 8. GMMA (Guppy Multiple Moving Average)
+    if df['GMMA_Short'].iloc[-1] > df['GMMA_Long'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "GMMA: Bullish; "
     else:
         trend_score += 0
         details['Trend'] += "GMMA: Bearish; "
 
-    # Hull Moving Average (HMA)
-    hma = df['HMA'].iloc[-1]
-    if df['Close'].iloc[-1] > hma:
+    # 9. Hull Moving Average (HMA)
+    if current_price > df['HMA'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "HMA: Bullish; "
     else:
         trend_score += 0
         details['Trend'] += "HMA: Bearish; "
 
-    # Ichimoku Cloud
-    ichimoku_tenkan = df['Ichimoku_Tenkan'].iloc[-1]
-    ichimoku_kijun = df['Ichimoku_Kijun'].iloc[-1]
-    ichimoku_senkou_a = df['Ichimoku_Senkou_Span_A'].iloc[-1]
-    ichimoku_senkou_b = df['Ichimoku_Senkou_Span_B'].iloc[-1]
-    price = df['Close'].iloc[-1]
-    if ichimoku_tenkan > ichimoku_kijun and price > ichimoku_senkou_a and price > ichimoku_senkou_b:
+    # 10. Ichimoku Cloud
+    if df['Ichimoku_Tenkan'].iloc[-1] > df['Ichimoku_Kijun'].iloc[-1] and current_price > df['Ichimoku_Senkou_Span_A'].iloc[-1] and current_price > df['Ichimoku_Senkou_Span_B'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "Ichimoku: Strong Bullish; "
-    elif ichimoku_tenkan > ichimoku_kijun:
+    elif df['Ichimoku_Tenkan'].iloc[-1] > df['Ichimoku_Kijun'].iloc[-1]:
         trend_score += 0.75
         details['Trend'] += "Ichimoku: Moderate Bullish; "
-    elif ichimoku_tenkan < ichimoku_kijun and (price > ichimoku_senkou_a or price > ichimoku_senkou_b):
+    elif df['Ichimoku_Tenkan'].iloc[-1] < df['Ichimoku_Kijun'].iloc[-1] and (current_price > df['Ichimoku_Senkou_Span_A'].iloc[-1] or current_price > df['Ichimoku_Senkou_Span_B'].iloc[-1]):
         trend_score += 0.5
         details['Trend'] += "Ichimoku: Neutral; "
     else:
         trend_score += 0.25
         details['Trend'] += "Ichimoku: Bearish; "
 
-    # Keltner Channels
-    kc_high = df['KC_High'].iloc[-1]
-    kc_low = df['KC_Low'].iloc[-1]
-    current_price = df['Close'].iloc[-1]
-
-    if current_price > kc_high:
+    # 11. Keltner Channels
+    if current_price > df['KC_High'].iloc[-1]:
         trend_score += 0
         details['Trend'] += "Keltner Channel: Overbought (Bearish); "
-    elif current_price < kc_low:
+    elif current_price < df['KC_Low'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "Keltner Channel: Oversold (Bullish); "
     else:
         trend_score += 0.5
         details['Trend'] += "Keltner Channel: Neutral; "
 
-    # LSMA (Least Squares Moving Average)
-    lsma = df['LSMA'].iloc[-1]
-    if df['Close'].iloc[-1] > lsma:
+    # 12. LSMA (Least Squares Moving Average)
+    if current_price > df['LSMA'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "LSMA: Bullish; "
     else:
         trend_score += 0
         details['Trend'] += "LSMA: Bearish; "
 
-    # Moving Average Channel (MAC)
-    mac_upper = df['MAC_Upper'].iloc[-1]
-    mac_lower = df['MAC_Lower'].iloc[-1]
-    current_price = df['Close'].iloc[-1]
-
-    if current_price > mac_upper:
+    # 13. Moving Average Channel (MAC)
+    if current_price > df['MAC_Upper'].iloc[-1]:
         trend_score += 0
         details['Trend'] += "Moving Average Channel: Overbought (Bearish); "
-    elif current_price < mac_lower:
+    elif current_price < df['MAC_Lower'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "Moving Average Channel: Oversold (Bullish); "
     else:
         trend_score += 0.5
         details['Trend'] += "Moving Average Channel: Neutral; "
 
-    # MACD Histogram
+    # 14. MACD Histogram
     macd_hist = df['MACD_hist'].iloc[-1]
     if macd_hist > 0 and macd_hist > df['MACD_hist'].iloc[-2]:
-        trend_score += 2
+        trend_score += 1
         details['Trend'] += "MACD: Strong Bullish; "
     elif macd_hist > 0:
-        trend_score += 1.75
+        trend_score += 0.5
         details['Trend'] += "MACD: Moderate Bullish; "
     elif macd_hist < 0 and macd_hist < df['MACD_hist'].iloc[-2]:
         trend_score += 0
         details['Trend'] += "MACD: Strong Bearish; "
 
-    # Parabolic SAR
+    # 15. Parabolic SAR
     psar = df['Parabolic_SAR'].iloc[-1]
     previous_psar = df['Parabolic_SAR'].iloc[-2]
-    current_price = df['Close'].iloc[-1]
 
     if current_price > psar and current_price > previous_psar:
         trend_score += 1
@@ -856,203 +824,177 @@ def calculate_scores(df):
         trend_score += 0.25
         details['Trend'] += "Parabolic SAR: Weak Bearish; "
 
-    # Price Channel
-    price_channel_upper = df['Price_Channel_Upper'].iloc[-1]
-    price_channel_lower = df['Price_Channel_Lower'].iloc[-1]
-    if df['Close'].iloc[-1] > price_channel_upper:
+    # 16. Price Channel
+    if current_price > df['Price_Channel_Upper'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "Price Channel: Breakout Bullish; "
-    elif df['Close'].iloc[-1] < price_channel_lower:
+    elif current_price < df['Price_Channel_Lower'].iloc[-1]:
         trend_score += 0
         details['Trend'] += "Price Channel: Breakout Bearish; "
     else:
         trend_score += 0.5
         details['Trend'] += "Price Channel: Within Channel; "
 
-    # SuperTrend
-    supertrend = df['SuperTrend'].iloc[-1]
-    if supertrend < price:
+    # 17. SuperTrend
+    if df['SuperTrend'].iloc[-1] < current_price:
         trend_score += 1
         details['Trend'] += "SuperTrend: Strong Bullish; "
-    elif supertrend > price:
+    else:
         trend_score += 0
         details['Trend'] += "SuperTrend: Bearish; "
 
-    # Triple EMA (TEMA)
-    tema = df['TEMA_20'].iloc[-1]
-    if tema < df['Close'].iloc[-1]:
+    # 18. Triple EMA (TEMA)
+    if df['TEMA_20'].iloc[-1] < current_price:
         trend_score += 1
         details['Trend'] += "TEMA: Bullish; "
     else:
         trend_score += 0
         details['Trend'] += "TEMA: Bearish; "
 
-    # Advance/Decline Line
-    adv_decline = df['Advance_Decline'].iloc[-1]
-    if adv_decline > 0:
+    # 19. Advance/Decline Line
+    if df['Advance_Decline'].iloc[-1] > 0:
         trend_score += 1
         details['Trend'] += "Advance/Decline: Advancing; "
     else:
         trend_score += 0
         details['Trend'] += "Advance/Decline: Declining; "
 
-    # Chande Kroll Stop
-    chande_kroll_long = df['Chande_Kroll_Stop_Long'].iloc[-1]
-    chande_kroll_short = df['Chande_Kroll_Stop_Short'].iloc[-1]
-    current_price = df['Close'].iloc[-1]
-
-    if current_price > chande_kroll_long:
-        trend_score += 0  # Overbought, hence bearish signal
+    # 20. Chande Kroll Stop
+    if current_price > df['Chande_Kroll_Stop_Long'].iloc[-1]:
+        trend_score += 0
         details['Trend'] += "Chande Kroll Stop: Overbought (Bearish); "
-    elif current_price < chande_kroll_short:
-        trend_score += 1  # Oversold, hence bullish signal
+    elif current_price < df['Chande_Kroll_Stop_Short'].iloc[-1]:
+        trend_score += 1
         details['Trend'] += "Chande Kroll Stop: Oversold (Bullish); "
     else:
-        trend_score += 0.5  # Neutral if within the stops
+        trend_score += 0.5
         details['Trend'] += "Chande Kroll Stop: Neutral; "
 
-    # William Alligator
-    alligator_jaw = df['Williams_Alligator_Jaw'].iloc[-1]
-    alligator_teeth = df['Williams_Alligator_Teeth'].iloc[-1]
-    alligator_lips = df['Williams_Alligator_Lips'].iloc[-1]
-    if alligator_lips > alligator_teeth > alligator_jaw:
+    # 21. Williams Alligator
+    if df['Williams_Alligator_Lips'].iloc[-1] > df['Williams_Alligator_Teeth'].iloc[-1] > df['Williams_Alligator_Jaw'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "Williams Alligator: Bullish; "
-    elif alligator_jaw > alligator_teeth > alligator_lips:
+    elif df['Williams_Alligator_Jaw'].iloc[-1] > df['Williams_Alligator_Teeth'].iloc[-1] > df['Williams_Alligator_Lips'].iloc[-1]:
         trend_score += 0
         details['Trend'] += "Williams Alligator: Bearish; "
     else:
         trend_score += 0.5
         details['Trend'] += "Williams Alligator: Neutral; "
 
-    # Donchian Channels
-    donchian_high = df['Donchian_High'].iloc[-1]
-    donchian_low = df['Donchian_Low'].iloc[-1]
-    current_price = df['Close'].iloc[-1]
-
-    if current_price > donchian_high:
-        trend_score += 0  # Overbought, hence bearish signal
+    # 22. Donchian Channels
+    if current_price > df['Donchian_High'].iloc[-1]:
+        trend_score += 0
         details['Trend'] += "Donchian Channels: Overbought (Bearish); "
-    elif current_price < donchian_low:
-        trend_score += 1  # Oversold, hence bullish signal
+    elif current_price < df['Donchian_Low'].iloc[-1]:
+        trend_score += 1
         details['Trend'] += "Donchian Channels: Oversold (Bullish); "
     else:
-        trend_score += 0.5  # Neutral if within the channels
+        trend_score += 0.5
         details['Trend'] += "Donchian Channels: Neutral; "
 
-    scores['Trend'] = trend_score / 22  # Normalize to 1
+    # Normalize Trend Score
+    scores['Trend'] = trend_score / 22
 
     ## Momentum Indicators----------------------------------------
     momentum_score = 0
 
-    # Awesome Oscillator (AO)
-    ao = df['AO'].iloc[-1]
-    if ao > 0:
+    # 1. Awesome Oscillator (AO)
+    if df['AO'].iloc[-1] > 0:
         momentum_score += 1
         details['Momentum'] += "AO: Bullish; "
     else:
         momentum_score += 0
         details['Momentum'] += "AO: Bearish; "
 
-    # Accelerator Oscillator (AC)
-    ac = df['AC'].iloc[-1]
-    if ac > 0:
+    # 2. Accelerator Oscillator (AC)
+    if df['AC'].iloc[-1] > 0:
         momentum_score += 1
         details['Momentum'] += "AC: Bullish; "
     else:
         momentum_score += 0
         details['Momentum'] += "AC: Bearish; "
 
-    # Chande Momentum Oscillator (CMO)
-    cmo = df['CMO'].iloc[-1]
-    if cmo > 50:
-        momentum_score += 0  # Overbought, hence bearish signal
+    # 3. Chande Momentum Oscillator (CMO)
+    if df['CMO'].iloc[-1] > 50:
+        momentum_score += 0
         details['Momentum'] += "CMO: Overbought (Bearish); "
-    elif cmo < -50:
-        momentum_score += 1  # Oversold, hence bullish signal
+    elif df['CMO'].iloc[-1] < -50:
+        momentum_score += 1
         details['Momentum'] += "CMO: Oversold (Bullish); "
     else:
-        momentum_score += 0.5  # Neutral
+        momentum_score += 0.5
         details['Momentum'] += "CMO: Neutral; "
 
-    # Commodity Channel Index (CCI)
-    cci = df['CCI'].iloc[-1]
-    if cci > 100:
-        momentum_score += 0  # Overbought, hence bearish signal
+    # 4. Commodity Channel Index (CCI)
+    if df['CCI'].iloc[-1] > 100:
+        momentum_score += 0
         details['Momentum'] += "CCI: Overbought (Bearish); "
-    elif cci < -100:
-        momentum_score += 1  # Oversold, hence bullish signal
+    elif df['CCI'].iloc[-1] < -100:
+        momentum_score += 1
         details['Momentum'] += "CCI: Oversold (Bullish); "
     else:
-        momentum_score += 0.5  # Neutral
+        momentum_score += 0.5
         details['Momentum'] += "CCI: Neutral; "
 
-    # Connors RSI (CRSI)
-    crsi = df['CRSI'].iloc[-1]
-    if crsi > 70:
-        momentum_score += 0  # Overbought, hence bearish signal
+    # 5. Connors RSI (CRSI)
+    if df['CRSI'].iloc[-1] > 70:
+        momentum_score += 0
         details['Momentum'] += "Connors RSI: Overbought (Bearish); "
-    elif crsi < 30:
-        momentum_score += 1  # Oversold, hence bullish signal
+    elif df['CRSI'].iloc[-1] < 30:
+        momentum_score += 1
         details['Momentum'] += "Connors RSI: Oversold (Bullish); "
     else:
-        momentum_score += 0.5  # Neutral
+        momentum_score += 0.5
         details['Momentum'] += "Connors RSI: Neutral; "
 
-    # Coppock Curve
-    coppock = df['Coppock'].iloc[-1]
-    if coppock > 0:
-        momentum_score += 1  # Bullish
+    # 6. Coppock Curve
+    if df['Coppock'].iloc[-1] > 0:
+        momentum_score += 1
         details['Momentum'] += "Coppock Curve: Bullish; "
     else:
-        momentum_score += 0  # Bearish
+        momentum_score += 0
         details['Momentum'] += "Coppock Curve: Bearish; "
 
-    # Detrended Price Oscillator (DPO)
-    dpo = df['DPO'].iloc[-1]
-    if dpo > 0:
-        momentum_score += 1  # Bullish
+    # 7. Detrended Price Oscillator (DPO)
+    if df['DPO'].iloc[-1] > 0:
+        momentum_score += 1
         details['Momentum'] += "DPO: Bullish; "
     else:
-        momentum_score += 0  # Bearish
+        momentum_score += 0
         details['Momentum'] += "DPO: Bearish; "
 
-    # Directional Movement Index (DMI)
+    # 8. Directional Movement Index (DMI)
     plus_di = df['Plus_DI'].iloc[-1]
     minus_di = df['Minus_DI'].iloc[-1]
     adx = df['ADX'].iloc[-1]
 
     if plus_di > minus_di and adx > 25:
-        momentum_score += 1  # Bullish
+        momentum_score += 1
         details['Momentum'] += "DMI: Bullish; "
     elif plus_di < minus_di and adx > 25:
-        momentum_score += 0  # Bearish
+        momentum_score += 0
         details['Momentum'] += "DMI: Bearish; "
     else:
-        momentum_score += 0.5  # Neutral
+        momentum_score += 0.5
         details['Momentum'] += "DMI: Neutral; "
 
-    # Know Sure Thing (KST)
-    kst = df['KST'].iloc[-1]
-    kst_signal = df['KST_Signal'].iloc[-1]
-
-    if kst > kst_signal:
-        momentum_score += 1  # Bullish
+    # 9. Know Sure Thing (KST)
+    if df['KST'].iloc[-1] > df['KST_Signal'].iloc[-1]:
+        momentum_score += 1
         details['Momentum'] += "KST: Bullish; "
     else:
-        momentum_score += 0  # Bearish
+        momentum_score += 0
         details['Momentum'] += "KST: Bearish; "
 
-    # Momentum
-    momentum = df['Momentum'].iloc[-1]
-    if momentum > 0:
-        momentum_score += 1  # Bullish
+    # 10. Momentum
+    if df['Momentum'].iloc[-1] > 0:
+        momentum_score += 1
         details['Momentum'] += "Momentum: Bullish; "
     else:
-        momentum_score += 0  # Bearish
+        momentum_score += 0
         details['Momentum'] += "Momentum: Bearish; "
 
-    # RSI (Relative Strength Index)
+    # 11. RSI (Relative Strength Index)
     rsi = df['RSI'].iloc[-1]
     if rsi > 70:
         momentum_score += 0
@@ -1073,455 +1015,401 @@ def calculate_scores(df):
         momentum_score += 1
         details['Momentum'] += "RSI: Oversold (Bullish); "
 
-    # Rate of Change (ROC)
-    roc = df['ROC'].iloc[-1]
-    if roc > 0:
-        momentum_score += 1  # Bullish
+    # 12. Rate of Change (ROC)
+    if df['ROC'].iloc[-1] > 0:
+        momentum_score += 1
         details['Momentum'] += "ROC: Bullish; "
     else:
-        momentum_score += 0  # Bearish
+        momentum_score += 0
         details['Momentum'] += "ROC: Bearish; "
 
-    # Stochastic Oscillator
+    # 13. Stochastic Oscillator
     stoch_k = df['Stochastic_%K'].iloc[-1]
     stoch_d = df['Stochastic_%D'].iloc[-1]
 
     if stoch_k > 80:
-        momentum_score += 0  # Overbought, hence bearish signal
+        momentum_score += 0
         details['Momentum'] += "Stochastic Oscillator: Overbought (Bearish); "
     elif stoch_k < 20:
-        momentum_score += 1  # Oversold, hence bullish signal
+        momentum_score += 1
         details['Momentum'] += "Stochastic Oscillator: Oversold (Bullish); "
     elif stoch_k > stoch_d:
-        momentum_score += 0.75  # Bullish
+        momentum_score += 0.75
         details['Momentum'] += "Stochastic Oscillator: Bullish; "
     else:
-        momentum_score += 0.25  # Bearish
+        momentum_score += 0.25
         details['Momentum'] += "Stochastic Oscillator: Bearish; "
 
-    # Stochastic RSI
-    stoch_rsi = df['Stochastic_RSI'].iloc[-1]
-    if stoch_rsi > 0.8:
-        momentum_score += 0  # Overbought, hence bearish signal
+    # 14. Stochastic RSI
+    if df['Stochastic_RSI'].iloc[-1] > 0.8:
+        momentum_score += 0
         details['Momentum'] += "Stochastic RSI: Overbought (Bearish); "
-    elif stoch_rsi < 0.2:
-        momentum_score += 1  # Oversold, hence bullish signal
+    elif df['Stochastic_RSI'].iloc[-1] < 0.2:
+        momentum_score += 1
         details['Momentum'] += "Stochastic RSI: Oversold (Bullish); "
     else:
-        momentum_score += 0.5  # Neutral
+        momentum_score += 0.5
         details['Momentum'] += "Stochastic RSI: Neutral; "
 
-    # TRIX
-    trix = df['TRIX'].iloc[-1]
-    trix_signal = df['TRIX_Signal'].iloc[-1]
-
-    if trix > trix_signal:
-        momentum_score += 1  # Bullish
+    # 15. TRIX
+    if df['TRIX'].iloc[-1] > df['TRIX_Signal'].iloc[-1]:
+        momentum_score += 1
         details['Momentum'] += "TRIX: Bullish; "
     else:
-        momentum_score += 0  # Bearish
+        momentum_score += 0
         details['Momentum'] += "TRIX: Bearish; "
 
-    # True Strength Index (TSI)
-    tsi = df['TSI'].iloc[-1]
-    tsi_signal = df['TSI_Signal'].iloc[-1]
-
-    if tsi > tsi_signal:
-        momentum_score += 1  # Bullish
+    # 16. True Strength Index (TSI)
+    if df['TSI'].iloc[-1] > df['TSI_Signal'].iloc[-1]:
+        momentum_score += 1
         details['Momentum'] += "TSI: Bullish; "
     else:
-        momentum_score += 0  # Bearish
+        momentum_score += 0
         details['Momentum'] += "TSI: Bearish; "
 
-    # Ultimate Oscillator
-    ultimate_osc = df['Ultimate_Oscillator'].iloc[-1]
-    if ultimate_osc > 70:
-        momentum_score += 0  # Overbought, hence bearish signal
+    # 17. Ultimate Oscillator
+    if df['Ultimate_Oscillator'].iloc[-1] > 70:
+        momentum_score += 0
         details['Momentum'] += "Ultimate Oscillator: Overbought (Bearish); "
-    elif ultimate_osc < 30:
-        momentum_score += 1  # Oversold, hence bullish signal
+    elif df['Ultimate_Oscillator'].iloc[-1] < 30:
+        momentum_score += 1
         details['Momentum'] += "Ultimate Oscillator: Oversold (Bullish); "
     else:
-        momentum_score += 0.5  # Neutral
+        momentum_score += 0.5
         details['Momentum'] += "Ultimate Oscillator: Neutral; "
 
-    # Relative Vigor Index (RVI)
-    rvi = df['Relative_Vigor_Index'].iloc[-1]
-    rvi_signal = df['RVI_Signal'].iloc[-1]
-
-    if rvi > rvi_signal:
-        momentum_score += 1  # Bullish
+    # 18. Relative Vigor Index (RVI)
+    if df['Relative_Vigor_Index'].iloc[-1] > df['RVI_Signal'].iloc[-1]:
+        momentum_score += 1
         details['Momentum'] += "RVI: Bullish; "
     else:
-        momentum_score += 0  # Bearish
+        momentum_score += 0
         details['Momentum'] += "RVI: Bearish; "
 
-    # SMI Ergodic Indicator/Oscillator
-    smi_ergodic = df['SMI_Ergodic'].iloc[-1]
-    smi_signal = df['SMI_Ergodic_Signal'].iloc[-1]
-
-    if smi_ergodic > smi_signal:
-        momentum_score += 1  # Bullish
+    # 19. SMI Ergodic Indicator/Oscillator
+    if df['SMI_Ergodic'].iloc[-1] > df['SMI_Ergodic_Signal'].iloc[-1]:
+        momentum_score += 1
         details['Momentum'] += "SMI Ergodic: Bullish; "
     else:
-        momentum_score += 0  # Bearish
+        momentum_score += 0
         details['Momentum'] += "SMI Ergodic: Bearish; "
 
-    # Fisher Transform
-    fisher_transform = df['Fisher_Transform'].iloc[-1]
-    fisher_signal = df['Fisher_Transform_Signal'].iloc[-1]
-
-    if fisher_transform > fisher_signal:
-        momentum_score += 1  # Bullish
+    # 20. Fisher Transform
+    if df['Fisher_Transform'].iloc[-1] > df['Fisher_Transform_Signal'].iloc[-1]:
+        momentum_score += 1
         details['Momentum'] += "Fisher Transform: Bullish; "
     else:
-        momentum_score += 0  # Bearish
+        momentum_score += 0
         details['Momentum'] += "Fisher Transform: Bearish; "
 
-    # Williams %R
+    # 21. Williams %R
     williams_r = df['Williams_%R'].iloc[-1]
     if williams_r > -20:
-        momentum_score += 0  # Overbought, hence bearish signal
+        momentum_score += 0
         details['Momentum'] += "Williams %R: Overbought (Bearish); "
     elif williams_r < -80:
-        momentum_score += 1  # Oversold, hence bullish signal
+        momentum_score += 1
         details['Momentum'] += "Williams %R: Oversold (Bullish); "
     else:
-        momentum_score += 0.5  # Neutral
+        momentum_score += 0.5
         details['Momentum'] += "Williams %R: Neutral; "
 
-    # Klinger Oscillator (KVO)
-    klinger = df['Klinger'].iloc[-1]
-    previous_klinger = df['Klinger'].iloc[-2]
-
-    if klinger > 0 and klinger > previous_klinger:
-        momentum_score += 1  # Bullish
-        details['Momentum'] += "Klinger Oscillator: Bullish; "
-    elif klinger < 0 and klinger < previous_klinger:
-        momentum_score += 0  # Bearish
-        details['Momentum'] += "Klinger Oscillator: Bearish; "
-    else:
-        momentum_score += 0.5  # Neutral
-        details['Momentum'] += "Klinger Oscillator: Neutral; "
-
-    scores['Momentum'] = momentum_score / 22  # Normalize to 1
+    # Normalize Momentum Score
+    scores['Momentum'] = momentum_score / 21
 
     # Volatility Indicators--------------------------------------------------------
     volatility_score = 0
 
-    # Average True Range (ATR)
+    # 1. Average True Range (ATR)
     atr = df['ATR'].iloc[-1]
     atr_mean = df['ATR'].rolling(window=14).mean().iloc[-1]
-
     if atr > 1.5 * atr_mean:
-        volatility_score += 1  # High volatility
+        volatility_score += 1
         details['Volatility'] += "ATR: High Volatility; "
     elif atr < 0.5 * atr_mean:
-        volatility_score += 0  # Low volatility
+        volatility_score += 0
         details['Volatility'] += "ATR: Low Volatility; "
     else:
-        volatility_score += 0.5  # Moderate volatility
+        volatility_score += 0.5
         details['Volatility'] += "ATR: Moderate Volatility; "
 
-    # Bollinger Bands %B
-    bb_percent_b = df['BB_%B'].iloc[-1]
-
-    if bb_percent_b > 1:
-        volatility_score += 0  # Overbought
+    # 2. Bollinger Bands %B
+    if df['BB_%B'].iloc[-1] > 1:
+        volatility_score += 0
         details['Volatility'] += "Bollinger Bands %B: Overbought (Bearish); "
-    elif bb_percent_b < 0:
-        volatility_score += 1  # Oversold
+    elif df['BB_%B'].iloc[-1] < 0:
+        volatility_score += 1
         details['Volatility'] += "Bollinger Bands %B: Oversold (Bullish); "
     else:
-        volatility_score += 0.5  # Neutral
+        volatility_score += 0.5
         details['Volatility'] += "Bollinger Bands %B: Neutral; "
 
-    # Bollinger Bands Width
+    # 3. Bollinger Bands Width
     bb_width = df['BB_Width'].iloc[-1]
     bb_width_mean = df['BB_Width'].rolling(window=14).mean().iloc[-1]
-
     if bb_width > 1.5 * bb_width_mean:
-        volatility_score += 1  # High volatility
+        volatility_score += 1
         details['Volatility'] += "Bollinger Bands Width: Expanding (High Volatility); "
     elif bb_width < 0.5 * bb_width_mean:
-        volatility_score += 0  # Low volatility
+        volatility_score += 0
         details['Volatility'] += "Bollinger Bands Width: Contracting (Low Volatility); "
     else:
-        volatility_score += 0.5  # Moderate volatility
+        volatility_score += 0.5
         details['Volatility'] += "Bollinger Bands Width: Moderate Volatility; "
 
-    # Chaikin Volatility
+    # 4. Chaikin Volatility
     chaikin_volatility = df['Chaikin_Volatility'].iloc[-1]
     chaikin_volatility_mean = df['Chaikin_Volatility'].rolling(window=14).mean().iloc[-1]
-
     if chaikin_volatility > 1.5 * chaikin_volatility_mean:
-        volatility_score += 1  # High volatility
+        volatility_score += 1
         details['Volatility'] += "Chaikin Volatility: High Volatility; "
     elif chaikin_volatility < 0.5 * chaikin_volatility_mean:
-        volatility_score += 0  # Low volatility
+        volatility_score += 0
         details['Volatility'] += "Chaikin Volatility: Low Volatility; "
     else:
-        volatility_score += 0.5  # Moderate volatility
+        volatility_score += 0.5
         details['Volatility'] += "Chaikin Volatility: Moderate Volatility; "
 
-    # Choppiness Index
+    # 5. Choppiness Index
     choppiness_index = df['Choppiness_Index'].iloc[-1]
-
     if choppiness_index > 61.8:
-        volatility_score += 1  # Choppy/High Volatility
+        volatility_score += 1
         details['Volatility'] += "Choppiness Index: High Volatility (Choppy Market); "
     elif choppiness_index < 38.2:
-        volatility_score += 0  # Trending/Low Volatility
+        volatility_score += 0
         details['Volatility'] += "Choppiness Index: Low Volatility (Trending Market); "
     else:
-        volatility_score += 0.5  # Neutral
+        volatility_score += 0.5
         details['Volatility'] += "Choppiness Index: Neutral; "
 
-    # Historical Volatility
+    # 6. Historical Volatility
     hist_vol = df['Hist_Vol_Annualized'].iloc[-1]
     hist_vol_mean = df['Hist_Vol_Annualized'].rolling(window=252).mean().iloc[-1]
-
     if hist_vol > 1.5 * hist_vol_mean:
-        volatility_score += 1  # High volatility
+        volatility_score += 1
         details['Volatility'] += "Historical Volatility: High Volatility; "
     elif hist_vol < 0.5 * hist_vol_mean:
-        volatility_score += 0  # Low volatility
+        volatility_score += 0
         details['Volatility'] += "Historical Volatility: Low Volatility; "
     else:
-        volatility_score += 0.5  # Moderate volatility
+        volatility_score += 0.5
         details['Volatility'] += "Historical Volatility: Moderate Volatility; "
 
-    # Mass Index
-    mass_index = df['Mass_Index'].iloc[-1]
-
-    if mass_index > 27:
-        volatility_score += 1  # High volatility (Potential Reversal)
+    # 7. Mass Index
+    if df['Mass_Index'].iloc[-1] > 27:
+        volatility_score += 1
         details['Volatility'] += "Mass Index: High Volatility (Potential Reversal); "
-    elif mass_index < 26.5:
-        volatility_score += 0  # Low volatility
+    elif df['Mass_Index'].iloc[-1] < 26.5:
+        volatility_score += 0
         details['Volatility'] += "Mass Index: Low Volatility; "
     else:
-        volatility_score += 0.5  # Neutral
+        volatility_score += 0.5
         details['Volatility'] += "Mass Index: Neutral; "
 
-    # Relative Volatility Index (RVI)
-    rvi = df['RVI'].iloc[-1]
-
-    if rvi > 60:
-        volatility_score += 1  # High volatility
+    # 8. Relative Volatility Index (RVI)
+    if df['RVI'].iloc[-1] > 60:
+        volatility_score += 1
         details['Volatility'] += "Relative Volatility Index: High Volatility; "
-    elif rvi < 40:
-        volatility_score += 0  # Low volatility
+    elif df['RVI'].iloc[-1] < 40:
+        volatility_score += 0
         details['Volatility'] += "Relative Volatility Index: Low Volatility; "
     else:
-        volatility_score += 0.5  # Neutral
+        volatility_score += 0.5
         details['Volatility'] += "Relative Volatility Index: Neutral; "
 
-    # Standard Deviation
+    # 9. Standard Deviation
     std_dev = df['Standard_Deviation'].iloc[-1]
     std_dev_mean = df['Standard_Deviation'].rolling(window=20).mean().iloc[-1]
-
     if std_dev > 1.5 * std_dev_mean:
-        volatility_score += 1  # High volatility
+        volatility_score += 1
         details['Volatility'] += "Standard Deviation: High Volatility; "
     elif std_dev < 0.5 * std_dev_mean:
-        volatility_score += 0  # Low volatility
+        volatility_score += 0
         details['Volatility'] += "Standard Deviation: Low Volatility; "
     else:
-        volatility_score += 0.5  # Moderate volatility
+        volatility_score += 0.5
         details['Volatility'] += "Standard Deviation: Moderate Volatility; "
 
-    # Volatility Close-to-Close
+    # 10. Volatility Close-to-Close
     vol_ctc = df['Vol_CtC'].iloc[-1]
     vol_ctc_mean = df['Vol_CtC'].rolling(window=20).mean().iloc[-1]
-
     if vol_ctc > 1.5 * vol_ctc_mean:
-        volatility_score += 1  # High volatility
+        volatility_score += 1
         details['Volatility'] += "Volatility Close-to-Close: High Volatility; "
     elif vol_ctc < 0.5 * vol_ctc_mean:
-        volatility_score += 0  # Low volatility
+        volatility_score += 0
         details['Volatility'] += "Volatility Close-to-Close: Low Volatility; "
     else:
-        volatility_score += 0.5  # Moderate volatility
+        volatility_score += 0.5
         details['Volatility'] += "Volatility Close-to-Close: Moderate Volatility; "
 
-    # Volatility Zero Trend Close-to-Close
+    # 11. Volatility Zero Trend Close-to-Close
     vol_ztc = df['Vol_ZtC'].iloc[-1]
     vol_ztc_mean = df['Vol_ZtC'].rolling(window=20).mean().iloc[-1]
-
     if vol_ztc > 1.5 * vol_ztc_mean:
-        volatility_score += 1  # High volatility
+        volatility_score += 1
         details['Volatility'] += "Volatility Zero Trend Close-to-Close: High Volatility; "
     elif vol_ztc < 0.5 * vol_ztc_mean:
-        volatility_score += 0  # Low volatility
+        volatility_score += 0
         details['Volatility'] += "Volatility Zero Trend Close-to-Close: Low Volatility; "
     else:
-        volatility_score += 0.5  # Moderate volatility
+        volatility_score += 0.5
         details['Volatility'] += "Volatility Zero Trend Close-to-Close: Moderate Volatility; "
 
-    # Volatility O-H-L-C
+    # 12. Volatility O-H-L-C
     vol_ohlc = df['Vol_OHLC'].iloc[-1]
     vol_ohlc_mean = df['Vol_OHLC'].rolling(window=20).mean().iloc[-1]
-
     if vol_ohlc > 1.5 * vol_ohlc_mean:
-        volatility_score += 1  # High volatility
+        volatility_score += 1
         details['Volatility'] += "Volatility O-H-L-C: High Volatility; "
     elif vol_ohlc < 0.5 * vol_ohlc_mean:
-        volatility_score += 0  # Low volatility
+        volatility_score += 0
         details['Volatility'] += "Volatility O-H-L-C: Low Volatility; "
     else:
-        volatility_score += 0.5  # Moderate volatility
+        volatility_score += 0.5
         details['Volatility'] += "Volatility O-H-L-C: Moderate Volatility; "
 
-    # Volatility Index
+    # 13. Volatility Index
     vol_index = df['Vol_Index'].iloc[-1]
     vol_index_mean = df['Vol_Index'].rolling(window=20).mean().iloc[-1]
-
     if vol_index > 1.5 * vol_index_mean:
-        volatility_score += 1  # High volatility
+        volatility_score += 1
         details['Volatility'] += "Volatility Index: High Volatility; "
     elif vol_index < 0.5 * vol_index_mean:
-        volatility_score += 0  # Low volatility
+        volatility_score += 0
         details['Volatility'] += "Volatility Index: Low Volatility; "
     else:
-        volatility_score += 0.5  # Moderate volatility
+        volatility_score += 0.5
         details['Volatility'] += "Volatility Index: Moderate Volatility; "
 
-    # Chop Zone
+    # 14. Chop Zone
     chop_zone = df['Chop_Zone'].iloc[-1]
-
     if chop_zone > 61.8:
-        volatility_score += 1  # High choppiness (High Volatility)
+        volatility_score += 1
         details['Volatility'] += "Chop Zone: High Volatility (Choppy Market); "
     elif chop_zone < 38.2:
-        volatility_score += 0  # Low choppiness (Low Volatility)
+        volatility_score += 0
         details['Volatility'] += "Chop Zone: Low Volatility (Trending Market); "
     else:
-        volatility_score += 0.5  # Neutral
+        volatility_score += 0.5
         details['Volatility'] += "Chop Zone: Neutral; "
 
-    # ZigZag
-    zigzag = df['ZigZag'].iloc[-1]
+    # 15. ZigZag
     zigzag_change = df['ZigZag'].diff().abs().max()
-
     if zigzag_change > 0.1:
-        volatility_score += 1  # Significant volatility
+        volatility_score += 1
         details['Volatility'] += "ZigZag: High Volatility; "
     else:
-        volatility_score += 0  # Low volatility
+        volatility_score += 0
         details['Volatility'] += "ZigZag: Low Volatility; "
 
-    # Keltner Channels
-    keltner_high = df['Keltner_High'].iloc[-1]
-    keltner_low = df['Keltner_Low'].iloc[-1]
-    current_price = df['Close'].iloc[-1]
-
-    if current_price > keltner_high:
-        volatility_score += 0  # Overbought, hence bearish signal
+    # 16. Keltner Channels
+    if current_price > df['Keltner_High'].iloc[-1]:
+        volatility_score += 0
         details['Volatility'] += "Keltner Channels: Overbought (Bearish); "
-    elif current_price < keltner_low:
-        volatility_score += 1  # Oversold, hence bullish signal
+    elif current_price < df['Keltner_Low'].iloc[-1]:
+        volatility_score += 1
         details['Volatility'] += "Keltner Channels: Oversold (Bullish); "
     else:
-        volatility_score += 0.5  # Neutral
+        volatility_score += 0.5
         details['Volatility'] += "Keltner Channels: Neutral; "
 
-    scores['Volatility'] = volatility_score / 16  # Normalize to 1
+    # Normalize Volatility Score
+    scores['Volatility'] = volatility_score / 16
 
-    # Volume ----------------------------------------------------------------
+    ## Volume Indicators-------------------------------
     volume_score = 0
 
-    # Accumulation/Distribution Line (A/D)
+    # 1. Accumulation/Distribution Line (A/D)
     ad_line = df['AD'].iloc[-1]
-    previous_ad_line = df['AD'].shift(1).iloc[-1]
-    if ad_line > previous_ad_line:
+    if ad_line > df['AD'].shift(1).iloc[-1]:
         volume_score += 1
-        details['Volume'] += "A/D Line: Increasing sharply; "
-    elif ad_line < previous_ad_line:
+        details['Volume'] += "A/D Line: Increasing; "
+    elif ad_line < df['AD'].shift(1).iloc[-1]:
         volume_score += 0
         details['Volume'] += "A/D Line: Decreasing; "
     else:
         volume_score += 0.5
         details['Volume'] += "A/D Line: Flat; "
 
-    # Balance of Power (BOP)
-    bop = df['BoP'].iloc[-1]
-    if bop > 0:
+    # 2. Balance of Power (BOP)
+    if df['BoP'].iloc[-1] > 0:
         volume_score += 1
         details['Volume'] += "BOP: Bullish; "
     else:
-        volume_score += 0
+        volume_score += 0.5
         details['Volume'] += "BOP: Bearish; "
 
-    # Chaikin Money Flow (CMF)
+    # 3. Chaikin Money Flow (CMF)
     cmf = df['CMF'].iloc[-1]
-    previous_cmf = df['CMF'].shift(1).iloc[-1]
-    if cmf > 0 and cmf > previous_cmf:
+    if cmf > 0 and cmf > df['CMF'].shift(1).iloc[-1]:
         volume_score += 1
-        details['Volume'] += "CMF: Increasing sharply; "
+        details['Volume'] += "CMF: Increasing; "
     elif cmf > 0:
         volume_score += 0.5
-        details['Volume'] += "CMF: Increasing moderately; "
+        details['Volume'] += "CMF: Positive but decreasing; "
     else:
         volume_score += 0
         details['Volume'] += "CMF: Decreasing; "
 
-    # Chaikin Oscillator
+    # 4. Chaikin Oscillator
     chaikin_oscillator = df['CO'].iloc[-1]
     previous_chaikin_oscillator = df['CO'].shift(1).iloc[-1]
-    if chaikin_oscillator > previous_chaikin_oscillator:
+    if chaikin_oscillator > previous_chaikin_oscillator and chaikin_oscillator > 0:
         volume_score += 1
-        details['Volume'] += "Chaikin Oscillator: Increasing sharply; "
-    elif chaikin_oscillator < previous_chaikin_oscillator:
-        volume_score += 0
-        details['Volume'] += "Chaikin Oscillator: Decreasing; "
-    else:
+        details['Volume'] += "Chaikin Oscillator: Increasing and positive; "
+    elif chaikin_oscillator > previous_chaikin_oscillator and chaikin_oscillator < 0:
+        volume_score += 0.75
+        details['Volume'] += "Chaikin Oscillator: Increasing but negative; "
+    elif chaikin_oscillator < previous_chaikin_oscillator and chaikin_oscillator > 0:
         volume_score += 0.5
-        details['Volume'] += "Chaikin Oscillator: Flat; "
+        details['Volume'] += "Chaikin Oscillator: Decreasing but positive; "
+    else:
+        volume_score += 0
+        details['Volume'] += "Chaikin Oscillator: Decreasing and negative; "
 
-    # Ease of Movement (EMV)
+    # 5. Ease of Movement (EMV)
     emv = df['EMV'].iloc[-1]
     previous_emv = df['EMV'].shift(1).iloc[-1]
-    if emv > previous_emv:
+    if emv > previous_emv and emv > 0:
         volume_score += 1
-        details['Volume'] += "EMV: Increasing sharply; "
-    elif emv < previous_emv:
+        details['Volume'] += "EMV: Increasing and positive; "
+    elif emv < previous_emv and emv < 0:
         volume_score += 0
-        details['Volume'] += "EMV: Decreasing; "
+        details['Volume'] += "EMV: Decreasing and negative; "
     else:
         volume_score += 0.5
         details['Volume'] += "EMV: Flat; "
 
-    # Elder's Force Index (EFI)
+    # 6. Elder's Force Index (EFI)
     efi = df['EFI'].iloc[-1]
-    previous_efi = df['EFI'].shift(1).iloc[-1]
-    if efi > previous_efi:
+    if efi > df['EFI'].shift(1).iloc[-1]:
         volume_score += 1
-        details['Volume'] += "EFI: Increasing sharply; "
-    elif efi < previous_efi:
+        details['Volume'] += "EFI: Increasing; "
+    elif efi < df['EFI'].shift(1).iloc[-1]:
         volume_score += 0
         details['Volume'] += "EFI: Decreasing; "
     else:
         volume_score += 0.5
         details['Volume'] += "EFI: Flat; "
 
-    # Klinger Oscillator
-    klinger = df['Klinger'].iloc[-1]
-    previous_klinger = df['Klinger'].shift(1).iloc[-1]
-    if klinger > 0 and klinger > previous_klinger:
+    # 7. Klinger Oscillator
+    kvo = df['KVO'].iloc[-1]
+    kvo_signal = df['KVO_Signal'].iloc[-1]
+    if kvo > kvo_signal and kvo > 0:
         volume_score += 1
-        details['Volume'] += "Klinger Oscillator: Increasing sharply; "
-    elif klinger > 0:
+        details['Volume'] += "KVO: Bullish crossover with positive money flow; "
+    elif kvo > kvo_signal and kvo < 0:
+        volume_score += 0.75
+        details['Volume'] += "KVO: Bullish crossover but negative money flow; "
+    elif kvo < kvo_signal and kvo > 0:
         volume_score += 0.5
-        details['Volume'] += "Klinger Oscillator: Increasing moderately; "
-    elif klinger < 0 and klinger < previous_klinger:
-        volume_score += 0
-        details['Volume'] += "Klinger Oscillator: Decreasing sharply; "
+        details['Volume'] += "KVO: Bearish crossover but positive money flow; "
     else:
-        volume_score += 0.25
-        details['Volume'] += "Klinger Oscillator: Decreasing moderately; "
+        volume_score += 0
+        details['Volume'] += "KVO: Bearish crossover with negative money flow; "
 
-    # Money Flow Index (MFI)
+    # 8. Money Flow Index (MFI)
     mfi = df['MFI'].iloc[-1]
     if mfi > 80:
         volume_score += 0
@@ -1533,7 +1421,7 @@ def calculate_scores(df):
         volume_score += 0.5
         details['Volume'] += "MFI: Neutral; "
 
-    # Net Volume
+    # 9. Net Volume
     net_volume = df['Net_Volume'].iloc[-1]
     previous_net_volume = df['Net_Volume'].shift(1).iloc[-1]
     if net_volume > previous_net_volume:
@@ -1546,7 +1434,7 @@ def calculate_scores(df):
         volume_score += 0.5
         details['Volume'] += "Net Volume: Flat; "
 
-    # On Balance Volume (OBV)
+    # 10. On Balance Volume (OBV)
     obv = df['OBV'].iloc[-1]
     previous_obv = df['OBV'].shift(1).iloc[-1]
     if obv > previous_obv:
@@ -1559,7 +1447,7 @@ def calculate_scores(df):
         volume_score += 0.5
         details['Volume'] += "OBV: Flat; "
 
-    # Price Volume Trend (PVT)
+    # 11. Price Volume Trend (PVT)
     pvt = df['PVT'].iloc[-1]
     previous_pvt = df['PVT'].shift(1).iloc[-1]
     if pvt > previous_pvt:
@@ -1572,36 +1460,26 @@ def calculate_scores(df):
         volume_score += 0.5
         details['Volume'] += "PVT: Flat; "
 
-    # VWAP (Volume Weighted Average Price)
-    vwap = df['VWAP'].iloc[-1]
-    current_price = df['Close'].iloc[-1]
-    if current_price > vwap:
+    # 12. VWAP (Volume Weighted Average Price)
+    if current_price > df['VWAP'].iloc[-1]:
         volume_score += 1
         details['Volume'] += "VWAP: Above VWAP (Bullish); "
-    elif current_price < vwap:
+    else:
         volume_score += 0
         details['Volume'] += "VWAP: Below VWAP (Bearish); "
-    else:
-        volume_score += 0.5
-        details['Volume'] += "VWAP: At VWAP (Neutral); "
 
-    # VWMA (Volume Weighted Moving Average)
-    vwma = df['VWMA'].iloc[-1]
-    current_price = df['Close'].iloc[-1]
-    if current_price > vwma:
+    # 13. VWMA (Volume Weighted Moving Average)
+    if current_price > df['VWMA'].iloc[-1]:
         volume_score += 1
         details['Volume'] += "VWMA: Above VWMA (Bullish); "
-    elif current_price < vwma:
+    else:
         volume_score += 0
         details['Volume'] += "VWMA: Below VWMA (Bearish); "
-    else:
-        volume_score += 0.5
-        details['Volume'] += "VWMA: At VWMA (Neutral); "
 
-    # Volume Oscillator
+    # 14. Volume Oscillator
     volume_osc = df['VO'].iloc[-1]
     previous_volume_osc = df['VO'].shift(1).iloc[-1]
-    if volume_osc > previous_volume_osc:
+    if volume_osc > previous_volume_osc and volume_osc > 0:
         volume_score += 1
         details['Volume'] += "Volume Oscillator: Increasing sharply; "
     elif volume_osc < previous_volume_osc:
@@ -1611,160 +1489,121 @@ def calculate_scores(df):
         volume_score += 0.5
         details['Volume'] += "Volume Oscillator: Flat; "
 
-    # Volume Profile Fixed Range (VPFR)
-    vpfr = df['VPFR'].iloc[-1]
-    previous_vpfr = df['VPFR'].shift(1).iloc[-1]
-    if vpfr > previous_vpfr:
+    # 15. Volume Profile Fixed Range (VPFR)
+    if df['VPFR'].iloc[-1] > df['VPFR'].shift(1).iloc[-1]:
         volume_score += 1
         details['Volume'] += "VPFR: Increasing sharply; "
-    elif vpfr < previous_vpfr:
+    else:
         volume_score += 0
         details['Volume'] += "VPFR: Decreasing; "
-    else:
-        volume_score += 0.5
-        details['Volume'] += "VPFR: Flat; "
 
-    # Volume Profile Visible Range (VPVR)
-    vpvr = df['VPVR'].iloc[-1]
-    previous_vpvr = df['VPVR'].shift(1).iloc[-1]
-    if vpvr > previous_vpvr:
+    # 16. Volume Profile Visible Range (VPVR)
+    if df['VPVR'].iloc[-1] > df['VPVR'].shift(1).iloc[-1]:
         volume_score += 1
         details['Volume'] += "VPVR: Increasing sharply; "
-    elif vpvr < previous_vpvr:
+    else:
         volume_score += 0
         details['Volume'] += "VPVR: Decreasing; "
-    else:
-        volume_score += 0.5
-        details['Volume'] += "VPVR: Flat; "
 
-    # Vortex Indicator
-    vortex_pos = df['Vortex_Pos'].iloc[-1]
-    vortex_neg = df['Vortex_Neg'].iloc[-1]
-    if vortex_pos > vortex_neg:
+    # 17. Vortex Indicator
+    if df['Vortex_Pos'].iloc[-1] > df['Vortex_Neg'].iloc[-1]:
         volume_score += 1
         details['Volume'] += "Vortex: Bullish trend; "
     else:
         volume_score += 0
         details['Volume'] += "Vortex: Bearish trend; "
 
-    # Williams Accumulation/Distribution (WAD)
-    wad = df['Williams_AD'].iloc[-1]
-    previous_wad = df['Williams_AD'].shift(1).iloc[-1]
-    if wad > previous_wad:
+    # 18. Williams Accumulation/Distribution (WAD)
+    if df['Williams_AD'].iloc[-1] > df['Williams_AD'].shift(1).iloc[-1]:
         volume_score += 1
         details['Volume'] += "WAD: Increasing sharply; "
-    elif wad < previous_wad:
+    else:
         volume_score += 0
         details['Volume'] += "WAD: Decreasing; "
-    else:
-        volume_score += 0.5
-        details['Volume'] += "WAD: Flat; "
 
-    # Final normalized volume score
-    scores['Volume'] = volume_score / 26  # Normalize to a scale of 0-1
+    # Normalize Volume Score
+    scores['Volume'] = volume_score / 18
 
-    # Support/Resistance ------------------------------------------------
+    ## Support/Resistance Indicators-------------------------------
     support_resistance_score = 0
 
     # 1. Williams Fractal
-    fractal_up = df['Fractal_Up'].iloc[-1]
-    fractal_down = df['Fractal_Down'].iloc[-1]
-
-    if fractal_up > 0:
-        support_resistance_score += 0.25  # Mild bearish signal, potential resistance
+    if df['Fractal_Up'].iloc[-1] > 0:
+        support_resistance_score += 0.25
         details['Support_Resistance'] += "Fractal: Potential Resistance detected; "
-    elif fractal_down > 0:
-        support_resistance_score += 0.75  # Mild bullish signal, potential support
+    elif df['Fractal_Down'].iloc[-1] > 0:
+        support_resistance_score += 0.75
         details['Support_Resistance'] += "Fractal: Potential Support detected; "
     else:
-        support_resistance_score += 0.5  # Neutral signal, no significant support/resistance
+        support_resistance_score += 0.5
         details['Support_Resistance'] += "Fractal: No significant support/resistance detected; "
 
-
-    # 2.Pivot Points
-    pivot_point = df['Pivot_Point'].iloc[-1]
-    resistance_1 = df['Resistance_1'].iloc[-1]
-    resistance_2 = df['Resistance_2'].iloc[-1]
-    resistance_3 = df['Resistance_3'].iloc[-1]
-    support_1 = df['Support_1'].iloc[-1]
-    support_2 = df['Support_2'].iloc[-1]
-    support_3 = df['Support_3'].iloc[-1]
+    # 2. Pivot Points
     price = df['Close'].iloc[-1]
-
-    if price > resistance_3:
-        support_resistance_score += 0  # Overbought condition, no score
+    if price > df['Resistance_3'].iloc[-1]:
+        support_resistance_score += 0
         details['Support_Resistance'] += "Pivot Points: Price significantly above Resistance 3 (Overbought); "
-    elif price > resistance_2:
-        support_resistance_score += 0.25  # Mildly overbought, small score
+    elif price > df['Resistance_2'].iloc[-1]:
+        support_resistance_score += 0.25
         details['Support_Resistance'] += "Pivot Points: Price above Resistance 2 (Mildly Overbought); "
-    elif price > resistance_1:
-        support_resistance_score += 0.5  # Moderate bullish signal
+    elif price > df['Resistance_1'].iloc[-1]:
+        support_resistance_score += 0.5
         details['Support_Resistance'] += "Pivot Points: Price above Resistance 1 (Moderately Bullish); "
-    elif price < support_3:
-        support_resistance_score += 1  # Oversold condition, strong bullish signal
+    elif price < df['Support_3'].iloc[-1]:
+        support_resistance_score += 1
         details['Support_Resistance'] += "Pivot Points: Price significantly below Support 3 (Oversold); "
-    elif price < support_2:
-        support_resistance_score += 0.75  # Mildly oversold, moderate bullish signal
+    elif price < df['Support_2'].iloc[-1]:
+        support_resistance_score += 0.75
         details['Support_Resistance'] += "Pivot Points: Price below Support 2 (Mildly Oversold); "
-    elif price < support_1:
-        support_resistance_score += 0.5  # Slightly oversold, mild bullish signal
+    elif price < df['Support_1'].iloc[-1]:
+        support_resistance_score += 0.5
         details['Support_Resistance'] += "Pivot Points: Price below Support 1 (Mildly Bullish); "
     else:
-        support_resistance_score += 0.25  # Neutral to slightly bullish signal
+        support_resistance_score += 0.25
         details['Support_Resistance'] += "Pivot Points: Price within range of Pivot (Neutral to Slightly Bullish); "
 
-
     # 3. Typical Price
-    typical_price = df['Typical_Price'].iloc[-1]
-    price = df['Close'].iloc[-1]  # Assuming 'price' is the closing price
-
-    if price < typical_price:
-        support_resistance_score += 0.75  # Bullish signal, price is below typical price
+    if price < df['Typical_Price'].iloc[-1]:
+        support_resistance_score += 0.75
         details['Support_Resistance'] += "Typical Price: Price below typical price (Support); "
-    elif price > typical_price:
-        support_resistance_score += 0.25  # Mild bearish signal, price is above typical price
+    elif price > df['Typical_Price'].iloc[-1]:
+        support_resistance_score += 0.25
         details['Support_Resistance'] += "Typical Price: Price above typical price (Resistance); "
     else:
-        support_resistance_score += 0.5  # Neutral signal, price is at typical price
+        support_resistance_score += 0.5
         details['Support_Resistance'] += "Typical Price: Price at typical price (Neutral); "
 
-
     # 4. Darvas Box Theory
-    darvas_high = df['Darvas_High'].iloc[-1]
-    darvas_low = df['Darvas_Low'].iloc[-1]
-
-    if price > darvas_high:
-        support_resistance_score += 0.75  # Bullish signal, but avoid extreme scoring
+    if price > df['Darvas_High'].iloc[-1]:
+        support_resistance_score += 0.75
         details['Support_Resistance'] += "Darvas Box: Price breaking out above Darvas high (Bullish); "
-    elif price < darvas_low:
-        support_resistance_score += 0.25  # Bearish signal, slight negative impact
+    elif price < df['Darvas_Low'].iloc[-1]:
+        support_resistance_score += 0.25
         details['Support_Resistance'] += "Darvas Box: Price breaking down below Darvas low (Bearish); "
     else:
-        support_resistance_score += 0.5  # Neutral signal, price within the range
+        support_resistance_score += 0.5
         details['Support_Resistance'] += "Darvas Box: Price within Darvas range (Neutral); "
 
-
-    # 5.Fibonacci Levels
-    fib_0_618 = df['Fib_0.618'].iloc[-1]
-    fib_0_382 = df['Fib_0.382'].iloc[-1]
-    fib_0_236 = df['Fib_0.236'].iloc[-1]
-
-    if price > fib_0_618:
+    # 5. Fibonacci Levels
+    if price > df['Fib_0.618'].iloc[-1]:
         support_resistance_score += 1
         details['Support_Resistance'] += "Fibonacci: Price above 61.8% retracement (Strong Support); "
-    elif price > fib_0_382:
+    elif price > df['Fib_0.382'].iloc[-1]:
         support_resistance_score += 0.75
         details['Support_Resistance'] += "Fibonacci: Price between 38.2% and 61.8% retracement (Moderate Support); "
-    elif price > fib_0_236:
+    elif price > df['Fib_0.236'].iloc[-1]:
         support_resistance_score += 0.5
         details['Support_Resistance'] += "Fibonacci: Price between 23.6% and 38.2% retracement (Weak Support); "
     else:
         support_resistance_score += 0
         details['Support_Resistance'] += "Fibonacci: Price below 23.6% retracement (Weak Resistance); "
 
-    # Final normalized support/resistance score
-    scores['Support_Resistance'] = support_resistance_score / 5  # Normalize to a scale of 0-1 based on the number of indicators
+    # Normalize Support/Resistance Score
+    scores['Support_Resistance'] = support_resistance_score / 5
+
     return scores, details
+
+
 
 def get_recommendation(overall_score):
     if overall_score >= 0.8:
@@ -1813,13 +1652,16 @@ def create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
     selected_indicators = st.multiselect(f'Select {group_name} Indicators', indicators, default=[indicators[0]] if indicators else [])
 
     if selected_indicators:
+        # Use Plotly's built-in color scale for better visualization
+        color_scale = px.colors.qualitative.Plotly
+
         fig = make_subplots(
             rows=1, cols=1, shared_xaxes=True, 
             specs=[[{"secondary_y": True}]],
             subplot_titles=(f"{ticker} - {group_name} Indicators",)
         )
 
-        # Choose to display either candlestick or line chart based on user selection
+        # Display either candlestick or line chart based on user selection
         if use_candlestick:
             fig.add_trace(go.Candlestick(
                 x=data.index,
@@ -1836,8 +1678,9 @@ def create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
                 name='Close Price', hoverinfo='x+y', line=dict(color='blue', width=2)
             ))
 
-        for indicator in selected_indicators:
+        for i, indicator in enumerate(selected_indicators):
             if indicator in data.columns:
+                color = color_scale[i % len(color_scale)]
                 if indicator == 'MACD_hist':
                     colors = get_macd_hist_colors(data[indicator])
                     fig.add_trace(go.Bar(
@@ -1848,7 +1691,7 @@ def create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
                     secondary_y = True if group_name == "Momentum" else False
                     fig.add_trace(go.Scatter(
                         x=data.index, y=data[indicator], mode='lines', 
-                        name=indicator, hoverinfo='x+y', line=dict(width=2)
+                        name=indicator, hoverinfo='x+y', line=dict(width=2, color=color)
                     ), secondary_y=secondary_y)
 
         # Add Bollinger Bands
@@ -1870,11 +1713,11 @@ def create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
 
         # Enhance layout and interaction features
         fig.update_layout(
-            
+            autosize=True,
             height=500,
-            margin=dict(t=100, b=40, l=60, r=60),
-            yaxis=dict(title='Price', side='left', fixedrange=False),
-            yaxis2=dict(title=f'{group_name} Indicator', side='right', overlaying='y', showgrid=False, fixedrange=False),
+            margin=dict(t=80, b=80, l=60, r=60),
+            yaxis=dict(title='Price', side='left', fixedrange=False, automargin=True),
+            yaxis2=dict(title=f'{group_name} Indicator', side='right', overlaying='y', showgrid=False, fixedrange=False, automargin=True),
             xaxis=dict(
                 rangeslider=dict(visible=True),
                 rangeselector=dict(
@@ -1888,17 +1731,19 @@ def create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
                         dict(step='all')
                     ])
                 ),
-                type='date'
+                type='date',
+                automargin=True,
             ),
-            legend=dict(x=0.5, y=0.1, orientation='h', xanchor='center', yanchor='top'),
+            legend=dict(x=0.5, y=-0.4, orientation='h', xanchor='center', yanchor='top'),
             hovermode='x unified',
-            hoverlabel=dict(bgcolor="skyblue", font_size=12, font_family="Rockwell"),
-            
+            hoverlabel=dict(bgcolor="sky blue", font_size=12, font_family="Rockwell"),
         )
 
-        st.plotly_chart(fig)
+        st.plotly_chart(fig, use_container_width=True)
     else:
         st.write(f"No indicators selected for {group_name}.")
+
+
 
 def get_macd_hist_colors(macd_hist):
     colors = []
@@ -2146,7 +1991,7 @@ def stock_analysis_app():
 
             # Define columns for each category
             trend_columns = ["MACD_hist","5_day_EMA", "10_day_EMA", "20_day_EMA", "ALMA", "Aroon_Up", "Aroon_Down", "ADX", "Plus_DI", "Minus_DI", "BB_Middle", "BB_Std", "BB_High", "BB_Low", "DEMA", "Envelope_High", "Envelope_Low", "GMMA_Short", "GMMA_Long", "HMA", "Ichimoku_Tenkan", "Ichimoku_Kijun", "Ichimoku_Senkou_Span_A", "Ichimoku_Senkou_Span_B", "KC_Middle", "ATR_10", "KC_High", "KC_Low", "LSMA", "MAC_Upper", "MAC_Lower", "EMA_12", "EMA_26", "MACD", "MACD_signal",  "Parabolic_SAR", "SuperTrend", "Price_Channel_Upper", "Price_Channel_Lower", "TEMA_20", "Advance_Decline", "Chande_Kroll_Stop_Long", "Chande_Kroll_Stop_Short", "Williams_Alligator_Jaw", "Williams_Alligator_Teeth", "Williams_Alligator_Lips", "Donchian_High", "Donchian_Low"]
-            momentum_columns = ["RSI","AO", "AC", "CMO", "CCI", "CRSI", "Coppock", "DPO", "KST", "KST_Signal", "Momentum",  "ROC",  "Stochastic_%K", "Stochastic_%D", "Stochastic_RSI", "TRIX", "TRIX_Signal", "TSI", "TSI_Signal", "Ultimate_Oscillator", "Relative_Vigor_Index", "RVI_Signal", "SMI_Ergodic", "SMI_Ergodic_Signal", "Fisher_Transform", "Fisher_Transform_Signal", "Williams_%R", "Klinger"]
+            momentum_columns = ["RSI","AO", "AC", "CMO", "CCI", "CRSI", "Coppock", "DPO", "KST", "KST_Signal", "Momentum",  "ROC",  "Stochastic_%K", "Stochastic_%D", "Stochastic_RSI", "TRIX", "TRIX_Signal", "TSI", "TSI_Signal", "Ultimate_Oscillator", "Relative_Vigor_Index", "RVI_Signal", "SMI_Ergodic", "SMI_Ergodic_Signal", "Fisher_Transform", "Fisher_Transform_Signal", "Williams_%R", "Plus_DI", "Minus_DI"]
             volatility_columns = ["ATR", "BB_%B", "BB_Width", "Chaikin_Volatility",  "Choppiness_Index", "Hist_Vol_Annualized", "Mass_Index", "RVI", "Standard_Deviation", "Vol_CtC", "Vol_ZtC", "Vol_OHLC", "Vol_Index", "Chop_Zone", "ZigZag", "Keltner_High", "Keltner_Low"]
             volume_columns = ["AD", "BoP", "CMF", "CO", "EMV", "EFI", "KVO", "KVO_Signal", "MFI", "Net_Volume", "OBV", "PVT", "VWAP", "VO", "Vortex_Pos", "Vortex_Neg", "Volume", "VWMA", "VPFR", "VPVR", "Spread", "Elder_Ray_Bull", "Elder_Ray_Bear", "Volume_Profile", "Price_to_Volume", "McClellan_Oscillator", "TRIN", "Williams_AD", "Ease_of_Movement"]
             support_resistance_columns = ["Pivot_Point","Fractal_Up", "Fractal_Down",  "Resistance_1", "Support_1", "Resistance_2", "Support_2", "Resistance_3", "Support_3", "Typical_Price", "Darvas_High", "Darvas_Low", "Fib_0.0", "Fib_0.236", "Fib_0.382", "Fib_0.5", "Fib_0.618", "Fib_1.0"]

@@ -1,40 +1,27 @@
 import streamlit as st
 from utils.mongodb import portfolios_collection, users_collection, buy_trades_collection, sell_trades_collection
-from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
+from utils.constants import bse_largecap, bse_smallcap, bse_midcap
 import yfinance as yf
 import pandas as pd
-import plotly.graph_objects as go
-import plotly.express as px
 from datetime import datetime
+import plotly.graph_objects as go
 
-# Helper function to get user ID from email
+# Helper functions
 def get_user_id(email):
     user = users_collection.find_one({"email": email})
     return user['_id'] if user else None
 
-# Helper function to get company info
-def get_company_info(ticker):
-    try:
-        stock = yf.Ticker(ticker)
-        info = stock.info
-        return info.get('longName', 'N/A'), info.get('sector', 'N/A'), info.get('industry', 'N/A')
-    except Exception as e:
-        return 'N/A', 'N/A', 'N/A'
-
-# Function to get company names from tickers
 def get_company_name(ticker):
     try:
         stock = yf.Ticker(ticker)
         return stock.info.get('shortName', ticker)
     except:
-        return ticker  # Return ticker if company name not found
+        return ticker
 
-# Assuming a list of tickers (this could be from an index or predefined list)
 all_tickers = bse_largecap + bse_smallcap + bse_midcap
 ticker_to_company = {ticker: get_company_name(ticker) for ticker in all_tickers}
 company_names = list(ticker_to_company.values())
 
-# Portfolio feature
 def display_portfolio():
     st.header(f"{st.session_state.username}'s Portfolio")
     user_id = get_user_id(st.session_state.email)
@@ -42,7 +29,7 @@ def display_portfolio():
     # Refresh portfolio data
     portfolio = list(portfolios_collection.find({"user_id": user_id}))
 
-    # Add new stock to portfolio
+    # Add to Portfolio
     st.sidebar.subheader("Add to Portfolio")
     selected_company = st.sidebar.selectbox('Select or Enter Company Name:', company_names)
     ticker = [ticker for ticker, company in ticker_to_company.items() if company == selected_company][0]
@@ -50,6 +37,7 @@ def display_portfolio():
     bought_price = st.sidebar.number_input("Bought Price per Share", min_value=0.0, step=0.01)
     buy_brokerage = st.sidebar.number_input("Buy Brokerage Charges", min_value=0.0, step=0.01)
     buy_date = st.sidebar.date_input("Buy Date", pd.Timestamp.now(), key="buy_date")
+    
     if st.sidebar.button("Add to Portfolio"):
         try:
             current_data = yf.download(ticker, period='1d')
@@ -63,7 +51,8 @@ def display_portfolio():
                 "shares": shares,
                 "bought_price": bought_price,
                 "brokerage": buy_brokerage,
-                "date": pd.Timestamp(buy_date)
+                "date": pd.Timestamp(buy_date),
+                "label": "buy"  # Add buy label
             })
 
             # Add to or update portfolio
@@ -76,7 +65,7 @@ def display_portfolio():
                 "date_added": pd.Timestamp(buy_date)
             })
             st.success(f"{selected_company} ({ticker}) added to your portfolio!")
-            st.experimental_rerun()  # Refresh the app to reflect changes
+            st.experimental_rerun()
         except Exception as e:
             st.error(f"Error adding stock: {e}")
 
@@ -94,12 +83,10 @@ def display_portfolio():
                 current_value = entry['shares'] * last_price
                 p_l = current_value - invested_value
                 p_l_percent = (p_l / invested_value) * 100
-                company_name, sector, industry = get_company_info(entry['ticker'])
+                company_name = get_company_name(entry['ticker'])
                 portfolio_data.append({
                     "Ticker": entry['ticker'],
                     "Company Name": company_name,
-                    "Sector": sector,
-                    "Industry": industry,
                     "Shares": entry['shares'],
                     "Bought Price": entry['bought_price'],
                     "Invested Value": invested_value,
@@ -112,11 +99,10 @@ def display_portfolio():
                 st.error(f"Error retrieving data for {entry['ticker']}: {e}")
 
         portfolio_df = pd.DataFrame(portfolio_data)
-
         st.write("Editable Portfolio:")
         edited_portfolio_df = st.data_editor(portfolio_df, num_rows="dynamic")
 
-        # Detect changes and update the database
+        # Update or delete portfolio based on edited data
         for index, row in edited_portfolio_df.iterrows():
             original_row = portfolio_df.loc[index]
             if row["Shares"] != original_row["Shares"] or row["Bought Price"] != original_row["Bought Price"]:
@@ -134,7 +120,7 @@ def display_portfolio():
                     {"user_id": user_id, "ticker": row['Ticker'], "date_added": row['Date Added']}
                 )
                 st.success(f"Removed {row['Company Name']} from your portfolio.")
-            st.experimental_rerun()  # Refresh the app to reflect changes
+            st.experimental_rerun()
 
         col1, col2 = st.columns(2)
 
@@ -155,8 +141,6 @@ def display_portfolio():
         st.sidebar.subheader("Sell from Portfolio")
         company_to_sell = st.sidebar.selectbox("Select a company to sell", portfolio_df['Company Name'])
         ticker_to_sell = portfolio_df[portfolio_df['Company Name'] == company_to_sell]['Ticker'].values[0]
-
-        # Fetch current values for the selected company
         entry_to_sell = portfolio_df[portfolio_df['Ticker'] == ticker_to_sell].iloc[0]
         sell_shares = st.sidebar.number_input("Number of Shares to Sell", min_value=0.0, max_value=entry_to_sell['Shares'], step=0.01)
         sell_price = st.sidebar.number_input("Sell Price per Share", min_value=0.0, step=0.01)
@@ -174,7 +158,8 @@ def display_portfolio():
                     "shares": sell_shares,
                     "sell_price": sell_price,
                     "brokerage": sell_brokerage,
-                    "date": pd.Timestamp(sell_date)
+                    "date": pd.Timestamp(sell_date),
+                    "label": "sell"  # Add sell label
                 })
 
                 # Calculate net profit/loss
@@ -201,14 +186,13 @@ def display_portfolio():
                     portfolios_collection.delete_one({"user_id": user_id, "ticker": ticker_to_sell, "date_added": entry_to_sell['Date Added']})
                     st.success(f"{company_to_sell} removed from your portfolio.")
 
-                st.experimental_rerun()  # Refresh the app to reflect changes
+                st.experimental_rerun()
 
-        # Display P&L table for trades
+        # P&L statement
         st.header("P&L Statement")
         trades_data = []
         sell_trades = list(sell_trades_collection.find({"user_id": user_id}))
         for trade in sell_trades:
-            # Retrieve corresponding buy trade details
             buy_trades = list(buy_trades_collection.find({"user_id": user_id, "ticker": trade['ticker']}))
             if buy_trades:
                 total_buy_value = sum([bt['shares'] * (bt['bought_price'] + (bt['brokerage'] / bt['shares'])) for bt in buy_trades])
@@ -234,7 +218,7 @@ def display_portfolio():
         st.write("Editable P&L Statement:")
         edited_p_l_df = st.data_editor(p_l_df, num_rows="dynamic")
 
-        # Detect changes and update the P&L database
+        # Update P&L database based on edits
         for index, row in edited_p_l_df.iterrows():
             original_row = p_l_df.loc[index]
             if any([
@@ -254,7 +238,6 @@ def display_portfolio():
                 )
                 st.success(f"Updated P&L for {row['Ticker']}.")
 
-        # Handle deleted rows in P&L table
         if len(edited_p_l_df) < len(p_l_df):
             deleted_rows = p_l_df[~p_l_df.index.isin(edited_p_l_df.index)]
             for _, row in deleted_rows.iterrows():
@@ -262,31 +245,100 @@ def display_portfolio():
                     {"user_id": user_id, "ticker": row['Ticker'], "date": row.name}
                 )
                 st.success(f"Removed P&L entry for {row['Ticker']}.")
-            st.experimental_rerun()  # Refresh the app to reflect changes
+            st.experimental_rerun()
 
-        # Generate plots for P&L with dates on the x-axis
+        # Generate P&L graph with dates on x-axis
         if not p_l_df.empty:
-            col3, col4 = st.columns(2)
-            with col3:
-                fig3 = go.Figure()
-                fig3.add_trace(go.Bar(x=edited_p_l_df.index, y=edited_p_l_df['Net P&L'], name='Net P&L'))
-                fig3.update_layout(title_text='Net Profit/Loss Over Time', xaxis_title='Date', yaxis_title='Net P&L')
-                st.plotly_chart(fig3)
+            fig3 = go.Figure()
+            fig3.add_trace(go.Bar(x=edited_p_l_df.index, y=edited_p_l_df['Net P&L'], name='Net P&L'))
+            fig3.update_layout(title_text='Net Profit/Loss Over Time', xaxis_title='Date', yaxis_title='Net P&L')
+            st.plotly_chart(fig3)
 
-            with col4:
-                total_pl = edited_p_l_df['Net P&L'].sum()
-                st.metric("Total Net P&L", f"{total_pl:.2f}")
+        # Trade book
+        st.header("Trade Book")
+        start_date = st.date_input("Start Date", pd.Timestamp.now() - pd.Timedelta(days=30))
+        end_date = st.date_input("End Date", pd.Timestamp.now())
+
+        # Retrieve all trades within the specified date range
+        all_buy_trades = list(buy_trades_collection.find({"user_id": user_id, "date": {"$gte": pd.Timestamp(start_date), "$lte": pd.Timestamp(end_date)}}))
+        all_sell_trades = list(sell_trades_collection.find({"user_id": user_id, "date": {"$gte": pd.Timestamp(start_date), "$lte": pd.Timestamp(end_date)}}))
+
+        # Ensure the 'label' field exists and is populated
+        for trade in all_buy_trades:
+            trade['label'] = trade.get('label', 'buy')
+
+        for trade in all_sell_trades:
+            trade['label'] = trade.get('label', 'sell')
+
+        # Combine buy and sell trades
+        all_trades = all_buy_trades + all_sell_trades
+        trade_book = pd.DataFrame(all_trades)
+
+        if not trade_book.empty:
+            trade_book['date'] = pd.to_datetime(trade_book['date'])
+            trade_book.set_index('date', inplace=True)
+            st.write("Editable Trade Book:")
+            edited_trade_book_df = st.data_editor(trade_book, num_rows="dynamic")
+
+            # Update the trade book based on edits
+            for index, row in edited_trade_book_df.iterrows():
+                original_row = trade_book.loc[index]
+                if any([
+                    row["ticker"] != original_row["ticker"],
+                    row["shares"] != original_row["shares"],
+                    row["label"] != original_row["label"],
+                    row.get("bought_price", None) != original_row.get("bought_price", None),
+                    row.get("sell_price", None) != original_row.get("sell_price", None)
+                ]):
+                    if row['label'] == 'buy':
+                        buy_trades_collection.update_one(
+                            {"user_id": user_id, "ticker": row['ticker'], "date": original_row.name},
+                            {"$set": {
+                                "ticker": row["ticker"],
+                                "shares": row["shares"],
+                                "bought_price": row.get("bought_price", None),
+                                "brokerage": row.get("brokerage", None)
+                            }}
+                        )
+                    else:
+                        sell_trades_collection.update_one(
+                            {"user_id": user_id, "ticker": row['ticker'], "date": original_row.name},
+                            {"$set": {
+                                "ticker": row["ticker"],
+                                "shares": row["shares"],
+                                "sell_price": row.get("sell_price", None),
+                                "brokerage": row.get("brokerage", None)
+                            }}
+                        )
+                    st.success(f"Updated trade for {row['ticker']}.")
+
+            # Handle deleted rows in the trade book
+            if len(edited_trade_book_df) < len(trade_book):
+                deleted_rows = trade_book[~trade_book.index.isin(edited_trade_book_df.index)]
+                for _, row in deleted_rows.iterrows():
+                    if row['label'] == 'buy':
+                        buy_trades_collection.delete_one(
+                            {"user_id": user_id, "ticker": row['ticker'], "date": row.name}
+                        )
+                    else:
+                        sell_trades_collection.delete_one(
+                            {"user_id": user_id, "ticker": row['ticker'], "date": row.name}
+                        )
+                    st.success(f"Removed trade entry for {row['ticker']}.")
+                st.experimental_rerun()
+        else:
+            st.write("No trades found in the selected date range.")
 
     else:
         st.write("Your portfolio is empty.")
 
-# Call the function to display the portfolio
+# Display the portfolio
 if 'username' not in st.session_state:
-    st.session_state.username = 'Guest'  # or handle the case where username is not set
+    st.session_state.username = 'Guest'
 if 'email' not in st.session_state:
-    st.session_state.email = 'guest@example.com'  # or handle the case where email is not set
+    st.session_state.email = 'guest@example.com'
 if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False  # or handle the case where logged_in is not set
+    st.session_state.logged_in = False
 
 if st.session_state.logged_in:
     display_portfolio()

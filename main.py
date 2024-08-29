@@ -2,7 +2,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from utils.mongodb import init_db
 from authentication import login, signup, forgot_password
-from components import my_account, my_portfolio, my_watchlist, markets, stock_screener, stock_analysis, admin, home_page
+from components import my_account, my_portfolio, my_watchlist, markets, stock_screener, stock_analysis, admin, home_page,stock_comparision
 
 # Initialize MongoDB collections
 init_db()
@@ -44,8 +44,10 @@ def main_menu():
         f"{st.session_state.username}'s Watchlist",
         "Stock Screener",
         "Stock Analysis",
+        "Stock Comparision",
         "Markets",
         "My Account"
+
     ]
 
     # Add Database Admin Page only if the user is an admin
@@ -92,6 +94,8 @@ else:
             stock_screener.stock_screener_app()
         elif choice == "Stock Analysis":
             stock_analysis.stock_analysis_app()
+        elif choice == "Stock Comparision":
+            stock_comparision.display_stock_comparison()
         elif choice == "Database Admin Page" and st.session_state.is_admin:
             admin.display_tables()
         else:
