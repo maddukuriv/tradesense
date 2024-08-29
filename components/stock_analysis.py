@@ -2044,11 +2044,11 @@ def stock_analysis_app():
 
             # Calculate overall weightage score
             overall_score = (
-                scores['Trend'] * 0.25 + 
+                scores['Trend'] * 0.30 + 
                 scores['Momentum'] * 0.25 + 
                 scores['Volume'] * 0.25 + 
-                scores['Volatility'] * 0.125 + 
-                scores['Support_Resistance'] * 0.125
+                scores['Volatility'] * 0.10 + 
+                scores['Support_Resistance'] * 0.10
             )
             recommendation = get_recommendation(overall_score)
 

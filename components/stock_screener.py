@@ -1078,10 +1078,10 @@ def stock_screener_app():
 
         # Define weightages for each category
         weightage = {
-            'Volume_Score': 0.20,             # 15% weight
+            'Volume_Score': 0.25,             # 25% weight
             'Trend_Score': 0.25,              # 25% weight
             'Momentum_Score': 0.25,           # 25% weight
-            'Volatility_Score': 0.15,         # 15% weight
+            'Volatility_Score': 0.10,         # 10% weight
             'Support_Resistance_Score': 0.10, # 10% weight
             'Statistical_Score': 0.05,        # 5% weight
            
