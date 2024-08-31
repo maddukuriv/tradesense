@@ -37,7 +37,7 @@ if client:
         # Collection for trades
         trades_collection = db['trades']
 
-        print("database connected===>")
+        print("Database connected successfully")
     except pymongo.errors.ServerSelectionTimeoutError as err:
         print(f"Error selecting database or collections: {err}")
 

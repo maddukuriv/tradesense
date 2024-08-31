@@ -19,7 +19,7 @@ def fetch_company_names(tickers):
         ticker_to_name[ticker] = name
     return ticker_to_name
 
-# Helper functions
+# Updated get_user_id function
 def get_user_id(email):
     user = users_collection.find_one({"email": email})
     return user['_id'] if user else None
@@ -32,9 +32,80 @@ all_tickers = bse_largecap + bse_midcap
 ticker_to_company = fetch_company_names(all_tickers)
 company_names = list(ticker_to_company.values())
 
+# Load user trades from the database
+def load_user_trades(user_id):
+    trades = list(trades_collection.find({"user_id": user_id}))
+    if trades:
+        trade_book = pd.DataFrame(trades)
+        trade_book['Date'] = pd.to_datetime(trade_book['Date'])
+        st.session_state.trade_book = trade_book
+    else:
+        st.session_state.trade_book = pd.DataFrame(columns=['Date', 'Stock', 'Action', 'Quantity', 'Price'])
+
+    # Reconstruct portfolio and P&L Statement from trade book
+    portfolio = pd.DataFrame(columns=['Stock', 'Quantity', 'Average Cost'])
+    pnl_statement = pd.DataFrame(columns=['Date', 'Stock', 'Gross Profit', 'Net Profit', 'Gross Profit %', 'Net Profit %'])
+    
+    for _, trade in trade_book.iterrows():
+        stock = trade['Stock']
+        action = trade['Action']
+        quantity = trade['Quantity']
+        price = trade['Price']
+        date = trade['Date']
+        
+        if action == 'BUY':
+            if stock in portfolio['Stock'].values:
+                existing_quantity = portfolio.loc[portfolio['Stock'] == stock, 'Quantity'].values[0]
+                existing_avg_cost = portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'].values[0]
+                
+                new_quantity = existing_quantity + quantity
+                new_avg_cost = ((existing_avg_cost * existing_quantity) + (price * quantity)) / new_quantity
+                
+                portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] = new_quantity
+                portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'] = new_avg_cost
+            else:
+                new_portfolio_entry = pd.DataFrame([{
+                    'Stock': stock,
+                    'Quantity': quantity,
+                    'Average Cost': price
+                }])
+                portfolio = pd.concat([portfolio, new_portfolio_entry], ignore_index=True)
+        
+        elif action == 'SELL':
+            if stock in portfolio['Stock'].values:
+                existing_quantity = portfolio.loc[portfolio['Stock'] == stock, 'Quantity'].values[0]
+                avg_cost = portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'].values[0]
+                
+                new_quantity = existing_quantity - quantity
+                gross_profit = (price - avg_cost) * quantity
+                net_profit = gross_profit  # Assuming no brokerage fees are applied here
+                gross_profit_pct = (gross_profit / (avg_cost * quantity)) * 100
+                net_profit_pct = gross_profit_pct  # Since net profit equals gross profit here
+                
+                pnl_entry = pd.DataFrame([{
+                    'Date': date,
+                    'Stock': stock,
+                    'Gross Profit': gross_profit,
+                    'Net Profit': net_profit,
+                    'Gross Profit %': gross_profit_pct,
+                    'Net Profit %': net_profit_pct
+                }])
+                pnl_statement = pd.concat([pnl_statement, pnl_entry], ignore_index=True)
+                
+                if new_quantity > 0:
+                    portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] = new_quantity
+                else:
+                    portfolio = portfolio[portfolio['Stock'] != stock]
+
+    st.session_state.portfolio = portfolio
+    st.session_state.pnl_statement = pnl_statement
+
 def display_portfolio():
     st.header(f"{st.session_state.username}'s Portfolio")
     user_id = get_user_id(st.session_state.email)
+
+    if user_id is not None and 'trade_book' not in st.session_state:
+        load_user_trades(user_id)
 
     # Sidebar: Add to Portfolio
     st.sidebar.header("Portfolio Management")
@@ -48,85 +119,84 @@ def display_portfolio():
     brokerage = st.sidebar.number_input("Brokerage Charges", min_value=0.0, step=0.01, key="trade_brokerage")
     trade_date = st.sidebar.date_input("Trade Date", datetime.today(), key="trade_date")
 
-    # Global in-memory trade book and portfolio for the current user session
-    if 'trade_book' not in st.session_state:
-        st.session_state.trade_book = pd.DataFrame(columns=['Date', 'Stock', 'Action', 'Quantity', 'Price'])
-    if 'portfolio' not in st.session_state:
-        st.session_state.portfolio = pd.DataFrame(columns=['Stock', 'Quantity', 'Average Cost'])
-    if 'pnl_statement' not in st.session_state:
-        st.session_state.pnl_statement = pd.DataFrame(columns=['Date', 'Stock', 'Gross Profit', 'Net Profit', 'Gross Profit %', 'Net Profit %'])
-
     def register_trade(stock, action, quantity, price, trade_date):
         trade_book = st.session_state.trade_book
         portfolio = st.session_state.portfolio
         pnl_statement = st.session_state.pnl_statement
 
-        # Record the trade in the trade book with the provided trade date
+        if user_id is None:
+            st.error("User ID could not be found. Ensure the user is logged in.")
+            return
+
+        # Prepare the trade document
         new_trade = {
-            'user_id': get_user_id(st.session_state.email),
+            'user_id': user_id,
             'Date': pd.Timestamp(trade_date),
             'Stock': stock,
             'Action': action,
             'Quantity': quantity,
             'Price': price
         }
-        trades_collection.insert_one(new_trade)
-        trade_book = pd.concat([trade_book, pd.DataFrame([new_trade])], ignore_index=True)
-        
-        if action == 'BUY':
-            # Update Portfolio
-            if stock in portfolio['Stock'].values:
-                portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] += quantity
-                portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'] = (
-                    (portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'] * (portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] - quantity)) + (price * quantity)
-                ) / portfolio.loc[portfolio['Stock'] == stock, 'Quantity']
-            else:
-                new_portfolio_entry = pd.DataFrame([{
-                    'Stock': stock,
-                    'Quantity': quantity,
-                    'Average Cost': price
-                }])
-                portfolio = pd.concat([portfolio, new_portfolio_entry], ignore_index=True)
-        
-        elif action == 'SELL':
-            # Update Portfolio
-            if stock in portfolio['Stock'].values:
-                portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] -= quantity
-                
-                # Calculate Realized P&L
-                avg_cost = portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'].values[0]
-                gross_profit = (price - avg_cost) * quantity
-                net_profit = gross_profit - brokerage
-                gross_profit_pct = (gross_profit / (avg_cost * quantity)) * 100
-                net_profit_pct = (net_profit / (avg_cost * quantity)) * 100
-                
-                new_pnl_entry = pd.DataFrame([{
-                    'Date': pd.Timestamp(trade_date),
-                    'Stock': stock,
-                    'Gross Profit': gross_profit,
-                    'Net Profit': net_profit,
-                    'Gross Profit %': gross_profit_pct,
-                    'Net Profit %': net_profit_pct
-                }])
-                pnl_statement = pd.concat([pnl_statement, new_pnl_entry], ignore_index=True)
 
-                # Ensure that all required columns are present
-                for column in ['Date', 'Stock', 'Gross Profit', 'Net Profit', 'Gross Profit %', 'Net Profit %']:
-                    if column not in pnl_statement.columns:
-                        pnl_statement[column] = pd.NaT if column == 'Date' else 0
-                
-                # If all shares sold, remove from portfolio
-                if portfolio.loc[portfolio['Stock'] == stock, 'Quantity'].values[0] == 0:
-                    portfolio = portfolio[portfolio['Stock'] != stock]
+        try:
+            # Insert the trade document into the MongoDB collection
+            result = trades_collection.insert_one(new_trade)
+            st.write("Trade inserted with ID:", result.inserted_id)
+            
+            # Update the in-memory trade book
+            trade_book = pd.concat([trade_book, pd.DataFrame([new_trade])], ignore_index=True)
+            
+            if action == 'BUY':
+                if stock in portfolio['Stock'].values:
+                    existing_quantity = portfolio.loc[portfolio['Stock'] == stock, 'Quantity'].values[0]
+                    existing_avg_cost = portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'].values[0]
+                    
+                    new_quantity = existing_quantity + quantity
+                    new_avg_cost = ((existing_avg_cost * existing_quantity) + (price * quantity)) / new_quantity
+                    
+                    portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] = new_quantity
+                    portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'] = new_avg_cost
+                else:
+                    new_portfolio_entry = pd.DataFrame([{
+                        'Stock': stock,
+                        'Quantity': quantity,
+                        'Average Cost': price
+                    }])
+                    portfolio = pd.concat([portfolio, new_portfolio_entry], ignore_index=True)
+            
+            elif action == 'SELL':
+                if stock in portfolio['Stock'].values:
+                    existing_quantity = portfolio.loc[portfolio['Stock'] == stock, 'Quantity'].values[0]
+                    avg_cost = portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'].values[0]
+                    
+                    new_quantity = existing_quantity - quantity
+                    gross_profit = (price - avg_cost) * quantity
+                    net_profit = gross_profit  # Assuming no brokerage fees are applied here
+                    gross_profit_pct = (gross_profit / (avg_cost * quantity)) * 100
+                    net_profit_pct = gross_profit_pct  # Since net profit equals gross profit here
+                    
+                    pnl_entry = pd.DataFrame([{
+                        'Date': trade_date,
+                        'Stock': stock,
+                        'Gross Profit': gross_profit,
+                        'Net Profit': net_profit,
+                        'Gross Profit %': gross_profit_pct,
+                        'Net Profit %': net_profit_pct
+                    }])
+                    pnl_statement = pd.concat([pnl_statement, pnl_entry], ignore_index=True)
+                    
+                    if new_quantity > 0:
+                        portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] = new_quantity
+                    else:
+                        portfolio = portfolio[portfolio['Stock'] != stock]
 
-        # Debugging output to check for Date column presence
-        if 'Date' not in pnl_statement.columns:
-            st.write("Debugging: 'Date' column is not in pnl_statement")
+            # Save the updates back to session state
+            st.session_state.trade_book = trade_book
+            st.session_state.portfolio = portfolio
+            st.session_state.pnl_statement = pnl_statement
 
-        # Save the updates back to session state
-        st.session_state.trade_book = trade_book
-        st.session_state.portfolio = portfolio
-        st.session_state.pnl_statement = pnl_statement
+        except Exception as e:
+            st.error(f"Error inserting trade into the database: {e}")
 
     if st.sidebar.button("Execute Trade"):
         if ticker and shares > 0 and price_per_share > 0:
@@ -140,11 +210,8 @@ def display_portfolio():
         else:
             st.sidebar.error("Please select a company and enter valid trade details.")
 
-    
-
     # Display Portfolio
     if not st.session_state.portfolio.empty:
-        #st.subheader("Portfolio")
         portfolio_df = st.session_state.portfolio.copy()
         portfolio_df['Company Name'] = portfolio_df['Stock'].apply(lambda x: get_company_name(x, ticker_to_company))
         portfolio_df['Last Traded Price'] = portfolio_df['Stock'].apply(lambda x: yf.Ticker(x).history(period="1d")['Close'].iloc[-1])
@@ -152,6 +219,7 @@ def display_portfolio():
         portfolio_df['P&L'] = portfolio_df['Current Value'] - (portfolio_df['Quantity'] * portfolio_df['Average Cost'])
         portfolio_df['P&L (%)'] = (portfolio_df['P&L'] / (portfolio_df['Quantity'] * portfolio_df['Average Cost'])) * 100
         st.dataframe(portfolio_df, use_container_width=True)
+
         # Display summary metrics
         col1, col2 = st.columns(2)
         with col1:
@@ -168,6 +236,7 @@ def display_portfolio():
         st.info("No current holdings in your portfolio.")
 
     st.divider()
+
     # Display P&L Statement
     st.subheader("P&L Statement")
     pnl_df = st.session_state.pnl_statement.copy()
@@ -176,7 +245,6 @@ def display_portfolio():
             pnl_df['Date'] = pd.to_datetime(pnl_df['Date']).dt.date
             st.dataframe(pnl_df[['Date', 'Stock', 'Gross Profit', 'Net Profit', 'Gross Profit %', 'Net Profit %']], use_container_width=True)
 
-            #st.subheader("Net Profit/Loss Over Time")
             pnl_df['Cumulative Net Profit'] = pnl_df['Net Profit'].cumsum()
             fig3 = go.Figure()
             fig3.add_trace(go.Bar(x=pnl_df['Date'], y=pnl_df['Cumulative Net Profit'], name='Net Profit', marker_color='green'))
@@ -186,36 +254,20 @@ def display_portfolio():
             st.warning("No 'Date' column found in P&L statement.")
     else:
         st.info("No profit/loss data available.")
+    
     st.divider()
+
     # Display Trade Book
     st.subheader("Trade Book")
     st.dataframe(st.session_state.trade_book, use_container_width=True)
 
 # User Session Management
-if 'username' not in st.session_state:
-    st.session_state.username = 'Guest'
-if 'email' not in st.session_state:
-    st.session_state.email = 'guest@example.com'
-if 'logged_in' not in st.session_state:
+if 'logged_in' not in st.session_state or not st.session_state.logged_in:
     st.session_state.logged_in = False
-
-def login():
-    st.sidebar.header("Login")
-    email = st.sidebar.text_input("Email", key="login_email")
-    password = st.sidebar.text_input("Password", type="password", key="login_password")
-    if st.sidebar.button("Login"):
-        user = users_collection.find_one({"email": email, "password": password})  # Ensure password is hashed in production
-        if user:
-            st.session_state.logged_in = True
-            st.session_state.username = user.get('username', 'User')
-            st.session_state.email = email
-            st.success(f"Logged in as {st.session_state.username}")
-            st.experimental_rerun()
-        else:
-            st.sidebar.error("Invalid credentials")
 
 if st.session_state.logged_in:
     display_portfolio()
 else:
-    login()
     st.write("Please log in to view your portfolio.")
+    # This is where you would include your login function
+    # For example, you could import the `login` function from your login module
