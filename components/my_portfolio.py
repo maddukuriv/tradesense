@@ -62,14 +62,16 @@ def display_portfolio():
         pnl_statement = st.session_state.pnl_statement
 
         # Record the trade in the trade book with the provided trade date
-        new_trade = pd.DataFrame([{
+        new_trade = {
+            'user_id': get_user_id(st.session_state.email),
             'Date': pd.Timestamp(trade_date),
             'Stock': stock,
             'Action': action,
             'Quantity': quantity,
             'Price': price
-        }])
-        trade_book = pd.concat([trade_book, new_trade], ignore_index=True)
+        }
+        trades_collection.insert_one(new_trade)
+        trade_book = pd.concat([trade_book, pd.DataFrame([new_trade])], ignore_index=True)
         
         if action == 'BUY':
             # Update Portfolio

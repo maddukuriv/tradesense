@@ -2,6 +2,11 @@ import os
 import pymongo
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
+import streamlit as st
+import pandas as pd
+from datetime import datetime
+import plotly.graph_objects as go
+import yfinance as yf
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,11 +33,8 @@ if client:
         # Existing collections
         users_collection = db['users']
         watchlists_collection = db['watchlists']
-        portfolios_collection = db['portfolios']
 
-        # New collections for buy and sell trades
-        buy_trades_collection = db['buy_trades']  # Collection for buy trades
-        sell_trades_collection = db['sell_trades']  # Collection for sell trades
+        # Collection for trades
         trades_collection = db['trades']
 
         print("database connected===>")
@@ -46,15 +48,6 @@ def init_db():
             # Ensure indexes for unique fields
             users_collection.create_index('email', unique=True)
             watchlists_collection.create_index('user_id')
-            portfolios_collection.create_index('user_id')
-
-            # Creating indexes for buy_trades and sell_trades
-            buy_trades_collection.create_index([('user_id', pymongo.ASCENDING), ('ticker', pymongo.ASCENDING)])
-            sell_trades_collection.create_index([('user_id', pymongo.ASCENDING), ('ticker', pymongo.ASCENDING)])
-
-            # Ensure unique trade IDs (if you're generating unique IDs for each trade)
-            buy_trades_collection.create_index('trade_id', unique=True, sparse=True)
-            sell_trades_collection.create_index('trade_id', unique=True, sparse=True)
 
             print("Database initialized with indexes")
     except pymongo.errors.PyMongoError as e:

@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from utils.mongodb import users_collection, watchlists_collection, portfolios_collection
+from utils.mongodb import users_collection, watchlists_collection, trades_collection
 
 # Display tables function
 def display_tables():
@@ -14,7 +14,6 @@ def display_tables():
     watchlists = list(watchlists_collection.find())
     st.dataframe(pd.DataFrame(watchlists))
 
-    st.header("Portfolios Collection")
-    portfolios = list(portfolios_collection.find())
-    st.dataframe(pd.DataFrame(portfolios))
-
+    st.header("Trades Collection")
+    trades = list(trades_collection.find())
+    st.dataframe(pd.DataFrame(trades))
