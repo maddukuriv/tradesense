@@ -40,7 +40,7 @@ def load_user_trades(user_id):
         trade_book['Date'] = pd.to_datetime(trade_book['Date'])
         st.session_state.trade_book = trade_book
     else:
-        st.session_state.trade_book = pd.DataFrame(columns=['Date', 'Stock', 'Action', 'Quantity', 'Price'])
+        st.session_state.trade_book = pd.DataFrame(columns=['Date', 'Stock', 'Action', 'Quantity', 'Price', 'Brokerage'])
 
     # Reconstruct portfolio and P&L Statement from trade book
     portfolio = pd.DataFrame(columns=['Stock', 'Quantity', 'Average Cost'])
@@ -51,6 +51,7 @@ def load_user_trades(user_id):
         action = trade['Action']
         quantity = trade['Quantity']
         price = trade['Price']
+        brokerage = trade.get('Brokerage', 0)  # Ensure brokerage is included
         date = trade['Date']
         
         if action == 'BUY':
@@ -78,9 +79,9 @@ def load_user_trades(user_id):
                 
                 new_quantity = existing_quantity - quantity
                 gross_profit = (price - avg_cost) * quantity
-                net_profit = gross_profit  # Assuming no brokerage fees are applied here
+                net_profit = gross_profit - brokerage  # Subtracting brokerage from the gross profit
                 gross_profit_pct = (gross_profit / (avg_cost * quantity)) * 100
-                net_profit_pct = gross_profit_pct  # Since net profit equals gross profit here
+                net_profit_pct = (net_profit / (avg_cost * quantity)) * 100
                 
                 pnl_entry = pd.DataFrame([{
                     'Date': date,
@@ -135,7 +136,8 @@ def display_portfolio():
             'Stock': stock,
             'Action': action,
             'Quantity': quantity,
-            'Price': price
+            'Price': price,
+            'Brokerage': brokerage  # Include brokerage in the trade document
         }
 
         try:
@@ -171,9 +173,9 @@ def display_portfolio():
                     
                     new_quantity = existing_quantity - quantity
                     gross_profit = (price - avg_cost) * quantity
-                    net_profit = gross_profit  # Assuming no brokerage fees are applied here
+                    net_profit = gross_profit - brokerage  # Subtracting brokerage from the gross profit
                     gross_profit_pct = (gross_profit / (avg_cost * quantity)) * 100
-                    net_profit_pct = gross_profit_pct  # Since net profit equals gross profit here
+                    net_profit_pct = (net_profit / (avg_cost * quantity)) * 100
                     
                     pnl_entry = pd.DataFrame([{
                         'Date': trade_date,
@@ -245,10 +247,10 @@ def display_portfolio():
             pnl_df['Date'] = pd.to_datetime(pnl_df['Date']).dt.date
             st.dataframe(pnl_df[['Date', 'Stock', 'Gross Profit', 'Net Profit', 'Gross Profit %', 'Net Profit %']], use_container_width=True)
 
-            pnl_df['Cumulative Net Profit'] = pnl_df['Net Profit'].cumsum()
+            # Update: Displaying Net Profit for each Date (not cumulative)
             fig3 = go.Figure()
-            fig3.add_trace(go.Bar(x=pnl_df['Date'], y=pnl_df['Cumulative Net Profit'], name='Net Profit', marker_color='green'))
-            fig3.update_layout(title='Net Profit/Loss Over Time', xaxis_title='Date', yaxis_title='Cumulative Net Profit', template='plotly_dark')
+            fig3.add_trace(go.Bar(x=pnl_df['Date'], y=pnl_df['Net Profit'], name='Net Profit', marker_color='green'))
+            fig3.update_layout(title='Net Profit/Loss Over Time', xaxis_title='Date', yaxis_title='Net Profit', template='plotly_dark')
             st.plotly_chart(fig3, use_container_width=True)
         else:
             st.warning("No 'Date' column found in P&L statement.")
