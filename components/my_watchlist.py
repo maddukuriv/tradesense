@@ -97,7 +97,7 @@ def get_company_name(ticker):
 
 
 # Generate the ticker to company mapping
-ticker_to_company = {ticker: get_company_name(ticker) for ticker in bse_largecap + bse_midcap + bse_smallcap}
+ticker_to_company = {ticker: get_company_name(ticker) for ticker in bse_largecap + bse_midcap }
 
 # Convert the ticker_to_company dictionary to a list of company names
 company_names = list(ticker_to_company.values())

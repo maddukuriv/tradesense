@@ -1,338 +1,195 @@
 import streamlit as st
-from utils.mongodb import portfolios_collection, users_collection, buy_trades_collection, sell_trades_collection
-from utils.constants import bse_largecap, bse_smallcap, bse_midcap
+from utils.mongodb import trades_collection, users_collection
+from utils.constants import bse_largecap, bse_midcap
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
 import plotly.graph_objects as go
+
+# Set Streamlit page configuration
+st.set_page_config(page_title="Real-Time Trading Portfolio", layout="wide")
+
+# Cache company names to reduce API calls
+@st.cache_data(ttl=600)
+def fetch_company_names(tickers):
+    ticker_to_name = {}
+    for ticker in tickers:
+        stock = yf.Ticker(ticker)
+        name = stock.info.get('shortName', ticker)
+        ticker_to_name[ticker] = name
+    return ticker_to_name
 
 # Helper functions
 def get_user_id(email):
     user = users_collection.find_one({"email": email})
     return user['_id'] if user else None
 
-def get_company_name(ticker):
-    try:
-        stock = yf.Ticker(ticker)
-        return stock.info.get('shortName', ticker)
-    except:
-        return ticker
+def get_company_name(ticker, ticker_to_company):
+    return ticker_to_company.get(ticker, ticker)
 
-all_tickers = bse_largecap + bse_smallcap + bse_midcap
-ticker_to_company = {ticker: get_company_name(ticker) for ticker in all_tickers}
+# Initialize tickers and company names
+all_tickers = bse_largecap + bse_midcap
+ticker_to_company = fetch_company_names(all_tickers)
 company_names = list(ticker_to_company.values())
 
 def display_portfolio():
     st.header(f"{st.session_state.username}'s Portfolio")
     user_id = get_user_id(st.session_state.email)
 
-    # Refresh portfolio data
-    portfolio = list(portfolios_collection.find({"user_id": user_id}))
-
-    # Add to Portfolio
-    st.sidebar.subheader("Add to Portfolio")
-    selected_company = st.sidebar.selectbox('Select or Enter Company Name:', company_names)
-    ticker = [ticker for ticker, company in ticker_to_company.items() if company == selected_company][0]
-    shares = st.sidebar.number_input("Number of Shares", min_value=0.0, step=0.01)
-    bought_price = st.sidebar.number_input("Bought Price per Share", min_value=0.0, step=0.01)
-    buy_brokerage = st.sidebar.number_input("Buy Brokerage Charges", min_value=0.0, step=0.01)
-    buy_date = st.sidebar.date_input("Buy Date", pd.Timestamp.now(), key="buy_date")
+    # Sidebar: Add to Portfolio
+    st.sidebar.header("Portfolio Management")
+    st.sidebar.subheader("Trade Stock")
+    selected_company = st.sidebar.selectbox('Select Company:', [""] + company_names)
+    ticker = next((t for t, name in ticker_to_company.items() if name == selected_company), None) if selected_company else None
     
-    if st.sidebar.button("Add to Portfolio"):
-        try:
-            current_data = yf.download(ticker, period='1d')
-            if current_data.empty:
-                raise ValueError("Ticker not found")
+    trade_type = st.sidebar.selectbox("Trade Type", ["Buy", "Sell"])
+    shares = st.sidebar.number_input("Number of Shares", min_value=0.01, step=0.01, key="trade_shares")
+    price_per_share = st.sidebar.number_input("Price per Share", min_value=0.01, step=0.01, key="trade_price")
+    brokerage = st.sidebar.number_input("Brokerage Charges", min_value=0.0, step=0.01, key="trade_brokerage")
+    trade_date = st.sidebar.date_input("Trade Date", datetime.today(), key="trade_date")
 
-            # Log the buy trade
-            buy_trades_collection.insert_one({
-                "user_id": user_id,
-                "ticker": ticker,
-                "shares": shares,
-                "bought_price": bought_price,
-                "brokerage": buy_brokerage,
-                "date": pd.Timestamp(buy_date),
-                "label": "buy"  # Add buy label
-            })
+    # Global in-memory trade book and portfolio for the current user session
+    if 'trade_book' not in st.session_state:
+        st.session_state.trade_book = pd.DataFrame(columns=['Date', 'Stock', 'Action', 'Quantity', 'Price'])
+    if 'portfolio' not in st.session_state:
+        st.session_state.portfolio = pd.DataFrame(columns=['Stock', 'Quantity', 'Average Cost'])
+    if 'pnl_statement' not in st.session_state:
+        st.session_state.pnl_statement = pd.DataFrame(columns=['Date', 'Stock', 'Gross Profit', 'Net Profit', 'Gross Profit %', 'Net Profit %'])
 
-            # Add to or update portfolio
-            portfolios_collection.insert_one({
-                "user_id": user_id,
-                "ticker": ticker,
-                "shares": shares,
-                "bought_price": bought_price,
-                "brokerage": buy_brokerage,
-                "date_added": pd.Timestamp(buy_date)
-            })
-            st.success(f"{selected_company} ({ticker}) added to your portfolio!")
-            st.experimental_rerun()
-        except Exception as e:
-            st.error(f"Error adding stock: {e}")
+    def register_trade(stock, action, quantity, price, trade_date):
+        trade_book = st.session_state.trade_book
+        portfolio = st.session_state.portfolio
+        pnl_statement = st.session_state.pnl_statement
 
-    # Display and edit portfolio
-    if portfolio:
-        portfolio_data = []
-        for entry in portfolio:
-            try:
-                current_data = yf.download(entry['ticker'], period='1d')
-                if current_data.empty:
-                    raise ValueError(f"Ticker {entry['ticker']} not found")
-
-                last_price = current_data['Close'].iloc[-1]
-                invested_value = entry['shares'] * entry['bought_price']
-                current_value = entry['shares'] * last_price
-                p_l = current_value - invested_value
-                p_l_percent = (p_l / invested_value) * 100
-                company_name = get_company_name(entry['ticker'])
-                portfolio_data.append({
-                    "Ticker": entry['ticker'],
-                    "Company Name": company_name,
-                    "Shares": entry['shares'],
-                    "Bought Price": entry['bought_price'],
-                    "Invested Value": invested_value,
-                    "Last Traded Price": last_price,
-                    "Current Value": current_value,
-                    "P&L (%)": p_l_percent,
-                    "Date Added": entry['date_added']
-                })
-            except Exception as e:
-                st.error(f"Error retrieving data for {entry['ticker']}: {e}")
-
-        portfolio_df = pd.DataFrame(portfolio_data)
-        st.write("Editable Portfolio:")
-        edited_portfolio_df = st.data_editor(portfolio_df, num_rows="dynamic")
-
-        # Update or delete portfolio based on edited data
-        for index, row in edited_portfolio_df.iterrows():
-            original_row = portfolio_df.loc[index]
-            if row["Shares"] != original_row["Shares"] or row["Bought Price"] != original_row["Bought Price"]:
-                portfolios_collection.update_one(
-                    {"user_id": user_id, "ticker": row['Ticker'], "date_added": original_row['Date Added']},
-                    {"$set": {"shares": row['Shares'], "bought_price": row['Bought Price']}}
-                )
-                st.success(f"Updated {row['Company Name']} in your portfolio.")
-
-        # Handle deleted rows
-        if len(edited_portfolio_df) < len(portfolio_df):
-            deleted_rows = portfolio_df[~portfolio_df.index.isin(edited_portfolio_df.index)]
-            for _, row in deleted_rows.iterrows():
-                portfolios_collection.delete_one(
-                    {"user_id": user_id, "ticker": row['Ticker'], "date_added": row['Date Added']}
-                )
-                st.success(f"Removed {row['Company Name']} from your portfolio.")
-            st.experimental_rerun()
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            labels = portfolio_df['Company Name']
-            values = portfolio_df['Current Value']
-            fig1 = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.3)])
-            fig1.update_layout(title_text="Portfolio Distribution")
-            st.plotly_chart(fig1)
-
-        with col2:
-            fig2 = go.Figure()
-            fig2.add_trace(go.Bar(x=portfolio_df['Company Name'], y=portfolio_df['P&L (%)']))
-            fig2.update_layout(title_text='Profit Percentage of Each Stock', xaxis_title='Company', yaxis_title='P&L (%)')
-            st.plotly_chart(fig2)
-
-        # Sell stock from portfolio
-        st.sidebar.subheader("Sell from Portfolio")
-        company_to_sell = st.sidebar.selectbox("Select a company to sell", portfolio_df['Company Name'])
-        ticker_to_sell = portfolio_df[portfolio_df['Company Name'] == company_to_sell]['Ticker'].values[0]
-        entry_to_sell = portfolio_df[portfolio_df['Ticker'] == ticker_to_sell].iloc[0]
-        sell_shares = st.sidebar.number_input("Number of Shares to Sell", min_value=0.0, max_value=entry_to_sell['Shares'], step=0.01)
-        sell_price = st.sidebar.number_input("Sell Price per Share", min_value=0.0, step=0.01)
-        sell_brokerage = st.sidebar.number_input("Sell Brokerage Charges", min_value=0.0, step=0.01)
-        sell_date = st.sidebar.date_input("Sell Date", pd.Timestamp.now(), key="sell_date")
-
-        if st.sidebar.button("Sell Stock"):
-            if sell_shares > entry_to_sell['Shares']:
-                st.error(f"Cannot sell more shares than you own for {company_to_sell}.")
+        # Record the trade in the trade book with the provided trade date
+        new_trade = pd.DataFrame([{
+            'Date': pd.Timestamp(trade_date),
+            'Stock': stock,
+            'Action': action,
+            'Quantity': quantity,
+            'Price': price
+        }])
+        trade_book = pd.concat([trade_book, new_trade], ignore_index=True)
+        
+        if action == 'BUY':
+            # Update Portfolio
+            if stock in portfolio['Stock'].values:
+                portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] += quantity
+                portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'] = (
+                    (portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'] * (portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] - quantity)) + (price * quantity)
+                ) / portfolio.loc[portfolio['Stock'] == stock, 'Quantity']
             else:
-                # Log the sell trade
-                sell_trades_collection.insert_one({
-                    "user_id": user_id,
-                    "ticker": ticker_to_sell,
-                    "shares": sell_shares,
-                    "sell_price": sell_price,
-                    "brokerage": sell_brokerage,
-                    "date": pd.Timestamp(sell_date),
-                    "label": "sell"  # Add sell label
-                })
-
-                # Calculate net profit/loss
-                bought_price = entry_to_sell['Bought Price']
-                buy_brokerage = portfolio_df[portfolio_df['Ticker'] == ticker_to_sell]['Buy Brokerage'].values[0]
-
-                # Calculate the brokerage cost per share
-                brokerage_per_share = buy_brokerage / entry_to_sell['Shares']
-
-                total_sell_value = sell_shares * sell_price - sell_brokerage
-                total_invested_value = sell_shares * (bought_price + brokerage_per_share)
-                net_profit_loss = total_sell_value - total_invested_value
+                new_portfolio_entry = pd.DataFrame([{
+                    'Stock': stock,
+                    'Quantity': quantity,
+                    'Average Cost': price
+                }])
+                portfolio = pd.concat([portfolio, new_portfolio_entry], ignore_index=True)
+        
+        elif action == 'SELL':
+            # Update Portfolio
+            if stock in portfolio['Stock'].values:
+                portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] -= quantity
                 
-                st.success(f"Sold {sell_shares} shares of {company_to_sell} for a net {'profit' if net_profit_loss >= 0 else 'loss'} of {net_profit_loss:.2f}.")
+                # Calculate Realized P&L
+                avg_cost = portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'].values[0]
+                gross_profit = (price - avg_cost) * quantity
+                net_profit = gross_profit - brokerage
+                gross_profit_pct = (gross_profit / (avg_cost * quantity)) * 100
+                net_profit_pct = (net_profit / (avg_cost * quantity)) * 100
+                
+                new_pnl_entry = pd.DataFrame([{
+                    'Date': pd.Timestamp(trade_date),
+                    'Stock': stock,
+                    'Gross Profit': gross_profit,
+                    'Net Profit': net_profit,
+                    'Gross Profit %': gross_profit_pct,
+                    'Net Profit %': net_profit_pct
+                }])
+                pnl_statement = pd.concat([pnl_statement, new_pnl_entry], ignore_index=True)
 
-                # Update the portfolio
-                remaining_shares = entry_to_sell['Shares'] - sell_shares
-                if remaining_shares > 0:
-                    portfolios_collection.update_one(
-                        {"user_id": user_id, "ticker": ticker_to_sell, "date_added": entry_to_sell['Date Added']},
-                        {"$set": {"shares": remaining_shares}}
-                    )
-                else:
-                    portfolios_collection.delete_one({"user_id": user_id, "ticker": ticker_to_sell, "date_added": entry_to_sell['Date Added']})
-                    st.success(f"{company_to_sell} removed from your portfolio.")
+                # Ensure that all required columns are present
+                for column in ['Date', 'Stock', 'Gross Profit', 'Net Profit', 'Gross Profit %', 'Net Profit %']:
+                    if column not in pnl_statement.columns:
+                        pnl_statement[column] = pd.NaT if column == 'Date' else 0
+                
+                # If all shares sold, remove from portfolio
+                if portfolio.loc[portfolio['Stock'] == stock, 'Quantity'].values[0] == 0:
+                    portfolio = portfolio[portfolio['Stock'] != stock]
 
+        # Debugging output to check for Date column presence
+        if 'Date' not in pnl_statement.columns:
+            st.write("Debugging: 'Date' column is not in pnl_statement")
+
+        # Save the updates back to session state
+        st.session_state.trade_book = trade_book
+        st.session_state.portfolio = portfolio
+        st.session_state.pnl_statement = pnl_statement
+
+    if st.sidebar.button("Execute Trade"):
+        if ticker and shares > 0 and price_per_share > 0:
+            try:
+                action = 'BUY' if trade_type == 'Buy' else 'SELL'
+                register_trade(ticker, action, shares, price_per_share, trade_date)
+                st.sidebar.success(f"{trade_type} {shares} shares of {selected_company} ({ticker}) at ₹{price_per_share:.2f} per share.")
                 st.experimental_rerun()
-
-        # P&L statement
-        st.header("P&L Statement")
-        trades_data = []
-        sell_trades = list(sell_trades_collection.find({"user_id": user_id}))
-        for trade in sell_trades:
-            buy_trades = list(buy_trades_collection.find({"user_id": user_id, "ticker": trade['ticker']}))
-            if buy_trades:
-                total_buy_value = sum([bt['shares'] * (bt['bought_price'] + (bt['brokerage'] / bt['shares'])) for bt in buy_trades])
-                avg_buy_price = total_buy_value / sum([bt['shares'] for bt in buy_trades])
-                total_sell_value = trade['shares'] * trade['sell_price'] - trade['brokerage']
-                net_p_l = total_sell_value - (trade['shares'] * avg_buy_price)
-                trades_data.append({
-                    "Ticker": trade['ticker'],
-                    "Shares Sold": trade['shares'],
-                    "Buy Price (Avg)": avg_buy_price,
-                    "Sell Price": trade['sell_price'],
-                    "Buy Brokerage (Per Share)": sum([bt['brokerage'] for bt in buy_trades]) / sum([bt['shares'] for bt in buy_trades]),
-                    "Sell Brokerage": trade['brokerage'],
-                    "Net P&L": net_p_l,
-                    "Sell Date": trade['date']
-                })
-
-        p_l_df = pd.DataFrame(trades_data)
-        if not p_l_df.empty:
-            p_l_df['Sell Date'] = pd.to_datetime(p_l_df['Sell Date'])
-            p_l_df.set_index('Sell Date', inplace=True)
-
-        st.write("Editable P&L Statement:")
-        edited_p_l_df = st.data_editor(p_l_df, num_rows="dynamic")
-
-        # Update P&L database based on edits
-        for index, row in edited_p_l_df.iterrows():
-            original_row = p_l_df.loc[index]
-            if any([
-                row["Shares Sold"] != original_row["Shares Sold"],
-                row["Buy Price (Avg)"] != original_row["Buy Price (Avg)"],
-                row["Sell Price"] != original_row["Sell Price"],
-                row["Buy Brokerage (Per Share)"] != original_row["Buy Brokerage (Per Share)"],
-                row["Sell Brokerage"] != original_row["Sell Brokerage"]
-            ]):
-                sell_trades_collection.update_one(
-                    {"user_id": user_id, "ticker": row['Ticker'], "date": original_row.name},
-                    {"$set": {
-                        "shares": row["Shares Sold"],
-                        "sell_price": row["Sell Price"],
-                        "brokerage": row["Sell Brokerage"]
-                    }}
-                )
-                st.success(f"Updated P&L for {row['Ticker']}.")
-
-        if len(edited_p_l_df) < len(p_l_df):
-            deleted_rows = p_l_df[~p_l_df.index.isin(edited_p_l_df.index)]
-            for _, row in deleted_rows.iterrows():
-                sell_trades_collection.delete_one(
-                    {"user_id": user_id, "ticker": row['Ticker'], "date": row.name}
-                )
-                st.success(f"Removed P&L entry for {row['Ticker']}.")
-            st.experimental_rerun()
-
-        # Generate P&L graph with dates on x-axis
-        if not p_l_df.empty:
-            fig3 = go.Figure()
-            fig3.add_trace(go.Bar(x=edited_p_l_df.index, y=edited_p_l_df['Net P&L'], name='Net P&L'))
-            fig3.update_layout(title_text='Net Profit/Loss Over Time', xaxis_title='Date', yaxis_title='Net P&L')
-            st.plotly_chart(fig3)
-
-        # Trade book
-        st.header("Trade Book")
-        start_date = st.date_input("Start Date", pd.Timestamp.now() - pd.Timedelta(days=30))
-        end_date = st.date_input("End Date", pd.Timestamp.now())
-
-        # Retrieve all trades within the specified date range
-        all_buy_trades = list(buy_trades_collection.find({"user_id": user_id, "date": {"$gte": pd.Timestamp(start_date), "$lte": pd.Timestamp(end_date)}}))
-        all_sell_trades = list(sell_trades_collection.find({"user_id": user_id, "date": {"$gte": pd.Timestamp(start_date), "$lte": pd.Timestamp(end_date)}}))
-
-        # Ensure the 'label' field exists and is populated
-        for trade in all_buy_trades:
-            trade['label'] = trade.get('label', 'buy')
-
-        for trade in all_sell_trades:
-            trade['label'] = trade.get('label', 'sell')
-
-        # Combine buy and sell trades
-        all_trades = all_buy_trades + all_sell_trades
-        trade_book = pd.DataFrame(all_trades)
-
-        if not trade_book.empty:
-            trade_book['date'] = pd.to_datetime(trade_book['date'])
-            trade_book.set_index('date', inplace=True)
-            st.write("Editable Trade Book:")
-            edited_trade_book_df = st.data_editor(trade_book, num_rows="dynamic")
-
-            # Update the trade book based on edits
-            for index, row in edited_trade_book_df.iterrows():
-                original_row = trade_book.loc[index]
-                if any([
-                    row["ticker"] != original_row["ticker"],
-                    row["shares"] != original_row["shares"],
-                    row["label"] != original_row["label"],
-                    row.get("bought_price", None) != original_row.get("bought_price", None),
-                    row.get("sell_price", None) != original_row.get("sell_price", None)
-                ]):
-                    if row['label'] == 'buy':
-                        buy_trades_collection.update_one(
-                            {"user_id": user_id, "ticker": row['ticker'], "date": original_row.name},
-                            {"$set": {
-                                "ticker": row["ticker"],
-                                "shares": row["shares"],
-                                "bought_price": row.get("bought_price", None),
-                                "brokerage": row.get("brokerage", None)
-                            }}
-                        )
-                    else:
-                        sell_trades_collection.update_one(
-                            {"user_id": user_id, "ticker": row['ticker'], "date": original_row.name},
-                            {"$set": {
-                                "ticker": row["ticker"],
-                                "shares": row["shares"],
-                                "sell_price": row.get("sell_price", None),
-                                "brokerage": row.get("brokerage", None)
-                            }}
-                        )
-                    st.success(f"Updated trade for {row['ticker']}.")
-
-            # Handle deleted rows in the trade book
-            if len(edited_trade_book_df) < len(trade_book):
-                deleted_rows = trade_book[~trade_book.index.isin(edited_trade_book_df.index)]
-                for _, row in deleted_rows.iterrows():
-                    if row['label'] == 'buy':
-                        buy_trades_collection.delete_one(
-                            {"user_id": user_id, "ticker": row['ticker'], "date": row.name}
-                        )
-                    else:
-                        sell_trades_collection.delete_one(
-                            {"user_id": user_id, "ticker": row['ticker'], "date": row.name}
-                        )
-                    st.success(f"Removed trade entry for {row['ticker']}.")
-                st.experimental_rerun()
+            except Exception as e:
+                st.sidebar.error(f"Error executing trade: {e}")
         else:
-            st.write("No trades found in the selected date range.")
+            st.sidebar.error("Please select a company and enter valid trade details.")
 
+    
+
+    # Display Portfolio
+    if not st.session_state.portfolio.empty:
+        #st.subheader("Portfolio")
+        portfolio_df = st.session_state.portfolio.copy()
+        portfolio_df['Company Name'] = portfolio_df['Stock'].apply(lambda x: get_company_name(x, ticker_to_company))
+        portfolio_df['Last Traded Price'] = portfolio_df['Stock'].apply(lambda x: yf.Ticker(x).history(period="1d")['Close'].iloc[-1])
+        portfolio_df['Current Value'] = portfolio_df['Quantity'] * portfolio_df['Last Traded Price']
+        portfolio_df['P&L'] = portfolio_df['Current Value'] - (portfolio_df['Quantity'] * portfolio_df['Average Cost'])
+        portfolio_df['P&L (%)'] = (portfolio_df['P&L'] / (portfolio_df['Quantity'] * portfolio_df['Average Cost'])) * 100
+        st.dataframe(portfolio_df, use_container_width=True)
+        # Display summary metrics
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Portfolio Distribution")
+            fig1 = go.Figure(go.Pie(labels=portfolio_df['Company Name'], values=portfolio_df['Current Value'], hole=.3))
+            fig1.update_layout(showlegend=True, legend_title_text='Companies')
+            st.plotly_chart(fig1, use_container_width=True)
+        with col2:
+            st.subheader("Current P&L(%)")
+            fig2 = go.Figure(go.Bar(x=portfolio_df['Company Name'], y=portfolio_df['P&L (%)']))
+            fig2.update_layout(title_text='Profit/Loss Percentage per Stock', xaxis_title='Company', yaxis_title='P&L (%)', showlegend=False)
+            st.plotly_chart(fig2, use_container_width=True)
     else:
-        st.write("Your portfolio is empty.")
+        st.info("No current holdings in your portfolio.")
 
-# Display the portfolio
+    st.divider()
+    # Display P&L Statement
+    st.subheader("P&L Statement")
+    pnl_df = st.session_state.pnl_statement.copy()
+    if not pnl_df.empty:
+        if 'Date' in pnl_df.columns:
+            pnl_df['Date'] = pd.to_datetime(pnl_df['Date']).dt.date
+            st.dataframe(pnl_df[['Date', 'Stock', 'Gross Profit', 'Net Profit', 'Gross Profit %', 'Net Profit %']], use_container_width=True)
+
+            #st.subheader("Net Profit/Loss Over Time")
+            pnl_df['Cumulative Net Profit'] = pnl_df['Net Profit'].cumsum()
+            fig3 = go.Figure()
+            fig3.add_trace(go.Bar(x=pnl_df['Date'], y=pnl_df['Cumulative Net Profit'], name='Net Profit', marker_color='green'))
+            fig3.update_layout(title='Net Profit/Loss Over Time', xaxis_title='Date', yaxis_title='Cumulative Net Profit', template='plotly_dark')
+            st.plotly_chart(fig3, use_container_width=True)
+        else:
+            st.warning("No 'Date' column found in P&L statement.")
+    else:
+        st.info("No profit/loss data available.")
+    st.divider()
+    # Display Trade Book
+    st.subheader("Trade Book")
+    st.dataframe(st.session_state.trade_book, use_container_width=True)
+
+# User Session Management
 if 'username' not in st.session_state:
     st.session_state.username = 'Guest'
 if 'email' not in st.session_state:
@@ -340,7 +197,23 @@ if 'email' not in st.session_state:
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
+def login():
+    st.sidebar.header("Login")
+    email = st.sidebar.text_input("Email", key="login_email")
+    password = st.sidebar.text_input("Password", type="password", key="login_password")
+    if st.sidebar.button("Login"):
+        user = users_collection.find_one({"email": email, "password": password})  # Ensure password is hashed in production
+        if user:
+            st.session_state.logged_in = True
+            st.session_state.username = user.get('username', 'User')
+            st.session_state.email = email
+            st.success(f"Logged in as {st.session_state.username}")
+            st.experimental_rerun()
+        else:
+            st.sidebar.error("Invalid credentials")
+
 if st.session_state.logged_in:
     display_portfolio()
 else:
+    login()
     st.write("Please log in to view your portfolio.")

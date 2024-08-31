@@ -33,6 +33,7 @@ if client:
         # New collections for buy and sell trades
         buy_trades_collection = db['buy_trades']  # Collection for buy trades
         sell_trades_collection = db['sell_trades']  # Collection for sell trades
+        trades_collection = db['trades']
 
         print("database connected===>")
     except pymongo.errors.ServerSelectionTimeoutError as err:
