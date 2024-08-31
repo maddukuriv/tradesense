@@ -35,69 +35,75 @@ company_names = list(ticker_to_company.values())
 # Load user trades from the database
 def load_user_trades(user_id):
     trades = list(trades_collection.find({"user_id": user_id}))
+    
+    # Initialize trade_book to avoid UnboundLocalError
     if trades:
         trade_book = pd.DataFrame(trades)
         trade_book['Date'] = pd.to_datetime(trade_book['Date'])
         st.session_state.trade_book = trade_book
     else:
+        # If no trades found, initialize an empty trade_book
         st.session_state.trade_book = pd.DataFrame(columns=['Date', 'Stock', 'Action', 'Quantity', 'Price', 'Brokerage'])
-
-    # Reconstruct portfolio and P&L Statement from trade book
+    
+    # Initialize portfolio and P&L Statement
     portfolio = pd.DataFrame(columns=['Stock', 'Quantity', 'Average Cost'])
     pnl_statement = pd.DataFrame(columns=['Date', 'Stock', 'Gross Profit', 'Net Profit', 'Gross Profit %', 'Net Profit %'])
     
-    for _, trade in trade_book.iterrows():
-        stock = trade['Stock']
-        action = trade['Action']
-        quantity = trade['Quantity']
-        price = trade['Price']
-        brokerage = trade.get('Brokerage', 0)  # Ensure brokerage is included
-        date = trade['Date']
-        
-        if action == 'BUY':
-            if stock in portfolio['Stock'].values:
-                existing_quantity = portfolio.loc[portfolio['Stock'] == stock, 'Quantity'].values[0]
-                existing_avg_cost = portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'].values[0]
-                
-                new_quantity = existing_quantity + quantity
-                new_avg_cost = ((existing_avg_cost * existing_quantity) + (price * quantity)) / new_quantity
-                
-                portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] = new_quantity
-                portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'] = new_avg_cost
-            else:
-                new_portfolio_entry = pd.DataFrame([{
-                    'Stock': stock,
-                    'Quantity': quantity,
-                    'Average Cost': price
-                }])
-                portfolio = pd.concat([portfolio, new_portfolio_entry], ignore_index=True)
-        
-        elif action == 'SELL':
-            if stock in portfolio['Stock'].values:
-                existing_quantity = portfolio.loc[portfolio['Stock'] == stock, 'Quantity'].values[0]
-                avg_cost = portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'].values[0]
-                
-                new_quantity = existing_quantity - quantity
-                gross_profit = (price - avg_cost) * quantity
-                net_profit = gross_profit - brokerage  # Subtracting brokerage from the gross profit
-                gross_profit_pct = (gross_profit / (avg_cost * quantity)) * 100
-                net_profit_pct = (net_profit / (avg_cost * quantity)) * 100
-                
-                pnl_entry = pd.DataFrame([{
-                    'Date': date,
-                    'Stock': stock,
-                    'Gross Profit': gross_profit,
-                    'Net Profit': net_profit,
-                    'Gross Profit %': gross_profit_pct,
-                    'Net Profit %': net_profit_pct
-                }])
-                pnl_statement = pd.concat([pnl_statement, pnl_entry], ignore_index=True)
-                
-                if new_quantity > 0:
+    # Ensure iterrows() doesn't cause UnboundLocalError by checking if trade_book is empty
+    if not st.session_state.trade_book.empty:
+        for _, trade in st.session_state.trade_book.iterrows():
+            stock = trade['Stock']
+            action = trade['Action']
+            quantity = trade['Quantity']
+            price = trade['Price']
+            brokerage = trade.get('Brokerage', 0)  # Ensure brokerage is included
+            date = trade['Date']
+            
+            if action == 'BUY':
+                if stock in portfolio['Stock'].values:
+                    existing_quantity = portfolio.loc[portfolio['Stock'] == stock, 'Quantity'].values[0]
+                    existing_avg_cost = portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'].values[0]
+                    
+                    new_quantity = existing_quantity + quantity
+                    new_avg_cost = ((existing_avg_cost * existing_quantity) + (price * quantity)) / new_quantity
+                    
                     portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] = new_quantity
+                    portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'] = new_avg_cost
                 else:
-                    portfolio = portfolio[portfolio['Stock'] != stock]
+                    new_portfolio_entry = pd.DataFrame([{
+                        'Stock': stock,
+                        'Quantity': quantity,
+                        'Average Cost': price
+                    }])
+                    portfolio = pd.concat([portfolio, new_portfolio_entry], ignore_index=True)
+            
+            elif action == 'SELL':
+                if stock in portfolio['Stock'].values:
+                    existing_quantity = portfolio.loc[portfolio['Stock'] == stock, 'Quantity'].values[0]
+                    avg_cost = portfolio.loc[portfolio['Stock'] == stock, 'Average Cost'].values[0]
+                    
+                    new_quantity = existing_quantity - quantity
+                    gross_profit = (price - avg_cost) * quantity
+                    net_profit = gross_profit - brokerage  # Subtracting brokerage from the gross profit
+                    gross_profit_pct = (gross_profit / (avg_cost * quantity)) * 100
+                    net_profit_pct = (net_profit / (avg_cost * quantity)) * 100
+                    
+                    pnl_entry = pd.DataFrame([{
+                        'Date': date,
+                        'Stock': stock,
+                        'Gross Profit': gross_profit,
+                        'Net Profit': net_profit,
+                        'Gross Profit %': gross_profit_pct,
+                        'Net Profit %': net_profit_pct
+                    }])
+                    pnl_statement = pd.concat([pnl_statement, pnl_entry], ignore_index=True)
+                    
+                    if new_quantity > 0:
+                        portfolio.loc[portfolio['Stock'] == stock, 'Quantity'] = new_quantity
+                    else:
+                        portfolio = portfolio[portfolio['Stock'] != stock]
 
+    # Store the results in session state
     st.session_state.portfolio = portfolio
     st.session_state.pnl_statement = pnl_statement
 
