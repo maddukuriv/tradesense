@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import linregress
 import pandas_ta as ta
+from datetime import datetime, timedelta
 
 from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
 
@@ -865,11 +866,15 @@ def add_scoring(df):
     )
     return df
 
+# Date inputs
+start_date = st.sidebar.date_input("Start Date", value=datetime.now() - timedelta(days=125))
+end_date = st.sidebar.date_input("End Date", value=datetime.now() + timedelta(days=1))
+
 def fetch_latest_data(tickers_with_dates):
     technical_data = []
     for ticker, occurrence_date in tickers_with_dates:
         try:
-            data = yf.download(ticker, start="2023-01-01", end="2023-12-31")
+            data = yf.download(ticker, start_date, end_date)
             if data.empty:
                 continue
             data = calculate_indicators(data)
@@ -883,10 +888,20 @@ def fetch_latest_data(tickers_with_dates):
 # Main Streamlit app to display the comparison and analysis
 def display_stock_comparison():
     st.title("Enhanced Stock Comparison Tool")
+    # Dropdown for selecting ticker category
+    ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap", "BSE-LargeCap & MidCap", "Manual"])
 
-    tickers = st.text_input("Enter Stock Ticker(s):").split(',')
+    # Set tickers based on selected category
+    tickers = {
+        "BSE-LargeCap": bse_largecap,
+        "BSE-MidCap": bse_midcap,
+        "BSE-SmallCap": bse_smallcap,
+        "BSE-LargeCap & MidCap": bse_largecap + bse_midcap,
+        "Manual": st.sidebar.text_input("Enter Stock Ticker(s):").split(',')
+    }[ticker_category]
 
-    if st.button("Analyze"):
+
+    if st.sidebar.button("Analyze"):
         tickers_with_signals = [(ticker, None) for ticker in tickers]
 
         df_signals = fetch_latest_data(tickers_with_signals)

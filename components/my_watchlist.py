@@ -3,7 +3,9 @@ from components.my_portfolio import get_user_id
 from utils.mongodb import watchlists_collection
 import yfinance as yf
 import pandas as pd
-from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
+from utils.constants import ticker_to_company_dict 
+
+
 
 # Helper function to calculate RSI
 def rsi(series, window=14):
@@ -86,22 +88,8 @@ def get_company_info(ticker):
     except Exception as e:
         return 'N/A', 'N/A', 'N/A'
 
-# Function to get company names from tickers
-def get_company_name(ticker):
-    try:
-        company_info = yf.Ticker(ticker)
-        return company_info.info['shortName']
-    except:
-        return ticker  # Return ticker if company name not found
-
-
-
-# Generate the ticker to company mapping
-ticker_to_company = {ticker: get_company_name(ticker) for ticker in bse_largecap + bse_midcap }
-
-# Convert the ticker_to_company dictionary to a list of company names
-company_names = list(ticker_to_company.values())
-
+# Convert the ticker_to_company_dict dictionary to a list of company names
+company_names = list(ticker_to_company_dict.values())
 
 # Watchlist feature
 def display_watchlist():
@@ -113,7 +101,7 @@ def display_watchlist():
     selected_company = st.sidebar.selectbox('Select or Enter Company Name:', company_names)
 
     # Retrieve the corresponding ticker for the selected company
-    ticker = [ticker for ticker, company in ticker_to_company.items() if company == selected_company][0]
+    ticker = [ticker for ticker, company in ticker_to_company_dict.items() if company == selected_company][0]
 
     # Add new ticker to watchlist
     if st.sidebar.button("Add Ticker"):
@@ -122,6 +110,7 @@ def display_watchlist():
             if not watchlists_collection.find_one({"user_id": user_id, "ticker": ticker}):
                 watchlists_collection.insert_one({"user_id": user_id, "ticker": ticker})
                 st.success(f"{ticker} ({selected_company}) added to your watchlist!")
+                st.experimental_rerun()  # Refresh the app to reflect changes
             else:
                 st.warning(f"{ticker} ({selected_company}) is already in your watchlist.")
         except ValueError as ve:

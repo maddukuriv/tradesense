@@ -1,62 +1,48 @@
 import streamlit as st
 from utils.mongodb import trades_collection, users_collection
-from utils.constants import bse_largecap, bse_midcap
+from utils.constants import ticker_to_company_dict
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
 import plotly.graph_objects as go
 
+# Function to get company name from the dictionary
+def get_company_name(ticker, ticker_to_company):
+    return ticker_to_company.get(ticker, ticker)
+
 # Set Streamlit page configuration
 st.set_page_config(page_title="Real-Time Trading Portfolio", layout="wide")
-
-# Cache company names to reduce API calls
-@st.cache_data(ttl=600)
-def fetch_company_names(tickers):
-    ticker_to_name = {}
-    for ticker in tickers:
-        stock = yf.Ticker(ticker)
-        name = stock.info.get('shortName', ticker)
-        ticker_to_name[ticker] = name
-    return ticker_to_name
 
 # Updated get_user_id function
 def get_user_id(email):
     user = users_collection.find_one({"email": email})
     return user['_id'] if user else None
 
-def get_company_name(ticker, ticker_to_company):
-    return ticker_to_company.get(ticker, ticker)
-
 # Initialize tickers and company names
-all_tickers = bse_largecap + bse_midcap
-ticker_to_company = fetch_company_names(all_tickers)
-company_names = list(ticker_to_company.values())
+all_tickers = list(ticker_to_company_dict.keys())
+company_names = list(ticker_to_company_dict.values())
 
 # Load user trades from the database
 def load_user_trades(user_id):
     trades = list(trades_collection.find({"user_id": user_id}))
     
-    # Initialize trade_book to avoid UnboundLocalError
     if trades:
         trade_book = pd.DataFrame(trades)
         trade_book['Date'] = pd.to_datetime(trade_book['Date'])
         st.session_state.trade_book = trade_book
     else:
-        # If no trades found, initialize an empty trade_book
         st.session_state.trade_book = pd.DataFrame(columns=['Date', 'Stock', 'Action', 'Quantity', 'Price', 'Brokerage'])
     
-    # Initialize portfolio and P&L Statement
     portfolio = pd.DataFrame(columns=['Stock', 'Quantity', 'Average Cost'])
     pnl_statement = pd.DataFrame(columns=['Date', 'Stock', 'Gross Profit', 'Net Profit', 'Gross Profit %', 'Net Profit %'])
     
-    # Ensure iterrows() doesn't cause UnboundLocalError by checking if trade_book is empty
     if not st.session_state.trade_book.empty:
         for _, trade in st.session_state.trade_book.iterrows():
             stock = trade['Stock']
             action = trade['Action']
             quantity = trade['Quantity']
             price = trade['Price']
-            brokerage = trade.get('Brokerage', 0)  # Ensure brokerage is included
+            brokerage = trade.get('Brokerage', 0)
             date = trade['Date']
             
             if action == 'BUY':
@@ -84,7 +70,7 @@ def load_user_trades(user_id):
                     
                     new_quantity = existing_quantity - quantity
                     gross_profit = (price - avg_cost) * quantity
-                    net_profit = gross_profit - brokerage  # Subtracting brokerage from the gross profit
+                    net_profit = gross_profit - brokerage
                     gross_profit_pct = (gross_profit / (avg_cost * quantity)) * 100
                     net_profit_pct = (net_profit / (avg_cost * quantity)) * 100
                     
@@ -103,7 +89,6 @@ def load_user_trades(user_id):
                     else:
                         portfolio = portfolio[portfolio['Stock'] != stock]
 
-    # Store the results in session state
     st.session_state.portfolio = portfolio
     st.session_state.pnl_statement = pnl_statement
 
@@ -114,11 +99,10 @@ def display_portfolio():
     if user_id is not None and 'trade_book' not in st.session_state:
         load_user_trades(user_id)
 
-    # Sidebar: Add to Portfolio
     st.sidebar.header("Portfolio Management")
     st.sidebar.subheader("Trade Stock")
     selected_company = st.sidebar.selectbox('Select Company:', [""] + company_names)
-    ticker = next((t for t, name in ticker_to_company.items() if name == selected_company), None) if selected_company else None
+    ticker = next((t for t, name in ticker_to_company_dict.items() if name == selected_company), None) if selected_company else None
     
     trade_type = st.sidebar.selectbox("Trade Type", ["Buy", "Sell"])
     shares = st.sidebar.number_input("Number of Shares", min_value=0.01, step=0.01, key="trade_shares")
@@ -135,7 +119,6 @@ def display_portfolio():
             st.error("User ID could not be found. Ensure the user is logged in.")
             return
 
-        # Prepare the trade document
         new_trade = {
             'user_id': user_id,
             'Date': pd.Timestamp(trade_date),
@@ -143,15 +126,13 @@ def display_portfolio():
             'Action': action,
             'Quantity': quantity,
             'Price': price,
-            'Brokerage': brokerage  # Include brokerage in the trade document
+            'Brokerage': brokerage
         }
 
         try:
-            # Insert the trade document into the MongoDB collection
             result = trades_collection.insert_one(new_trade)
             st.write("Trade inserted with ID:", result.inserted_id)
             
-            # Update the in-memory trade book
             trade_book = pd.concat([trade_book, pd.DataFrame([new_trade])], ignore_index=True)
             
             if action == 'BUY':
@@ -179,7 +160,7 @@ def display_portfolio():
                     
                     new_quantity = existing_quantity - quantity
                     gross_profit = (price - avg_cost) * quantity
-                    net_profit = gross_profit - brokerage  # Subtracting brokerage from the gross profit
+                    net_profit = gross_profit - brokerage
                     gross_profit_pct = (gross_profit / (avg_cost * quantity)) * 100
                     net_profit_pct = (net_profit / (avg_cost * quantity)) * 100
                     
@@ -198,7 +179,6 @@ def display_portfolio():
                     else:
                         portfolio = portfolio[portfolio['Stock'] != stock]
 
-            # Save the updates back to session state
             st.session_state.trade_book = trade_book
             st.session_state.portfolio = portfolio
             st.session_state.pnl_statement = pnl_statement
@@ -218,17 +198,15 @@ def display_portfolio():
         else:
             st.sidebar.error("Please select a company and enter valid trade details.")
 
-    # Display Portfolio
     if not st.session_state.portfolio.empty:
         portfolio_df = st.session_state.portfolio.copy()
-        portfolio_df['Company Name'] = portfolio_df['Stock'].apply(lambda x: get_company_name(x, ticker_to_company))
+        portfolio_df['Company Name'] = portfolio_df['Stock'].apply(lambda x: get_company_name(x, ticker_to_company_dict))
         portfolio_df['Last Traded Price'] = portfolio_df['Stock'].apply(lambda x: yf.Ticker(x).history(period="1d")['Close'].iloc[-1])
         portfolio_df['Current Value'] = portfolio_df['Quantity'] * portfolio_df['Last Traded Price']
         portfolio_df['P&L'] = portfolio_df['Current Value'] - (portfolio_df['Quantity'] * portfolio_df['Average Cost'])
         portfolio_df['P&L (%)'] = (portfolio_df['P&L'] / (portfolio_df['Quantity'] * portfolio_df['Average Cost'])) * 100
         st.dataframe(portfolio_df, use_container_width=True)
 
-        # Display summary metrics
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Portfolio Distribution")
@@ -245,7 +223,6 @@ def display_portfolio():
 
     st.divider()
 
-    # Display P&L Statement
     st.subheader("P&L Statement")
     pnl_df = st.session_state.pnl_statement.copy()
     if not pnl_df.empty:
@@ -253,7 +230,6 @@ def display_portfolio():
             pnl_df['Date'] = pd.to_datetime(pnl_df['Date']).dt.date
             st.dataframe(pnl_df[['Date', 'Stock', 'Gross Profit', 'Net Profit', 'Gross Profit %', 'Net Profit %']], use_container_width=True)
 
-            # Update: Displaying Net Profit for each Date (not cumulative)
             fig3 = go.Figure()
             fig3.add_trace(go.Bar(x=pnl_df['Date'], y=pnl_df['Net Profit'], name='Net Profit', marker_color='green'))
             fig3.update_layout(title='Net Profit/Loss Over Time', xaxis_title='Date', yaxis_title='Net Profit', template='plotly_dark')
@@ -265,7 +241,6 @@ def display_portfolio():
     
     st.divider()
 
-    # Display Trade Book
     st.subheader("Trade Book")
     st.dataframe(st.session_state.trade_book, use_container_width=True)
 
@@ -277,5 +252,3 @@ if st.session_state.logged_in:
     display_portfolio()
 else:
     st.write("Please log in to view your portfolio.")
-    # This is where you would include your login function
-    # For example, you could import the `login` function from your login module

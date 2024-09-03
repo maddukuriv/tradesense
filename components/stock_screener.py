@@ -366,8 +366,6 @@ def stock_screener_app():
         return zigzag_series.ffill()
 
     
-    
-
 
     @st.cache_data
     def fetch_and_calculate_data(ticker, start_date, end_date):
@@ -728,8 +726,6 @@ def stock_screener_app():
                     'Williams_Alligator_Lips':latest_data['Williams_Alligator_Lips'],
                     'ZigZag':latest_data['ZigZag'],
                   
-
-
 
                 })
             except Exception as e:
