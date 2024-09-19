@@ -766,27 +766,44 @@ def stock_screener_app():
                     recent_data['Volume'].iloc[i-1] <= recent_data['Volume_MA'].iloc[i-1]):
                     return recent_data.index[i]
         return None
-
+    
+    def count_scanned_tickers(tickers):
+            valid_tickers = []
+            for ticker in tickers:
+                try:
+                    data = yf.download(ticker, start=start_date, end=end_date)
+                    if not data.empty:
+                        valid_tickers.append(ticker)
+                except Exception:
+                    pass
+            return len(valid_tickers)
+    
     tickers_with_signals = []
     progress_bar = st.progress(0)
     progress_step = 1 / len(tickers)
 
+    total_tickers = len(tickers)
+    scanned_tickers = 0
+
     for i, ticker in enumerate(tickers):
-        progress_bar.progress((i + 1) * progress_step)
-        try:
-            data = yf.download(ticker, start=start_date, end=end_date)
-            if data.empty:
-                continue
-            data = calculate_indicators(data)
-            occurrence_date = check_signal(data, submenu)
-            if occurrence_date:
-                tickers_with_signals.append((ticker, occurrence_date))
-        except KeyError as e:
-            st.error(f"KeyError: {e} - Check if the ticker symbol '{ticker}' is valid.")
-        except Exception as e:
-            st.error(f"Error processing data for ticker '{ticker}': {e}")
+            try:
+                data = yf.download(ticker, start=start_date, end=end_date)
+                if data.empty:
+                    continue
+                data = calculate_indicators(data)
+                occurrence_date = check_signal(data, submenu)
+                if occurrence_date:
+                    tickers_with_signals.append((ticker, occurrence_date))
+                scanned_tickers += 1
+            except Exception as e:
+                st.error(f"Error processing data for ticker '{ticker}': {str(e)}")
+
+            progress_bar.progress((i + 1) * progress_step)
+
+    st.write(f"Successfully scanned {scanned_tickers} out of {total_tickers} tickers.")
 
     df_signals = fetch_latest_data(tickers_with_signals)
+
 
     def add_scoring(df):
         # Customize scoring for each indicator
