@@ -82,7 +82,7 @@ def calculate_var(returns, confidence_level=0.05):
 
 # Main application
 def markets_app():
-    submenu = st.sidebar.selectbox("Select Option", ["Equities", "Commodities", "Currencies", "Cryptocurrencies", "Insights"])
+    submenu = st.sidebar.selectbox("Select Option", ["Economic Indicators","Equities", "Commodities", "Currencies", "Cryptocurrencies", "Insights"])
 
     if submenu == "Equities":
         ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap","S&P 500","FTSE 100"])

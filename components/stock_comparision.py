@@ -304,9 +304,6 @@ def smi_ergodic(close, n=14, m=5, signal_n=3):
     return smi, signal
 
 
-
-
-
 # Calculate Williams %R
 def williams_r(high, low, close, n=14):
     highest_high = high.rolling(n).max()
