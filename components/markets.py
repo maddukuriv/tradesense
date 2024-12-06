@@ -7,6 +7,9 @@ import plotly.graph_objects as go
 import plotly.express as px
 from utils.constants import bse_largecap, bse_midcap, bse_smallcap,sp500_tickers,ftse100_tickers
 from datetime import datetime
+import requests
+      
+    
 
 # Function to download data and calculate moving averages with caching
 def get_stock_data(ticker_symbol):
@@ -83,6 +86,127 @@ def calculate_var(returns, confidence_level=0.05):
 # Main application
 def markets_app():
     submenu = st.sidebar.selectbox("Select Option", ["Economic Indicators","Equities", "Commodities", "Currencies", "Cryptocurrencies", "Insights"])
+
+    if submenu == "Economic Indicators":
+
+
+        # Function to fetch economic data from the World Bank API
+        def fetch_economic_data(country_code, indicator, start_year, end_year):
+            """
+            Fetch economic data for a country and indicator from the World Bank API.
+            """
+            url = f"http://api.worldbank.org/v2/country/{country_code}/indicator/{indicator}"
+            params = {
+                'format': 'json',
+                'date': f'{start_year}:{end_year}',
+                'per_page': 100
+            }
+            response = requests.get(url, params=params)
+            data = response.json()
+            if len(data) < 2 or not isinstance(data[1], list):
+                return [], []
+            
+            years, values = [], []
+            for entry in data[1]:
+                if entry['value'] is not None:
+                    years.append(int(entry['date']))
+                    values.append(float(entry['value']))
+            return years, values
+
+        # Function to plot economic indicator comparison
+        def plot_economic_comparison(countries, indicator, title, y_label, scaling_factor=1):
+            """
+            Plots economic data for multiple countries.
+            """
+            data = []
+            for country_name, country_code in countries.items():
+                years, values = fetch_economic_data(country_code, indicator, start_year, end_year + 1)  # Include end_year + 1
+                scaled_values = [x / scaling_factor for x in values]
+                for year, value in zip(years, scaled_values):
+                    data.append({'Year': year, 'Value': value, 'Country': country_name})
+            
+            if data:
+                df = pd.DataFrame(data)
+                fig = px.line(df, x='Year', y='Value', color='Country', title=title, labels={'Value': y_label})
+                fig.update_layout(xaxis_title="Year", yaxis_title=y_label, title_x=0.5)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.write(f"No data available for {title}.")
+
+        # App Header
+        st.title("Comprehensive Economic Indicator Dashboard")
+        st.write("Analyze global economic indicators across multiple countries and categories.")
+
+        # Sidebar Configuration
+        st.sidebar.header("Configuration")
+        country_options = {
+            'USA': 'US',
+            'UK': 'GB',
+            'Germany': 'DE',
+            'France': 'FR',
+            'India': 'IN',
+            'China': 'CN',
+            'Australia': 'AU',
+            'Japan': 'JP'
+        }
+        selected_countries = st.sidebar.multiselect("Select Countries", options=list(country_options.keys()), default=['USA', 'India'])
+
+        # Date range selection
+        start_year = st.sidebar.slider("Start Year", min_value=1960, max_value=datetime.now().year - 1, value=2000)
+        end_year = st.sidebar.slider("End Year", min_value=1961, max_value=datetime.now().year, value=datetime.now().year)
+
+        # Filter countries for selected options
+        selected_country_codes = {k: country_options[k] for k in selected_countries}
+
+        # Economic Indicators
+        indicator_categories = {
+            "Macroeconomic Indicators": {
+                "GDP (Trillion USD)": ('NY.GDP.MKTP.CD', "GDP (Trillion USD)", 1e12),
+                "Inflation Comparison (% Annual)": ('FP.CPI.TOTL.ZG', "Inflation (% Annual)", 1),
+                "Stock Market Capitalization to GDP (%)": ('CM.MKT.LCAP.GD.ZS', "Market Cap to GDP (%)", 1),
+                "Gross Savings (% of GDP)": ('NY.GNS.ICTR.ZS', "Savings (% of GDP)", 1)
+            },
+            "Financial Market Indicators": {
+                "Interest Rate Spread (Lending - Deposit Rate, %)": ('FR.INR.LNDP', "Interest Rate Spread (%)", 1),
+                "Net Foreign Direct Investment (% of GDP)": ('BX.KLT.DINV.WD.GD.ZS', "Net FDI (% of GDP)", 1),
+                "Domestic Credit to Private Sector (% of GDP)": ('FS.AST.PRVT.GD.ZS', "Credit to Private Sector (%)", 1),
+                "Broad Money Growth (% Annual)": ('FM.LBL.BMNY.ZG', "Broad Money Growth (%)", 1)
+            },
+            "Sector-Specific Indicators": {
+                "Agriculture Value Added (% of GDP)": ('NV.AGR.TOTL.ZS', "Agriculture (% of GDP)", 1),
+                "Industry Value Added (% of GDP)": ('NV.IND.TOTL.ZS', "Industry (% of GDP)", 1),
+                "Service Sector Value Added (% of GDP)": ('NV.SRV.TOTL.ZS', "Services (% of GDP)", 1)
+            },
+            "Trade Indicators": {
+                "Exports (% of GDP)": ('NE.EXP.GNFS.ZS', "Exports (% of GDP)", 1),
+                "Imports (% of GDP)": ('NE.IMP.GNFS.ZS', "Imports (% of GDP)", 1),
+                "Terms of Trade Adjustment": ('NY.TTF.GNFS.KN', "Terms of Trade (LCU)", 1)
+            },
+            "Environmental, Social, and Governance (ESG) Indicators": {
+                "CO2 Emissions (Metric Tons per Capita)": ('EN.ATM.CO2E.PC', "CO2 Emissions (Metric Tons per Capita)", 1),
+                "Energy Use (kg of Oil Equivalent per Capita)": ('EG.USE.PCAP.KG.OE', "Energy Use (kg per Capita)", 1)
+            },
+            "Monetary and Inflation Indicators": {
+                "Real Interest Rate (%)": ('FR.INR.RINR', "Real Interest Rate (%)", 1),
+                "Consumer Price Index (Base Year)": ('FP.CPI.TOTL', "CPI (Base Year)", 1),
+                "Producer Price Index (PPI)": ('FP.PRI.TOTL', "PPI (Base Year)", 1)
+            },
+            "Additional Indicators": {
+                "Unemployment Rate (%)": ('SL.UEM.TOTL.ZS', "Unemployment Rate (%)", 1),
+                "Government Debt to GDP (%)": ('GC.DOD.TOTL.GD.ZS', "Govt Debt to GDP (%)", 1),
+                "Current Account Balance (% of GDP)": ('BN.CAB.XOKA.GD.ZS', "Current Account Balance (%)", 1),
+                "Exchange Rate (LCU per USD)": ('PA.NUS.FCRF', "Exchange Rate (LCU per USD)", 1)
+            }
+        }
+
+        # Loop through each category and plot
+        for category, indicators in indicator_categories.items():
+            st.header(category)
+            for indicator_name, (indicator_code, y_label, scaling_factor) in indicators.items():
+                st.subheader(indicator_name)
+                plot_economic_comparison(selected_country_codes, indicator_code, indicator_name, y_label, scaling_factor)
+
+
 
     if submenu == "Equities":
         ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap","S&P 500","FTSE 100"])
