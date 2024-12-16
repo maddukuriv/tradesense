@@ -3,18 +3,18 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
-from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
+from utils.constants import crypto_largecap,crypto_midcap
 import pandas_ta as ta
 from plotly.subplots import make_subplots
 import plotly.graph_objs as go
 from scipy.stats import linregress
 
 
-def stock_screener_app():
-    st.sidebar.subheader("Stock Screener")
+def crypto_screener_app():
+    st.sidebar.subheader("Crypto Screener")
 
     # Dropdown for selecting ticker category
-    ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap", "S&P 500", "FTSE 100","Crypto-LargeCap"])
+    ticker_category = st.sidebar.selectbox("Select Index", ["Crypto-LargeCap","Crypto-MidCap"])
 
     # Dropdown for Strategies
     submenu = st.sidebar.selectbox("Select Strategy", ["MACD", "Moving Average", "Bollinger Bands", "Volume"])
@@ -25,11 +25,8 @@ def stock_screener_app():
 
     # Set tickers based on selected category
     tickers = {
-        "BSE-LargeCap": bse_largecap,
-        "BSE-MidCap": bse_midcap,
-        "BSE-SmallCap": bse_smallcap,
-        "S&P 500": sp500_tickers,
-        "FTSE 100": ftse100_tickers
+        "Crypto-LargeCap": crypto_largecap,
+        "Crypto-MidCap": crypto_midcap
     }[ticker_category]
 
     def atr(high, low, close, window=14):
@@ -1278,4 +1275,4 @@ def stock_screener_app():
 
 
 if __name__ == "__main__":
-    stock_screener_app()
+    crypto_screener_app()

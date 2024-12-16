@@ -2,7 +2,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from utils.mongodb import init_db
 from authentication import login, signup, forgot_password
-from components import my_account, my_portfolio, my_watchlist, markets, stock_screener, stock_analysis, admin, home_page,stock_comparision
+from components import my_account, my_portfolio, my_watchlist, markets, stock_screener, stock_analysis, admin, home_page,stock_comparision,crypto_screener,crypto_analysis
 
 # Initialize MongoDB collections
 init_db()
@@ -42,10 +42,12 @@ def main_menu():
     menu_options = [
         f"{st.session_state.username}'s Portfolio",
         f"{st.session_state.username}'s Watchlist",
+        "Markets",
+        "Crypto Screener",
         "Stock Screener",
+        "Crypto Analysis",
         "Stock Analysis",
         "Stock Comparision",
-        "Markets",
         "My Account"
 
     ]
@@ -90,8 +92,12 @@ else:
             my_portfolio.display_portfolio()
         elif choice == "Markets":
             markets.markets_app()
+        elif choice == "Crypto Screener":
+            crypto_screener.crypto_screener_app() 
         elif choice == "Stock Screener":
             stock_screener.stock_screener_app()
+        elif choice == "Crypto Analysis":
+            crypto_analysis.crypto_analysis_app() 
         elif choice == "Stock Analysis":
             stock_analysis.stock_analysis_app()
         elif choice == "Stock Comparision":
