@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
-from utils.constants import sp500_tickers, ftse100_tickers, Largecap,Midcap,Smallcap
+from utils.constants import sp500_tickers, ftse100_tickers, Largecap,Midcap,Smallcap,crypto_largecap,crypto_midcap
 import pandas_ta as ta
 from plotly.subplots import make_subplots
 import plotly.graph_objs as go
@@ -14,7 +14,7 @@ def stock_screener_app():
     st.sidebar.subheader("Stock Screener")
 
     # Dropdown for selecting ticker category
-    ticker_category = st.sidebar.selectbox("Select Index", [ "Largecap","Midcap","Smallcap","Multicap","S&P 500", "FTSE 100"])
+    ticker_category = st.sidebar.selectbox("Select Index/Crypto", [ "Largecap","Midcap","Smallcap","Multicap","S&P 500", "FTSE 100","Crypto"])
 
     # Dropdown for Strategies
     submenu = st.sidebar.selectbox("Select Strategy", ["Momentum", "Mean Reversion", "Volume Driven", "Trend Following","Breakout","Volatility Based","Reversal","Trend Conformation","Volatility Reversion","Volume & Momentum"])
@@ -30,7 +30,8 @@ def stock_screener_app():
         "Smallcap": Smallcap,
         "Multicap": Largecap + Midcap +Smallcap,
         "S&P 500": sp500_tickers,
-        "FTSE 100": ftse100_tickers
+        "FTSE 100": ftse100_tickers,
+        "Crypto": crypto_largecap + crypto_midcap
     }[ticker_category]
 
     def atr(high, low, close, window=14):

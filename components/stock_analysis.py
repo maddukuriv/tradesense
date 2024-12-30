@@ -13,7 +13,7 @@ import nltk
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import requests
-from utils.constants import ticker_to_company_dict 
+from utils.constants import ticker_to_company_dict
 import nltk
 import plotly.express as px
 
@@ -32,6 +32,8 @@ ticker_to_company = {ticker: ticker_to_company_dict.get(ticker, ticker) for tick
 
 # Convert the ticker_to_company dictionary to a list of company names
 company_names = list(ticker_to_company.values())
+
+
 
 
 @st.cache_data(ttl=300)

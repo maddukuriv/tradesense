@@ -79,12 +79,15 @@ def home_page_app():
 
     with col1:
         stock_symbols = {
-            "NIFTY 50": "^NSEI",
-            "BSE 500": "BSE-500.BO",
-            "S&P 500": "^GSPC",
-            "FTSE 100": "^FTSE",
+            "NIFTY 50(India)": "^NSEI",
+            "BSE 500(India)": "BSE-500.BO",
+            "S&P 500(USA)": "^GSPC",
+            "FTSE 100(UK)": "^FTSE",
             "SSE Composite (China)": "000001.SS",
             "Nikkei 225 (Japan)": "^N225",
+            "DAX(Germany)":"^GDAXI",
+            "CAC 40(France)": "^FCHI",
+            "HSI(Hong Kong)":"^HSI",
             "ASX 200 (Australia)": "^AXJO",
             "S&P/TSX (Canada)": "^GSPTSE",
             "Bitcoin": "BTC-USD",
