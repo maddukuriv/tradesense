@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
-from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
+from utils.constants import sp500_tickers, ftse100_tickers, Largecap,Midcap,Smallcap
 import pandas_ta as ta
 from plotly.subplots import make_subplots
 import plotly.graph_objs as go
@@ -14,10 +14,10 @@ def stock_screener_app():
     st.sidebar.subheader("Stock Screener")
 
     # Dropdown for selecting ticker category
-    ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap", "S&P 500", "FTSE 100","Crypto-LargeCap"])
+    ticker_category = st.sidebar.selectbox("Select Index", [ "Largecap","Midcap","Smallcap","S&P 500", "FTSE 100"])
 
     # Dropdown for Strategies
-    submenu = st.sidebar.selectbox("Select Strategy", ["MACD", "Moving Average", "Bollinger Bands", "Volume"])
+    submenu = st.sidebar.selectbox("Select Strategy", ["MACD", "Moving Average", "Bollinger Bands", "Volume","VWAP", "MFI", "OBV", "CMF", "A/D"])
 
     # Date inputs
     start_date = st.sidebar.date_input("Start Date", value=datetime.now() - timedelta(days=365))
@@ -25,9 +25,9 @@ def stock_screener_app():
 
     # Set tickers based on selected category
     tickers = {
-        "BSE-LargeCap": bse_largecap,
-        "BSE-MidCap": bse_midcap,
-        "BSE-SmallCap": bse_smallcap,
+        "Largecap":Largecap,
+        "Midcap": Midcap,
+        "Smallcap": Smallcap,
         "S&P 500": sp500_tickers,
         "FTSE 100": ftse100_tickers
     }[ticker_category]
@@ -760,11 +760,57 @@ def stock_screener_app():
                     recent_data['Close'].iloc[i-1] <= recent_data['BB_Low'].iloc[i-1]):
                     return recent_data.index[i]
         elif strategy == "Volume":
-            data['Volume_MA'] = data['Volume'].rolling(window=20).mean()
+            data['Volume_MA10'] = data['Volume'].rolling(window=10).mean()
+            data['Volume_MA30'] = data['Volume'].rolling(window=30).mean()
+            recent_data = data.tail(5)
             for i in range(1, len(recent_data)):
-                if (recent_data['Volume'].iloc[i] > recent_data['Volume_MA'].iloc[i] and
-                    recent_data['Volume'].iloc[i-1] <= recent_data['Volume_MA'].iloc[i-1]):
+                if (recent_data['Volume_MA10'].iloc[i] > recent_data['Volume_MA30'].iloc[i] and
+                    recent_data['Volume_MA10'].iloc[i-1] <= recent_data['Volume_MA30'].iloc[i-1]):
                     return recent_data.index[i]
+
+   
+        elif strategy == "VWAP":
+            data['VWAP'] = (data['Close'] * data['Volume']).cumsum() / data['Volume'].cumsum()
+            for i in range(1, len(recent_data)):
+                if (recent_data['Close'].iloc[i] > recent_data['VWAP'].iloc[i] and
+                    recent_data['Close'].iloc[i-1] <= recent_data['VWAP'].iloc[i-1]):
+                    return recent_data.index[i]
+        
+        elif strategy == "MFI":
+            data['Typical_Price'] = (data['High'] + data['Low'] + data['Close']) / 3
+            data['Raw_Money_Flow'] = data['Typical_Price'] * data['Volume']
+            data['Money_Flow_Ratio'] = data['Raw_Money_Flow'].rolling(window=14).sum() / data['Raw_Money_Flow'].shift(1).rolling(window=14).sum()
+            data['MFI'] = 100 - (100 / (1 + data['Money_Flow_Ratio']))
+            for i in range(1, len(recent_data)):
+                if (recent_data['MFI'].iloc[i] > 20 and
+                    recent_data['MFI'].iloc[i-1] <= 20):
+                    return recent_data.index[i]
+        
+        elif strategy == "OBV":
+            data['OBV'] = (data['Volume'] * ((data['Close'] > data['Close'].shift(1)) * 2 - 1)).cumsum()
+            for i in range(1, len(recent_data)):
+                if (recent_data['OBV'].iloc[i] > recent_data['OBV'].iloc[i-1] and
+                    recent_data['OBV'].iloc[i-1] > recent_data['OBV'].iloc[i-2]):
+                    return recent_data.index[i]
+        
+        elif strategy == "CMF":
+            data['Money_Flow_Volume'] = ((data['Close'] - data['Low']) - (data['High'] - data['Close'])) / (data['High'] - data['Low']) * data['Volume']
+            data['CMF'] = data['Money_Flow_Volume'].rolling(window=20).sum() / data['Volume'].rolling(window=20).sum()
+            for i in range(1, len(recent_data)):
+                if (recent_data['CMF'].iloc[i] > 0 and
+                    recent_data['CMF'].iloc[i-1] <= 0):
+                    return recent_data.index[i]
+        
+        elif strategy == "A/D":
+            data['Money_Flow_Multiplier'] = ((data['Close'] - data['Low']) - (data['High'] - data['Close'])) / (data['High'] - data['Low'])
+            data['Money_Flow_Volume'] = data['Money_Flow_Multiplier'] * data['Volume']
+            data['A/D'] = data['Money_Flow_Volume'].cumsum()
+            for i in range(1, len(recent_data)):
+                if (recent_data['A/D'].iloc[i] > recent_data['A/D'].iloc[i-1] and
+                    recent_data['A/D'].iloc[i-1] > recent_data['A/D'].iloc[i-2]):
+                    return recent_data.index[i]               
+
+
         return None
     
     def count_scanned_tickers(tickers):

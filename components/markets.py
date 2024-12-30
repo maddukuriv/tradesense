@@ -5,10 +5,9 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from utils.constants import bse_largecap, bse_midcap, bse_smallcap,sp500_tickers,ftse100_tickers
-from datetime import datetime
+from utils.constants import Largecap, Midcap, Smallcap,sp500_tickers,ftse100_tickers
+from datetime import datetime, timedelta
 import requests
-      
     
 
 # Function to download data and calculate moving averages with caching
@@ -209,8 +208,8 @@ def markets_app():
 
 
     if submenu == "Equities":
-        ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap","S&P 500","FTSE 100"])
-        tickers = {"BSE-LargeCap": bse_largecap, "BSE-MidCap": bse_midcap, "BSE-SmallCap": bse_smallcap,"S&P 500":sp500_tickers,"FTSE 100":ftse100_tickers }[ticker_category]
+        ticker_category = st.sidebar.selectbox("Select Index", ["Largecap", "Midcap", "Smallcap","S&P 500","FTSE 100"])
+        tickers = {"Largecap": Largecap, "Midcap": Midcap, "Smallcap": Smallcap,"S&P 500":sp500_tickers,"FTSE 100":ftse100_tickers }[ticker_category]
 
         @st.cache_data(ttl=60)
         def get_sector_industry_price_changes(tickers, timestamp):
@@ -394,17 +393,286 @@ def markets_app():
 
     elif submenu == "Cryptocurrencies":
         st.subheader("Cryptocurrencies")
-        tickers = ["BTC-USD", "ETH-USD", "BNB-USD", "XRP-USD", "DOGE-USD"]
-        selected_tickers = st.multiselect("Select cryptocurrencies to visualize", tickers, default=["BTC-USD", "ETH-USD"])
-        indicators = st.multiselect("Select Indicators", ['Close', 'MA_15', 'MA_50', 'MACD', 'Bollinger Bands'], default=['Close'])
-        if not selected_tickers:
-            st.warning("Please select at least one cryptocurrency.")
-        else:
-            columns = st.columns(len(selected_tickers))
-            for ticker, col in zip(selected_tickers, columns):
-                data = get_stock_data(ticker)
-                fig = create_figure(data, indicators, f'{ticker} Price')
-                col.plotly_chart(fig)
+
+        # Function to get stock data and calculate moving averages
+        @st.cache_data(ttl=60)
+        def get_stock_data(ticker_symbol, start_date, end_date):
+            data = yf.download(ticker_symbol, start=start_date, end=end_date)
+            data['MA_10'] = data['Close'].rolling(window=10).mean()
+            data['MA_20'] = data['Close'].rolling(window=20).mean()
+            data.dropna(inplace=True)
+            return data
+
+        # Function to create Plotly figure with volume histogram
+        def create_figure(data, indicators, ticker):
+            fig = go.Figure()
+
+            # Add candlestick chart
+            fig.add_trace(go.Candlestick(x=data.index,
+                                        open=data['Open'],
+                                        high=data['High'],
+                                        low=data['Low'],
+                                        close=data['Close'],
+                                        name='Candlesticks'))
+
+            if 'Close' in indicators:
+                fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Close Price'))
+            if 'MA_10' in indicators:
+                fig.add_trace(go.Scatter(x=data.index, y=data['MA_10'], mode='lines', name='10-day MA'))
+            if 'MA_20' in indicators:
+                fig.add_trace(go.Scatter(x=data.index, y=data['MA_20'], mode='lines', name='20-day MA'))
+
+            # Add volume histogram
+            fig.add_trace(go.Bar(x=data.index, y=data['Volume'], name='Volume', yaxis='y2', marker_color='rgba(255, 0, 255, 0.2)'))
+
+            fig.update_layout(
+                title={
+                    'text': f'{ticker} Price and Technical Indicators',
+                    'y': 0.97,
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'yanchor': 'top'
+                },
+                height=500,
+                margin=dict(t=100, b=10, l=50, r=50),
+                yaxis=dict(title='Price'),
+                yaxis2=dict(title='Volume', overlaying='y', side='right'),
+                xaxis=dict(
+                    rangeslider=dict(visible=True),
+                    rangeselector=dict(
+                        buttons=list([
+                            dict(count=7, label='7d', step='day', stepmode='backward'),
+                            dict(count=14, label='14d', step='day', stepmode='backward'),
+                            dict(count=1, label='1m', step='month', stepmode='backward'),
+                            dict(count=3, label='3m', step='month', stepmode='backward'),
+                            dict(count=6, label='6m', step='month', stepmode='backward'),
+                            dict(count=1, label='1y', step='year', stepmode='backward'),
+                            dict(step='all')
+                        ])
+                    ),
+                    type='date'
+                ),
+                legend=dict(x=0.5, y=-0.02, orientation='h', xanchor='center', yanchor='top'),
+                hovermode='x unified',
+                hoverlabel=dict(bgcolor="sky blue", font_size=12, font_family="Rockwell")
+            )
+            return fig
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            stock_symbols = {
+                "NIFTY 50": "^NSEI",
+                "BSE 500": "BSE-500.BO",
+                "S&P 500": "^GSPC",
+                "FTSE 100": "^FTSE",
+                "SSE Composite (China)": "000001.SS",
+                "Nikkei 225 (Japan)": "^N225",
+                "ASX 200 (Australia)": "^AXJO",
+                "S&P/TSX (Canada)": "^GSPTSE",
+                "Bitcoin": "BTC-USD",
+                "EUR/USD": "EURUSD=X",
+                "Gold Futures": "GC=F",
+                "Crude Oil Futures": "CL=F"
+            }
+            stock_name = st.selectbox("Select Index", list(stock_symbols.keys()))
+            ticker = stock_symbols[stock_name]
+            st.write(f"You selected: {stock_name}")
+
+        with col2:
+            START = st.date_input('Start Date', value=datetime.now() - timedelta(days=365))
+
+        with col3:
+            END = st.date_input('End Date', value=datetime.now() + timedelta(days=1))
+
+        if ticker and START and END:
+            try:
+                data = get_stock_data(ticker, START, END)
+                fig = create_figure(data, ['Close', 'MA_10', 'MA_20'], ticker)
+                st.plotly_chart(fig)
+            except Exception as e:
+                st.error(f"Error fetching data: {e}")
+
+        st.divider()
+        
+        # Market Performance
+        st.subheader("Cryptos's Performance")
+
+        market_indices = {
+            
+        'Bitcoin': 'BTC-USD',
+        'Ethereum': 'ETH-USD',
+        'XRP': 'XRP-USD',
+        'Tether USDt': 'USDT-USD',
+        'Solana': 'SOL-USD',
+        'BNB': 'BNB-USD',
+        'Dogecoin': 'DOGE-USD',
+        'Cardano': 'ADA-USD',
+        'USDC': 'USDC-USD',
+        'Lido Staked ETH': 'STETH-USD',
+        'Wrapped TRON': 'WTRX-USD',
+        'TRON': 'TRX-USD',
+        'Avalanche': 'AVAX-USD',
+        'Shiba Inu': 'SHIB-USD',
+        'Lido wstETH': 'WSTETH-USD',
+        'Toncoin': 'TON11419-USD',
+        'Chainlink': 'LINK-USD',
+        'Polkadot': 'DOT-USD',
+        'Stellar': 'XLM-USD',
+        'Wrapped Bitcoin': 'WBTC-USD',
+        'WETH': 'WETH-USD',
+        'Hedera': 'HBAR-USD',
+        'Bitcoin Cash': 'BCH-USD',
+        'Sui': 'SUI20947-USD',
+        'Uniswap': 'UNI7083-USD',
+        'Pepe': 'PEPE24478-USD',
+        'Litecoin': 'LTC-USD',
+        'UNUS SED LEO': 'LEO-USD',
+        'NEAR Protocol': 'NEAR-USD',
+        'Aptos': 'APT21794-USD',
+        'Wrapped eETH': 'WEETH-USD',
+        'Wrapped Beacon ETH': 'WBETH-USD',
+        'Bitcoin BEP2': 'BTCB-USD',
+        'Internet Computer': 'ICP-USD',
+        'Ethena USDe': 'USDE29470-USD',
+        'Dai': 'DAI-USD',
+        'POL (ex-MATIC)': 'POL28321-USD',
+        'USDS': 'USDS33039-USD',
+        'Ethereum Classic': 'ETC-USD',
+        'Render': 'RENDER-USD',
+        'Cronos': 'CRO-USD',
+        'VeChain': 'VET-USD',
+        'Aave': 'AAVE-USD',
+        'Bittensor': 'TAO22974-USD',
+        'Artificial Superintelligence Alliance': 'FET-USD',
+        'Bitget Token': 'BGB-USD',
+        'Mantle': 'MNT27075-USD',
+        'Hyperliquid': 'HYPE32196-USD',
+        'Ethena Staked USDe': 'SUSDE-USD',
+        'Kaspa': 'KAS-USD',
+        'Filecoin': 'FIL-USD',
+        'MANTRA': 'OM-USD',
+        'Monero': 'XMR-USD',
+        'Algorand': 'ALGO-USD',
+        'Stacks': 'STX4847-USD',
+        'Fantom': 'FTM-USD',
+        'Cosmos': 'ATOM-USD',
+        'Jito Staked SOL': 'JITOSOL-USD',
+        'OKB': 'OKB-USD',
+        'Celestia': 'TIA22861-USD',
+        'Immutable': 'IMX10603-USD',
+        'Ethena': 'ENA-USD',
+        'dogwifhat': 'WIF-USD',
+        'Bonk': 'BONK-USD',
+        'Optimism': 'OP-USD',
+        'Injective': 'INJ-USD',
+        'The Graph': 'GRT6719-USD',
+        'Theta Network': 'THETA-USD',
+        'Ondo': 'ONDO-USD',
+        'Sei': 'SEI-USD',
+        'Worldcoin': 'WLD-USD',
+        'FLOKI': 'FLOKI-USD',
+        'THORChain': 'RUNE-USD',
+        'JasmyCoin': 'JASMY-USD',
+        'Tezos': 'XTZ-USD',
+        'Starknet': 'STRK22691-USD',
+        'BounceBit BTC': 'BBTC31369-USD',
+        'SolvBTC': 'SOLVBTC-USD',
+        'IOTA': 'IOTA-USD',
+        'Helium': 'HNT-USD',
+        'dYdX (Native)': 'DYDX-USD',
+        'Wrapped Zedxion': 'WZEDX-USD',
+        'Curve DAO Token': 'CRV-USD',
+        'Ethereum Name Service': 'ENS-USD',
+        'Lombard Staked BTC': 'LBTC33652-USD',
+        'XDC Network': 'XDC-USD',
+        'Bitcoin SV': 'BSV-USD',
+        'Neo': 'NEO-USD',
+        'MultiversX': 'EGLD-USD',
+        'AIOZ Network': 'AIOZ-USD',
+        'BitTorrent [New]': 'BTT-USD',
+        'Decentraland': 'MANA-USD',
+        'Mog Coin': 'MOG-USD',
+        'Peanut the Squirrel': 'PNUT-USD',
+        'Axie Infinity': 'AXS-USD',
+        'Marinade Staked SOL': 'MSOL-USD',
+        'Polygon': 'MATIC-USD',
+        'Popcat (SOL)': 'POPCAT28782-USD',
+        'Core': 'CORE23254-USD',
+        'ApeCoin': 'APE18876-USD',
+        'Binance Staked SOL': 'BNSOL-USD',
+        'Zeebu': 'ZBU-USD',
+        'Wrapped BNB': 'WBNB-USD',
+        'GateToken': 'GT-USD',
+        'Chiliz': 'CHZ-USD',
+        'FTX Token': 'FTT-USD',
+        'ether.fi Staked ETH': 'EETH-USD',
+        'EigenLayer': 'EIGEN-USD',
+        'SuperVerse': 'SUPER8290-USD',
+        'Zcash': 'ZEC-USD',
+        'Conflux': 'CFX-USD',
+        'Synthetix': 'SNX-USD',
+        'PancakeSwap': 'CAKE-USD',
+        'Akash Network': 'AKT-USD',
+        'Pendle': 'PENDLE-USD',
+        'SolvBTC.BBN': 'SOLVBTCBBN-USD',
+        'Fellaz': 'FLZ-USD',
+        'Fasttoken': 'FTN-USD',
+        'Mina': 'MINA-USD'
+        }
+
+        # Define date ranges
+        date_ranges = {
+            "1 day": timedelta(days=1),
+            "2 days": timedelta(days=2),
+            "3 days": timedelta(days=3),
+            "5 days": timedelta(days=5),
+            "10 days": timedelta(days=10),
+            "1 month": timedelta(days=30),
+            "3 months": timedelta(days=90),
+            "6 months": timedelta(days=180),
+            "1 year": timedelta(days=365),
+            "2 years": timedelta(days=730),
+            "3 years": timedelta(days=1095),
+            "5 years": timedelta(days=1825)
+        }
+
+        selected_range = st.select_slider(
+            "Select Date Range for Market Performance",
+            options=list(date_ranges.keys()),
+            value="1 year"
+        )
+        END = datetime.now()
+        START = END - date_ranges[selected_range]
+
+        @st.cache_data(ttl=60)
+        def get_market_data(ticker_symbol, start_date, end_date):
+            try:
+                data = yf.download(ticker_symbol, start=start_date, end=end_date)
+                if data.empty:
+                    raise ValueError(f"No data found for ticker {ticker_symbol}")
+                return data
+            except Exception as e:
+                st.error(f"Error downloading data for {ticker_symbol}: {e}")
+                return None
+
+        def calculate_performance(data):
+            if data is not None and not data.empty:
+                performance = (data['Close'][-1] - data['Close'][0]) / data['Close'][0] * 100
+                return performance
+            return None
+
+        market_performance = {
+            market: calculate_performance(get_market_data(ticker, START, END))
+            for market, ticker in market_indices.items()
+            if get_market_data(ticker, START, END) is not None
+        }
+
+        performance_df = pd.DataFrame(list(market_performance.items()), columns=['Market', 'Performance'])
+        fig2 = px.bar(performance_df, x='Market', y='Performance', title='Market Performance',
+                    labels={'Performance': 'Performance (%)'}, color='Performance',
+                    color_continuous_scale=px.colors.diverging.RdYlGn)
+        st.plotly_chart(fig2)
 
     elif submenu == "Insights":
         st.subheader("Detailed Market Analysis")
