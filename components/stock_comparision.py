@@ -6,7 +6,7 @@ from scipy.stats import linregress
 import pandas_ta as ta
 from datetime import datetime, timedelta
 
-from utils.constants import bse_largecap, bse_smallcap, bse_midcap, sp500_tickers, ftse100_tickers
+from utils.constants import Largecap, Smallcap, Midcap, sp500_tickers, ftse100_tickers
 
 # Helper functions for calculating technical indicators and scoring
 def atr(high, low, close, window=14):
@@ -890,10 +890,10 @@ def display_stock_comparison():
 
     # Set tickers based on selected category
     tickers = {
-        "BSE-LargeCap": bse_largecap,
-        "BSE-MidCap": bse_midcap,
-        "BSE-SmallCap": bse_smallcap,
-        "BSE-LargeCap & MidCap": bse_largecap + bse_midcap,
+        "Largecap": Largecap,
+        "Midcap": Midcap,
+        "Smallcap": Smallcap,
+        "Multicap": Largecap + Midcap + Smallcap,
         "Manual": st.sidebar.text_input("Enter Stock Ticker(s):").split(',')
     }[ticker_category]
 
