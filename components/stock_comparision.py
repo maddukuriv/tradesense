@@ -886,7 +886,7 @@ def fetch_latest_data(tickers_with_dates):
 def display_stock_comparison():
     st.title("Enhanced Stock Comparison Tool")
     # Dropdown for selecting ticker category
-    ticker_category = st.sidebar.selectbox("Select Index", ["BSE-LargeCap", "BSE-MidCap", "BSE-SmallCap", "BSE-LargeCap & MidCap", "Manual"])
+    ticker_category = st.sidebar.selectbox("Select Index", ["Largecap", "Midcap", "Smallcap", "Multicap", "Manual"])
 
     # Set tickers based on selected category
     tickers = {
