@@ -14,7 +14,7 @@ def stock_screener_app():
     st.sidebar.subheader("Stock Screener")
 
     # Dropdown for selecting ticker category
-    ticker_category = st.sidebar.selectbox("Select Index", [ "Largecap","Midcap","Smallcap","S&P 500", "FTSE 100"])
+    ticker_category = st.sidebar.selectbox("Select Index", [ "Largecap","Midcap","Smallcap","Multicap","S&P 500", "FTSE 100"])
 
     # Dropdown for Strategies
     submenu = st.sidebar.selectbox("Select Strategy", ["MACD", "Moving Average", "Bollinger Bands", "Volume","VWAP", "MFI", "OBV", "CMF", "A/D"])
@@ -28,6 +28,7 @@ def stock_screener_app():
         "Largecap":Largecap,
         "Midcap": Midcap,
         "Smallcap": Smallcap,
+        "Multicap": Largecap + Midcap +Smallcap,
         "S&P 500": sp500_tickers,
         "FTSE 100": ftse100_tickers
     }[ticker_category]
