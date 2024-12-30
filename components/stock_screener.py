@@ -17,7 +17,7 @@ def stock_screener_app():
     ticker_category = st.sidebar.selectbox("Select Index", [ "Largecap","Midcap","Smallcap","Multicap","S&P 500", "FTSE 100"])
 
     # Dropdown for Strategies
-    submenu = st.sidebar.selectbox("Select Strategy", ["MACD", "Moving Average", "Bollinger Bands", "Volume","VWAP", "MFI", "OBV", "CMF", "A/D"])
+    submenu = st.sidebar.selectbox("Select Strategy", ["Momentum", "Mean Reversion", "Volume Driven", "Trend Following","Breakout","Volatility Based","Reversal","Trend Conformation","Volatility Reversion","Volume & Momentum"])
 
     # Date inputs
     start_date = st.sidebar.date_input("Start Date", value=datetime.now() - timedelta(days=365))
@@ -736,7 +736,7 @@ def stock_screener_app():
 
     def check_signal(data, strategy):
         recent_data = data[-5:]
-        if strategy == "MACD":
+        if strategy == "Momentum":
             data['MACD'] = data['EMA_12'] - data['EMA_26']
             data['MACD_signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
             data['MACD_hist'] = data['MACD'] - data['MACD_signal']
@@ -748,68 +748,110 @@ def stock_screener_app():
                     recent_data['MACD_hist'].iloc[i-1] < 0 and
                     recent_data['MACD_hist'].iloc[i] > recent_data['MACD_hist'].iloc[i-1] > recent_data['MACD_hist'].iloc[i-2]):
                     return recent_data.index[i]
-        elif strategy == "Moving Average":
-            data['Short_EMA'] = data['Close'].ewm(span=10, adjust=False).mean()
-            data['Long_EMA'] = data['Close'].ewm(span=20, adjust=False).mean()
-            for i in range(1, len(recent_data)):
-                if (recent_data['Short_EMA'].iloc[i] > recent_data['Long_EMA'].iloc[i] and
-                    recent_data['Short_EMA'].iloc[i-1] <= recent_data['Long_EMA'].iloc[i-1]):
-                    return recent_data.index[i]
-        elif strategy == "Bollinger Bands":
+
+        elif strategy == "Mean Reversion":
             for i in range(1, len(recent_data)):
                 if (recent_data['Close'].iloc[i] > recent_data['BB_Low'].iloc[i] and
                     recent_data['Close'].iloc[i-1] <= recent_data['BB_Low'].iloc[i-1]):
                     return recent_data.index[i]
-        elif strategy == "Volume":
-            data['Volume_MA10'] = data['Volume'].rolling(window=10).mean()
-            data['Volume_MA30'] = data['Volume'].rolling(window=30).mean()
-            recent_data = data.tail(5)
-            for i in range(1, len(recent_data)):
-                if (recent_data['Volume_MA10'].iloc[i] > recent_data['Volume_MA30'].iloc[i] and
-                    recent_data['Volume_MA10'].iloc[i-1] <= recent_data['Volume_MA30'].iloc[i-1]):
-                    return recent_data.index[i]
 
-   
-        elif strategy == "VWAP":
+        elif strategy == "Volume Driven":
             data['VWAP'] = (data['Close'] * data['Volume']).cumsum() / data['Volume'].cumsum()
             for i in range(1, len(recent_data)):
                 if (recent_data['Close'].iloc[i] > recent_data['VWAP'].iloc[i] and
                     recent_data['Close'].iloc[i-1] <= recent_data['VWAP'].iloc[i-1]):
                     return recent_data.index[i]
-        
-        elif strategy == "MFI":
-            data['Typical_Price'] = (data['High'] + data['Low'] + data['Close']) / 3
-            data['Raw_Money_Flow'] = data['Typical_Price'] * data['Volume']
-            data['Money_Flow_Ratio'] = data['Raw_Money_Flow'].rolling(window=14).sum() / data['Raw_Money_Flow'].shift(1).rolling(window=14).sum()
-            data['MFI'] = 100 - (100 / (1 + data['Money_Flow_Ratio']))
+                
+        elif strategy == "Trend Following":
+            # Calculate Ichimoku Cloud components
+            data['Ichimoku_Tenkan'] = (data['High'].rolling(window=9).max() + data['Low'].rolling(window=9).min()) / 2
+            data['Ichimoku_Kijun'] = (data['High'].rolling(window=26).max() + data['Low'].rolling(window=26).min()) / 2
+            data['Ichimoku_Senkou_Span_A'] = ((data['Ichimoku_Tenkan'] + data['Ichimoku_Kijun']) / 2).shift(26)
+            data['Ichimoku_Senkou_Span_B'] = ((data['High'].rolling(window=52).max() + data['Low'].rolling(window=52).min()) / 2).shift(26)
+
+            # Query stocks where price is above the Ichimoku Cloud in the last 5 days
+            for i in range(len(recent_data) - 5, len(recent_data)):
+                if (recent_data['Close'].iloc[i] > recent_data['Ichimoku_Senkou_Span_A'].iloc[i] and
+                    recent_data['Close'].iloc[i] > recent_data['Ichimoku_Senkou_Span_B'].iloc[i]):
+                    return recent_data.index[i]
+                
+        elif strategy == "Breakout":
+            # Calculate Keltner Channel components
+            data['KC_Middle'] = data['Close'].rolling(window=20).mean()
+            data['ATR_10'] = atr(data['High'], data['Low'], data['Close'], window=10)
+            data['KC_High'] = data['KC_Middle'] + (data['ATR_10'] * 2)
+            data['KC_Low'] = data['KC_Middle'] - (data['ATR_10'] * 2)
+
+            # Query stocks where price breaks out of the Keltner Channel
             for i in range(1, len(recent_data)):
-                if (recent_data['MFI'].iloc[i] > 20 and
-                    recent_data['MFI'].iloc[i-1] <= 20):
+                if recent_data['Close'].iloc[i] > recent_data['KC_High'].iloc[i]:  # Price breakout above the channel
                     return recent_data.index[i]
         
-        elif strategy == "OBV":
-            data['OBV'] = (data['Volume'] * ((data['Close'] > data['Close'].shift(1)) * 2 - 1)).cumsum()
+        elif strategy == "Reversal":
+            # Calculate Williams %R and CMO
+            data['Williams_%R'] = williams_r(data['High'], data['Low'], data['Close'])
+            data['CMO'] = rsi(data['Close'], window=14) - 50
+
+            # Query stocks where Williams %R is below -80 and CMO is below -50
             for i in range(1, len(recent_data)):
-                if (recent_data['OBV'].iloc[i] > recent_data['OBV'].iloc[i-1] and
-                    recent_data['OBV'].iloc[i-1] > recent_data['OBV'].iloc[i-2]):
+                if (recent_data['Williams_%R'].iloc[i] < -80 and  # Williams %R below -80
+                    recent_data['CMO'].iloc[i] < -50):  # CMO below -50
                     return recent_data.index[i]
-        
-        elif strategy == "CMF":
-            data['Money_Flow_Volume'] = ((data['Close'] - data['Low']) - (data['High'] - data['Close'])) / (data['High'] - data['Low']) * data['Volume']
-            data['CMF'] = data['Money_Flow_Volume'].rolling(window=20).sum() / data['Volume'].rolling(window=20).sum()
+
+        elif strategy == "Trend Confirmation ":
+            # Calculate GMMA components
+            data['GMMA_Short'] = data['Close'].ewm(span=3, adjust=False).mean()
+            data['GMMA_Long'] = data['Close'].ewm(span=30, adjust=False).mean()
+
+            # Query stocks where GMMA Short is greater than GMMA Long (indicating a potential breakout)
             for i in range(1, len(recent_data)):
-                if (recent_data['CMF'].iloc[i] > 0 and
-                    recent_data['CMF'].iloc[i-1] <= 0):
+                if recent_data['GMMA_Short'].iloc[i] > recent_data['GMMA_Long'].iloc[i]:  # GMMA Short above GMMA Long
                     return recent_data.index[i]
-        
-        elif strategy == "A/D":
-            data['Money_Flow_Multiplier'] = ((data['Close'] - data['Low']) - (data['High'] - data['Close'])) / (data['High'] - data['Low'])
-            data['Money_Flow_Volume'] = data['Money_Flow_Multiplier'] * data['Volume']
-            data['A/D'] = data['Money_Flow_Volume'].cumsum()
+                
+        elif strategy == "Volatility Reversion":
+            # Calculate Choppiness Index and ATR
+            data['Choppiness_Index'] = np.log10((data['High'] - data['Low']).rolling(window=14).sum() / \
+                                                (data['High'].rolling(window=14).max() - data['Low'].rolling(window=14).min())) * 100
+            data['ATR'] = atr(data['High'], data['Low'], data['Close'], window=14)
+
+            # Query stocks where market is choppy (Choppiness Index high) and ATR is low
             for i in range(1, len(recent_data)):
-                if (recent_data['A/D'].iloc[i] > recent_data['A/D'].iloc[i-1] and
-                    recent_data['A/D'].iloc[i-1] > recent_data['A/D'].iloc[i-2]):
-                    return recent_data.index[i]               
+                if (recent_data['Choppiness_Index'].iloc[i] > 60 and  # High Choppiness Index indicates choppy market
+                    recent_data['ATR'].iloc[i] < recent_data['ATR'].rolling(window=14).mean().iloc[i]):  # Low ATR
+                    return recent_data.index[i]
+
+            # Prepare for breakout when ATR increases as Choppiness Index decreases
+            for i in range(2, len(recent_data)):
+                if (recent_data['Choppiness_Index'].iloc[i] < 50 and  # Choppiness Index decreases
+                    recent_data['ATR'].iloc[i] > recent_data['ATR'].iloc[i-1]):  # ATR increases
+                    return recent_data.index[i]
+
+
+        elif strategy == "MomentumVolume & Momentum ":
+            data['MACD'] = data['EMA_12'] - data['EMA_26']
+            data['MACD_signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
+            data['MACD_hist'] = data['MACD'] - data['MACD_signal']
+            for i in range(1, len(recent_data)):
+                if (recent_data['MACD'].iloc[i] > recent_data['MACD_signal'].iloc[i] and
+                    recent_data['MACD'].iloc[i-1] < recent_data['MACD_signal'].iloc[i-1] and
+                    recent_data['MACD'].iloc[i] > 0 and
+                    recent_data['MACD_hist'].iloc[i] > 0 and
+                    recent_data['MACD_hist'].iloc[i-1] < 0 and
+                    recent_data['MACD_hist'].iloc[i] > recent_data['MACD_hist'].iloc[i-1] > recent_data['MACD_hist'].iloc[i-2]):
+                    return recent_data.index[i]
+                
+        elif strategy == "Volatility Based":
+            # Calculate Bollinger Bands Width and ATR
+            data['BB_High'] = data['Close'].rolling(window=20).mean() + (2 * data['Close'].rolling(window=20).std())
+            data['BB_Low'] = data['Close'].rolling(window=20).mean() - (2 * data['Close'].rolling(window=20).std())
+            data['BB_Width'] = (data['BB_High'] - data['BB_Low']) / data['Close']
+            data['ATR'] = atr(data['High'], data['Low'], data['Close'], window=14)
+
+            # Query stocks with low ATR and narrow Bollinger Bands Width
+            for i in range(1, len(recent_data)):
+                if (recent_data['ATR'].iloc[i] < recent_data['ATR'].rolling(window=14).mean().iloc[i] and  # Low ATR
+                    recent_data['BB_Width'].iloc[i] < recent_data['BB_Width'].rolling(window=14).mean().iloc[i]):  # Narrow BB Width
+                    return recent_data.index[i]
 
 
         return None
