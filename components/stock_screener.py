@@ -828,17 +828,15 @@ def stock_screener_app():
                     return recent_data.index[i]
 
 
-        elif strategy == "MomentumVolume & Momentum ":
+        elif strategy == "Volume & Momentum":
+
             data['MACD'] = data['EMA_12'] - data['EMA_26']
             data['MACD_signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
-            data['MACD_hist'] = data['MACD'] - data['MACD_signal']
+         
             for i in range(1, len(recent_data)):
                 if (recent_data['MACD'].iloc[i] > recent_data['MACD_signal'].iloc[i] and
                     recent_data['MACD'].iloc[i-1] < recent_data['MACD_signal'].iloc[i-1] and
-                    recent_data['MACD'].iloc[i] > 0 and
-                    recent_data['MACD_hist'].iloc[i] > 0 and
-                    recent_data['MACD_hist'].iloc[i-1] < 0 and
-                    recent_data['MACD_hist'].iloc[i] > recent_data['MACD_hist'].iloc[i-1] > recent_data['MACD_hist'].iloc[i-2]):
+                    recent_data['MACD'].iloc[i] > 0):
                     return recent_data.index[i]
                 
         elif strategy == "Volatility Based":
