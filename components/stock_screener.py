@@ -14,7 +14,7 @@ def stock_screener_app():
     st.sidebar.subheader("Stock Screener")
 
     # Dropdown for selecting ticker category
-    ticker_category = st.sidebar.selectbox("Select Index/Crypto", [ "Largecap","Midcap","Smallcap","Multicap","S&P 500", "FTSE 100","Crypto"])
+    ticker_category = st.sidebar.selectbox("Select Index/Crypto", [ "Largecap","Midcap","Smallcap","Largemidcap","Midsmall","Multicap","S&P 500", "FTSE 100","Crypto"])
 
     # Dropdown for Strategies
     submenu = st.sidebar.selectbox("Select Strategy", ["Momentum", "Mean Reversion", "Volume Driven", "Trend Following","Breakout","Volatility Based","Reversal","Trend Conformation","Volatility Reversion","Volume & Momentum"])
@@ -28,6 +28,8 @@ def stock_screener_app():
         "Largecap":Largecap,
         "Midcap": Midcap,
         "Smallcap": Smallcap,
+        "Largemidcap":Largecap + Midcap,
+        "Midsmallcap":Midcap +Smallcap,
         "Multicap": Largecap + Midcap +Smallcap,
         "S&P 500": sp500_tickers,
         "FTSE 100": ftse100_tickers,
@@ -738,19 +740,18 @@ def stock_screener_app():
     def check_signal(data, strategy):
         recent_data = data[-5:]
         if strategy == "Momentum":
+            # Calculate MACD AND SIGNAL
             data['MACD'] = data['EMA_12'] - data['EMA_26']
             data['MACD_signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
-            data['MACD_hist'] = data['MACD'] - data['MACD_signal']
+            # Query stocks where macd is above the macd signal in the last 5 days
             for i in range(1, len(recent_data)):
                 if (recent_data['MACD'].iloc[i] > recent_data['MACD_signal'].iloc[i] and
                     recent_data['MACD'].iloc[i-1] < recent_data['MACD_signal'].iloc[i-1] and
-                    recent_data['MACD'].iloc[i] > 0 and
-                    recent_data['MACD_hist'].iloc[i] > 0 and
-                    recent_data['MACD_hist'].iloc[i-1] < 0 and
-                    recent_data['MACD_hist'].iloc[i] > recent_data['MACD_hist'].iloc[i-1] > recent_data['MACD_hist'].iloc[i-2]):
+                    recent_data['MACD'].iloc[i] > 0):
                     return recent_data.index[i]
 
         elif strategy == "Mean Reversion":
+            # Query stocks where price is above the bollinger low in the last 5 days
             for i in range(1, len(recent_data)):
                 if (recent_data['Close'].iloc[i] > recent_data['BB_Low'].iloc[i] and
                     recent_data['Close'].iloc[i-1] <= recent_data['BB_Low'].iloc[i-1]):
