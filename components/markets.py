@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from utils.constants import Largecap, Midcap, Smallcap,sp500_tickers,ftse100_tickers,crypto_largecap,crypto_midcap
+from utils.constants import Largecap, Midcap, Smallcap,sp500_tickers,ftse100_tickers,crypto_largecap,crypto_midcap,Indices,Commodities,Currencies
 from datetime import datetime, timedelta
 import requests
     
@@ -84,7 +84,7 @@ def calculate_var(returns, confidence_level=0.05):
 
 # Main application
 def markets_app():
-    submenu = st.sidebar.selectbox("Select Option", ["Economic Indicators","Equities", "Commodities", "Currencies", "Cryptocurrencies", "Insights"])
+    submenu = st.sidebar.selectbox("Select Option", ["Indices","Stocks", "Commodities", "Currencies", "Cryptocurrencies","Economic Indicators"])
 
     if submenu == "Economic Indicators":
 
@@ -205,9 +205,139 @@ def markets_app():
                 st.subheader(indicator_name)
                 plot_economic_comparison(selected_country_codes, indicator_code, indicator_name, y_label, scaling_factor)
 
+    if submenu == "Indices":
+        st.subheader("World Indices")
+        ticker_category = st.sidebar.selectbox("Select Index", ["World Indices"])
+        tickers = {"World Indices": Indices}[ticker_category]
 
+        @st.cache_data(ttl=60)
+        def get_sector_industry_price_changes(tickers, timestamp):
+            data = {
+                'Ticker': [], 'Company Name': [], 'Sector': [], 'Industry': [], 'Market Cap': [], 'Last Traded Price': [],
+                '1D % Change': [], '2D % Change': [], '3D % Change': [], '5D % Change': [], '2W % Change': [],
+                '1M % Change': [], '3M % Change': [], '6M % Change': [], '1Y % Change': [],
+                '1D Volume': [], '2D Volume': [], '5D Volume': [], '2W Volume': [],
+                '1M Volume': [], '3M Volume': [], '6M Volume': [], '1Y Volume': [],
+                'Volume Change %': []
+            }
+            for ticker in tickers:
+                try:
+                    stock = yf.Ticker(ticker)
+                    info = stock.info
+                    price_data_1y = yf.download(ticker, period='1y')
 
-    if submenu == "Equities":
+                    if not price_data_1y.empty:
+                        last_traded_price = price_data_1y['Close'].iloc[-1]
+                        one_day_volume = price_data_1y['Volume'].iloc[-1]
+                        two_day_volume = price_data_1y['Volume'].iloc[-2:].mean()
+                        five_day_volume = price_data_1y['Volume'].iloc[-5:].mean()
+                        two_week_volume = price_data_1y['Volume'].iloc[-10:].mean()
+                        one_month_volume = price_data_1y['Volume'].iloc[-21:].mean()
+                        three_month_volume = price_data_1y['Volume'].iloc[-63:].mean()
+                        six_month_volume = price_data_1y['Volume'].iloc[-126:].mean()
+                        one_year_volume = price_data_1y['Volume'].mean()
+                        avg_volume = price_data_1y['Volume'].mean()
+                        volume_change = ((one_day_volume - avg_volume) / avg_volume) * 100 if avg_volume != 0 else 'N/A'
+                        price_changes = price_data_1y['Close'].pct_change() * 100
+                        one_day_change = price_changes.iloc[-1]
+                        two_day_change = price_changes.iloc[-2:].sum()
+                        three_day_change = price_changes.iloc[-3:].sum()
+                        five_day_change = price_changes.iloc[-5:].sum()
+                        two_week_change = price_changes.iloc[-10:].sum()
+                        one_month_change = price_changes.iloc[-21:].sum()
+                        three_month_change = price_changes.iloc[-63:].sum()
+                        six_month_change = price_changes.iloc[-126:].sum()
+                        one_year_change = price_changes.sum()
+                    else:
+                        last_traded_price = 'N/A'
+                        one_day_volume = 'N/A'
+                        two_day_volume = 'N/A'
+                        five_day_volume = 'N/A'
+                        two_week_volume = 'N/A'
+                        one_month_volume = 'N/A'
+                        three_month_volume = 'N/A'
+                        six_month_volume = 'N/A'
+                        one_year_volume = 'N/A'
+                        volume_change = 'N/A'
+                        one_day_change = 'N/A'
+                        two_day_change = 'N/A'
+                        three_day_change = 'N/A'
+                        five_day_change = 'N/A'
+                        two_week_change = 'N/A'
+                        one_month_change = 'N/A'
+                        three_month_change = 'N/A'
+                        six_month_change = 'N/A'
+                        one_year_change = 'N/A'
+
+                    data['Ticker'].append(ticker)
+                    data['Company Name'].append(info.get('longName', 'N/A'))
+                    data['Sector'].append(info.get('sector', 'N/A'))
+                    data['Industry'].append(info.get('industry', 'N/A'))
+                    data['Last Traded Price'].append(last_traded_price)
+                    data['Market Cap'].append(info.get('marketCap', 'N/A'))
+                    data['1D % Change'].append(one_day_change)
+                    data['2D % Change'].append(two_day_change)
+                    data['3D % Change'].append(three_day_change)
+                    data['5D % Change'].append(five_day_change)
+                    data['2W % Change'].append(two_week_change)
+                    data['1M % Change'].append(one_month_change)
+                    data['3M % Change'].append(three_month_change)
+                    data['6M % Change'].append(six_month_change)
+                    data['1Y % Change'].append(one_year_change)
+                    data['1D Volume'].append(one_day_volume)
+                    data['2D Volume'].append(two_day_volume)
+                    data['5D Volume'].append(five_day_volume)
+                    data['2W Volume'].append(two_week_volume)
+                    data['1M Volume'].append(one_month_volume)
+                    data['3M Volume'].append(three_month_volume)
+                    data['6M Volume'].append(six_month_volume)
+                    data['1Y Volume'].append(one_year_volume)
+                    data['Volume Change %'].append(volume_change)
+
+                except Exception as e:
+                    st.error(f"Error fetching data for {ticker}: {e}")
+
+            df = pd.DataFrame(data)
+
+            # Convert all relevant columns to numeric and fill NaNs with 0
+            numeric_columns = [col for col in df.columns if col not in ['Ticker', 'Company Name', 'Sector', 'Industry']]
+            df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce').fillna(0)
+
+            return df
+
+        sector_industry_price_changes_df = get_sector_industry_price_changes(tickers, datetime.now())
+
+        # Streamlit app
+        st.dataframe(sector_industry_price_changes_df)
+        st.subheader('Price')
+        price_chart_option = st.selectbox('Select period to view price changes:', [
+            '1D % Change', '2D % Change', '3D % Change', '5D % Change',
+            '2W % Change', '1M % Change', '3M % Change', '6M % Change', '1Y % Change'
+        ])
+
+        df_price_sorted = sector_industry_price_changes_df[['Ticker', price_chart_option]].copy()
+        df_price_sorted[price_chart_option] = pd.to_numeric(df_price_sorted[price_chart_option], errors='coerce')
+        df_price_sorted = df_price_sorted.sort_values(by=price_chart_option, ascending=False).reset_index(drop=True)
+        df_price_sorted.columns = ['Ticker', '% Change']
+
+        fig_price = px.bar(df_price_sorted, x='Ticker', y='% Change', title=f'{price_chart_option} Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
+        st.plotly_chart(fig_price)
+
+        st.subheader('Volume')
+        volume_chart_option = st.selectbox('Select period to view volume changes:', [
+            '1D Volume', '2D Volume', '5D Volume', '2W Volume',
+            '1M Volume', '3M Volume', '6M Volume', '1Y Volume'
+        ])
+
+        df_volume_sorted = sector_industry_price_changes_df[['Ticker', volume_chart_option]].copy()
+        df_volume_sorted[volume_chart_option] = pd.to_numeric(df_volume_sorted[volume_chart_option], errors='coerce')
+        df_volume_sorted = df_volume_sorted.sort_values(by=volume_chart_option, ascending=False).reset_index(drop=True)
+        df_volume_sorted.columns = ['Ticker', 'Volume']
+
+        fig_volume = px.bar(df_volume_sorted, x='Ticker', y='Volume', title=f'{volume_chart_option} Volume', color='Volume', color_continuous_scale=px.colors.diverging.RdYlGn)
+        st.plotly_chart(fig_volume)
+
+    if submenu == "Stocks":
         ticker_category = st.sidebar.selectbox("Select Index", ["Largecap", "Midcap", "Smallcap","Largemidcap","Midsmallcap","Multicap","S&P 500","FTSE 100"])
         tickers = {"Largecap": Largecap, "Midcap": Midcap, "Smallcap": Smallcap,"Largemidcap":Largecap + Midcap,"Midsmallcap":Midcap + Smallcap,"Multicap":Largecap + Midcap + Smallcap,"S&P 500":sp500_tickers,"FTSE 100":ftse100_tickers }[ticker_category]
 
@@ -309,7 +439,7 @@ def markets_app():
         sector_industry_price_changes_df = get_sector_industry_price_changes(tickers, datetime.now())
 
         # Streamlit app
-        st.subheader('Market Stats')
+        st.subheader('Stocks')
         st.dataframe(sector_industry_price_changes_df)
         st.subheader('Price')
         price_chart_option = st.selectbox('Select period to view price changes:', [
@@ -364,32 +494,268 @@ def markets_app():
 
     elif submenu == "Commodities":
         st.subheader("Commodities")
-        
-        tickers = ["GC=F", "CL=F", "NG=F", "SI=F", "HG=F"]
-        selected_tickers = st.multiselect("Select stock tickers to visualize", tickers, default=["GC=F", "CL=F"])
-        indicators = st.multiselect("Select Indicators", ['Close', 'MA_15', 'MA_50', 'MACD', 'Bollinger Bands'], default=['Close'])
-        if not selected_tickers:
-            st.warning("Please select at least one ticker.")
-        else:
-            columns = st.columns(len(selected_tickers))
-            for ticker, col in zip(selected_tickers, columns):
-                data = get_stock_data(ticker)
-                fig = create_figure(data, indicators, f'{ticker} Price')
-                col.plotly_chart(fig)
+  
+        ticker_category = st.sidebar.selectbox("Select Index", ["Commodities"])
+        tickers = {"Commodities": Commodities}[ticker_category]
+
+        @st.cache_data(ttl=60)
+        def get_sector_industry_price_changes(tickers, timestamp):
+            data = {
+                'Ticker': [], 'Company Name': [], 'Sector': [], 'Industry': [], 'Market Cap': [], 'Last Traded Price': [],
+                '1D % Change': [], '2D % Change': [], '3D % Change': [], '5D % Change': [], '2W % Change': [],
+                '1M % Change': [], '3M % Change': [], '6M % Change': [], '1Y % Change': [],
+                '1D Volume': [], '2D Volume': [], '5D Volume': [], '2W Volume': [],
+                '1M Volume': [], '3M Volume': [], '6M Volume': [], '1Y Volume': [],
+                'Volume Change %': []
+            }
+            for ticker in tickers:
+                try:
+                    stock = yf.Ticker(ticker)
+                    info = stock.info
+                    price_data_1y = yf.download(ticker, period='1y')
+
+                    if not price_data_1y.empty:
+                        last_traded_price = price_data_1y['Close'].iloc[-1]
+                        one_day_volume = price_data_1y['Volume'].iloc[-1]
+                        two_day_volume = price_data_1y['Volume'].iloc[-2:].mean()
+                        five_day_volume = price_data_1y['Volume'].iloc[-5:].mean()
+                        two_week_volume = price_data_1y['Volume'].iloc[-10:].mean()
+                        one_month_volume = price_data_1y['Volume'].iloc[-21:].mean()
+                        three_month_volume = price_data_1y['Volume'].iloc[-63:].mean()
+                        six_month_volume = price_data_1y['Volume'].iloc[-126:].mean()
+                        one_year_volume = price_data_1y['Volume'].mean()
+                        avg_volume = price_data_1y['Volume'].mean()
+                        volume_change = ((one_day_volume - avg_volume) / avg_volume) * 100 if avg_volume != 0 else 'N/A'
+                        price_changes = price_data_1y['Close'].pct_change() * 100
+                        one_day_change = price_changes.iloc[-1]
+                        two_day_change = price_changes.iloc[-2:].sum()
+                        three_day_change = price_changes.iloc[-3:].sum()
+                        five_day_change = price_changes.iloc[-5:].sum()
+                        two_week_change = price_changes.iloc[-10:].sum()
+                        one_month_change = price_changes.iloc[-21:].sum()
+                        three_month_change = price_changes.iloc[-63:].sum()
+                        six_month_change = price_changes.iloc[-126:].sum()
+                        one_year_change = price_changes.sum()
+                    else:
+                        last_traded_price = 'N/A'
+                        one_day_volume = 'N/A'
+                        two_day_volume = 'N/A'
+                        five_day_volume = 'N/A'
+                        two_week_volume = 'N/A'
+                        one_month_volume = 'N/A'
+                        three_month_volume = 'N/A'
+                        six_month_volume = 'N/A'
+                        one_year_volume = 'N/A'
+                        volume_change = 'N/A'
+                        one_day_change = 'N/A'
+                        two_day_change = 'N/A'
+                        three_day_change = 'N/A'
+                        five_day_change = 'N/A'
+                        two_week_change = 'N/A'
+                        one_month_change = 'N/A'
+                        three_month_change = 'N/A'
+                        six_month_change = 'N/A'
+                        one_year_change = 'N/A'
+
+                    data['Ticker'].append(ticker)
+                    data['Company Name'].append(info.get('longName', 'N/A'))
+                    data['Sector'].append(info.get('sector', 'N/A'))
+                    data['Industry'].append(info.get('industry', 'N/A'))
+                    data['Last Traded Price'].append(last_traded_price)
+                    data['Market Cap'].append(info.get('marketCap', 'N/A'))
+                    data['1D % Change'].append(one_day_change)
+                    data['2D % Change'].append(two_day_change)
+                    data['3D % Change'].append(three_day_change)
+                    data['5D % Change'].append(five_day_change)
+                    data['2W % Change'].append(two_week_change)
+                    data['1M % Change'].append(one_month_change)
+                    data['3M % Change'].append(three_month_change)
+                    data['6M % Change'].append(six_month_change)
+                    data['1Y % Change'].append(one_year_change)
+                    data['1D Volume'].append(one_day_volume)
+                    data['2D Volume'].append(two_day_volume)
+                    data['5D Volume'].append(five_day_volume)
+                    data['2W Volume'].append(two_week_volume)
+                    data['1M Volume'].append(one_month_volume)
+                    data['3M Volume'].append(three_month_volume)
+                    data['6M Volume'].append(six_month_volume)
+                    data['1Y Volume'].append(one_year_volume)
+                    data['Volume Change %'].append(volume_change)
+
+                except Exception as e:
+                    st.error(f"Error fetching data for {ticker}: {e}")
+
+            df = pd.DataFrame(data)
+
+            # Convert all relevant columns to numeric and fill NaNs with 0
+            numeric_columns = [col for col in df.columns if col not in ['Ticker', 'Company Name', 'Sector', 'Industry']]
+            df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce').fillna(0)
+
+            return df
+
+        sector_industry_price_changes_df = get_sector_industry_price_changes(tickers, datetime.now())
+
+        # Streamlit app
+        st.dataframe(sector_industry_price_changes_df)
+        st.subheader('Price')
+        price_chart_option = st.selectbox('Select period to view price changes:', [
+            '1D % Change', '2D % Change', '3D % Change', '5D % Change',
+            '2W % Change', '1M % Change', '3M % Change', '6M % Change', '1Y % Change'
+        ])
+
+        df_price_sorted = sector_industry_price_changes_df[['Ticker', price_chart_option]].copy()
+        df_price_sorted[price_chart_option] = pd.to_numeric(df_price_sorted[price_chart_option], errors='coerce')
+        df_price_sorted = df_price_sorted.sort_values(by=price_chart_option, ascending=False).reset_index(drop=True)
+        df_price_sorted.columns = ['Ticker', '% Change']
+
+        fig_price = px.bar(df_price_sorted, x='Ticker', y='% Change', title=f'{price_chart_option} Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
+        st.plotly_chart(fig_price)
+
+        st.subheader('Volume')
+        volume_chart_option = st.selectbox('Select period to view volume changes:', [
+            '1D Volume', '2D Volume', '5D Volume', '2W Volume',
+            '1M Volume', '3M Volume', '6M Volume', '1Y Volume'
+        ])
+
+        df_volume_sorted = sector_industry_price_changes_df[['Ticker', volume_chart_option]].copy()
+        df_volume_sorted[volume_chart_option] = pd.to_numeric(df_volume_sorted[volume_chart_option], errors='coerce')
+        df_volume_sorted = df_volume_sorted.sort_values(by=volume_chart_option, ascending=False).reset_index(drop=True)
+        df_volume_sorted.columns = ['Ticker', 'Volume']
+
+        fig_volume = px.bar(df_volume_sorted, x='Ticker', y='Volume', title=f'{volume_chart_option} Volume', color='Volume', color_continuous_scale=px.colors.diverging.RdYlGn)
+        st.plotly_chart(fig_volume)
 
     elif submenu == "Currencies":
         st.subheader("Currencies")
-        tickers = ["EURUSD=X", "GBPUSD=X", "CNYUSD=X", "INRUSD=X"]
-        selected_tickers = st.multiselect("Select currency pairs to visualize", tickers, default=["INRUSD=X", "CNYUSD=X"])
-        indicators = st.multiselect("Select Indicators", ['Close', 'MA_15', 'MA_50', 'MACD', 'Bollinger Bands'], default=['Close'])
-        if not selected_tickers:
-            st.warning("Please select at least one currency pair.")
-        else:
-            columns = st.columns(len(selected_tickers))
-            for ticker, col in zip(selected_tickers, columns):
-                data = get_stock_data(ticker)
-                fig = create_figure(data, indicators, f'{ticker} Price')
-                col.plotly_chart(fig)
+        ticker_category = st.sidebar.selectbox("Select Index", ["Currencies"])
+        tickers = {"Currencies": Currencies}[ticker_category]
+
+        @st.cache_data(ttl=60)
+        def get_sector_industry_price_changes(tickers, timestamp):
+            data = {
+                'Ticker': [], 'Company Name': [], 'Sector': [], 'Industry': [], 'Market Cap': [], 'Last Traded Price': [],
+                '1D % Change': [], '2D % Change': [], '3D % Change': [], '5D % Change': [], '2W % Change': [],
+                '1M % Change': [], '3M % Change': [], '6M % Change': [], '1Y % Change': [],
+                '1D Volume': [], '2D Volume': [], '5D Volume': [], '2W Volume': [],
+                '1M Volume': [], '3M Volume': [], '6M Volume': [], '1Y Volume': [],
+                'Volume Change %': []
+            }
+            for ticker in tickers:
+                try:
+                    stock = yf.Ticker(ticker)
+                    info = stock.info
+                    price_data_1y = yf.download(ticker, period='1y')
+
+                    if not price_data_1y.empty:
+                        last_traded_price = price_data_1y['Close'].iloc[-1]
+                        one_day_volume = price_data_1y['Volume'].iloc[-1]
+                        two_day_volume = price_data_1y['Volume'].iloc[-2:].mean()
+                        five_day_volume = price_data_1y['Volume'].iloc[-5:].mean()
+                        two_week_volume = price_data_1y['Volume'].iloc[-10:].mean()
+                        one_month_volume = price_data_1y['Volume'].iloc[-21:].mean()
+                        three_month_volume = price_data_1y['Volume'].iloc[-63:].mean()
+                        six_month_volume = price_data_1y['Volume'].iloc[-126:].mean()
+                        one_year_volume = price_data_1y['Volume'].mean()
+                        avg_volume = price_data_1y['Volume'].mean()
+                        volume_change = ((one_day_volume - avg_volume) / avg_volume) * 100 if avg_volume != 0 else 'N/A'
+                        price_changes = price_data_1y['Close'].pct_change() * 100
+                        one_day_change = price_changes.iloc[-1]
+                        two_day_change = price_changes.iloc[-2:].sum()
+                        three_day_change = price_changes.iloc[-3:].sum()
+                        five_day_change = price_changes.iloc[-5:].sum()
+                        two_week_change = price_changes.iloc[-10:].sum()
+                        one_month_change = price_changes.iloc[-21:].sum()
+                        three_month_change = price_changes.iloc[-63:].sum()
+                        six_month_change = price_changes.iloc[-126:].sum()
+                        one_year_change = price_changes.sum()
+                    else:
+                        last_traded_price = 'N/A'
+                        one_day_volume = 'N/A'
+                        two_day_volume = 'N/A'
+                        five_day_volume = 'N/A'
+                        two_week_volume = 'N/A'
+                        one_month_volume = 'N/A'
+                        three_month_volume = 'N/A'
+                        six_month_volume = 'N/A'
+                        one_year_volume = 'N/A'
+                        volume_change = 'N/A'
+                        one_day_change = 'N/A'
+                        two_day_change = 'N/A'
+                        three_day_change = 'N/A'
+                        five_day_change = 'N/A'
+                        two_week_change = 'N/A'
+                        one_month_change = 'N/A'
+                        three_month_change = 'N/A'
+                        six_month_change = 'N/A'
+                        one_year_change = 'N/A'
+
+                    data['Ticker'].append(ticker)
+                    data['Company Name'].append(info.get('longName', 'N/A'))
+                    data['Sector'].append(info.get('sector', 'N/A'))
+                    data['Industry'].append(info.get('industry', 'N/A'))
+                    data['Last Traded Price'].append(last_traded_price)
+                    data['Market Cap'].append(info.get('marketCap', 'N/A'))
+                    data['1D % Change'].append(one_day_change)
+                    data['2D % Change'].append(two_day_change)
+                    data['3D % Change'].append(three_day_change)
+                    data['5D % Change'].append(five_day_change)
+                    data['2W % Change'].append(two_week_change)
+                    data['1M % Change'].append(one_month_change)
+                    data['3M % Change'].append(three_month_change)
+                    data['6M % Change'].append(six_month_change)
+                    data['1Y % Change'].append(one_year_change)
+                    data['1D Volume'].append(one_day_volume)
+                    data['2D Volume'].append(two_day_volume)
+                    data['5D Volume'].append(five_day_volume)
+                    data['2W Volume'].append(two_week_volume)
+                    data['1M Volume'].append(one_month_volume)
+                    data['3M Volume'].append(three_month_volume)
+                    data['6M Volume'].append(six_month_volume)
+                    data['1Y Volume'].append(one_year_volume)
+                    data['Volume Change %'].append(volume_change)
+
+                except Exception as e:
+                    st.error(f"Error fetching data for {ticker}: {e}")
+
+            df = pd.DataFrame(data)
+
+            # Convert all relevant columns to numeric and fill NaNs with 0
+            numeric_columns = [col for col in df.columns if col not in ['Ticker', 'Company Name', 'Sector', 'Industry']]
+            df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce').fillna(0)
+
+            return df
+
+        sector_industry_price_changes_df = get_sector_industry_price_changes(tickers, datetime.now())
+
+        # Streamlit app
+        st.dataframe(sector_industry_price_changes_df)
+        st.subheader('Price')
+        price_chart_option = st.selectbox('Select period to view price changes:', [
+            '1D % Change', '2D % Change', '3D % Change', '5D % Change',
+            '2W % Change', '1M % Change', '3M % Change', '6M % Change', '1Y % Change'
+        ])
+
+        df_price_sorted = sector_industry_price_changes_df[['Ticker', price_chart_option]].copy()
+        df_price_sorted[price_chart_option] = pd.to_numeric(df_price_sorted[price_chart_option], errors='coerce')
+        df_price_sorted = df_price_sorted.sort_values(by=price_chart_option, ascending=False).reset_index(drop=True)
+        df_price_sorted.columns = ['Ticker', '% Change']
+
+        fig_price = px.bar(df_price_sorted, x='Ticker', y='% Change', title=f'{price_chart_option} Gainers/Losers', color='% Change', color_continuous_scale=px.colors.diverging.RdYlGn)
+        st.plotly_chart(fig_price)
+
+        st.subheader('Volume')
+        volume_chart_option = st.selectbox('Select period to view volume changes:', [
+            '1D Volume', '2D Volume', '5D Volume', '2W Volume',
+            '1M Volume', '3M Volume', '6M Volume', '1Y Volume'
+        ])
+
+        df_volume_sorted = sector_industry_price_changes_df[['Ticker', volume_chart_option]].copy()
+        df_volume_sorted[volume_chart_option] = pd.to_numeric(df_volume_sorted[volume_chart_option], errors='coerce')
+        df_volume_sorted = df_volume_sorted.sort_values(by=volume_chart_option, ascending=False).reset_index(drop=True)
+        df_volume_sorted.columns = ['Ticker', 'Volume']
+
+        fig_volume = px.bar(df_volume_sorted, x='Ticker', y='Volume', title=f'{volume_chart_option} Volume', color='Volume', color_continuous_scale=px.colors.diverging.RdYlGn)
+        st.plotly_chart(fig_volume)
 
     elif submenu == "Cryptocurrencies":
         st.subheader("Cryptocurrencies")
@@ -494,7 +860,6 @@ def markets_app():
         sector_industry_price_changes_df = get_sector_industry_price_changes(tickers, datetime.now())
 
         # Streamlit app
-        st.subheader('Market Stats')
         st.dataframe(sector_industry_price_changes_df)
         st.subheader('Price')
         price_chart_option = st.selectbox('Select period to view price changes:', [

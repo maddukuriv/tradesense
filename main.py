@@ -43,9 +43,9 @@ def main_menu():
         f"{st.session_state.username}'s Portfolio",
         f"{st.session_state.username}'s Watchlist",
         "Markets",
-        "Stock Screener",
-        "Stock Analysis",
-        "Stock Comparision",
+        "Screener",
+        "Analysis",
+        "Comparision",
         "My Account"
 
     ]
@@ -91,11 +91,11 @@ else:
         elif choice == "Markets":
             markets.markets_app()
 
-        elif choice == "Stock Screener":
+        elif choice == "Screener":
             stock_screener.stock_screener_app()
-        elif choice == "Stock Analysis":
+        elif choice == "Analysis":
             stock_analysis.stock_analysis_app()
-        elif choice == "Stock Comparision":
+        elif choice == "Comparision":
             stock_comparision.display_stock_comparison()
         elif choice == "Database Admin Page" and st.session_state.is_admin:
             admin.display_tables()

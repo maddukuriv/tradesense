@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
-from utils.constants import sp500_tickers, ftse100_tickers, Largecap,Midcap,Smallcap,crypto_largecap,crypto_midcap
+from utils.constants import sp500_tickers, ftse100_tickers, Largecap,Midcap,Smallcap,crypto_largecap,crypto_midcap,Currencies,Commodities,Indices
 import pandas_ta as ta
 from plotly.subplots import make_subplots
 import plotly.graph_objs as go
@@ -14,7 +14,7 @@ def stock_screener_app():
     st.sidebar.subheader("Stock Screener")
 
     # Dropdown for selecting ticker category
-    ticker_category = st.sidebar.selectbox("Select Index/Crypto", [ "Largecap","Midcap","Smallcap","Largemidcap","Midsmall","Multicap","S&P 500", "FTSE 100","Crypto"])
+    ticker_category = st.sidebar.selectbox("Select Index/Crypto", [ "Indices","Commodities","Currencies","Cryptocurrencies","Stocks-Largecap","Stocks-Midcap","Stocks-Smallcap","Stocks-Largemidcap","Stocks-Midsmall","Stocks-Multicap","Stocks-S&P 500", "Stocks-FTSE 100"])
 
     # Dropdown for Strategies
     submenu = st.sidebar.selectbox("Select Strategy", ["Momentum", "Mean Reversion", "Volume Driven", "Trend Following","Breakout","Volatility Based","Reversal","Trend Conformation","Volatility Reversion","Volume & Momentum"])
@@ -25,15 +25,19 @@ def stock_screener_app():
 
     # Set tickers based on selected category
     tickers = {
-        "Largecap":Largecap,
-        "Midcap": Midcap,
-        "Smallcap": Smallcap,
-        "Largemidcap":Largecap + Midcap,
-        "Midsmallcap":Midcap +Smallcap,
-        "Multicap": Largecap + Midcap +Smallcap,
-        "S&P 500": sp500_tickers,
-        "FTSE 100": ftse100_tickers,
-        "Crypto": crypto_largecap + crypto_midcap
+        "Stocks-Largecap":Largecap,
+        "Stocks-Midcap": Midcap,
+        "Stocks-Smallcap": Smallcap,
+        "Stocks-Largemidcap":Largecap + Midcap,
+        "Stocks-Midsmallcap":Midcap +Smallcap,
+        "Stocks-Multicap": Largecap + Midcap +Smallcap,
+        "Stocks-S&P 500": sp500_tickers,
+        "Stocks-FTSE 100": ftse100_tickers,
+        "Cryptocurrencies": crypto_largecap + crypto_midcap,
+        "Indices":Indices,
+        "Commodities":Commodities,
+        "Currencies":Currencies
+
     }[ticker_category]
 
     def atr(high, low, close, window=14):
