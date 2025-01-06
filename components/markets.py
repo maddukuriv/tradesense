@@ -208,8 +208,8 @@ def markets_app():
 
 
     if submenu == "Equities":
-        ticker_category = st.sidebar.selectbox("Select Index", ["Largecap", "Midcap", "Smallcap","Multicap","S&P 500","FTSE 100"])
-        tickers = {"Largecap": Largecap, "Midcap": Midcap, "Smallcap": Smallcap,"Multicap":Largecap + Midcap + Smallcap,"S&P 500":sp500_tickers,"FTSE 100":ftse100_tickers }[ticker_category]
+        ticker_category = st.sidebar.selectbox("Select Index", ["Largecap", "Midcap", "Smallcap","Largemidcap","Midsmallcap","Multicap","S&P 500","FTSE 100"])
+        tickers = {"Largecap": Largecap, "Midcap": Midcap, "Smallcap": Smallcap,"Largemidcap":Largecap + Midcap,"Midsmallcap":Midcap + Smallcap,"Multicap":Largecap + Midcap + Smallcap,"S&P 500":sp500_tickers,"FTSE 100":ftse100_tickers }[ticker_category]
 
         @st.cache_data(ttl=60)
         def get_sector_industry_price_changes(tickers, timestamp):
