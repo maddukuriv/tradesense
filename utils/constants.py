@@ -45,3 +45,4 @@ Currencies = [
     "USDIDR=X",  # US Dollar to Indonesian Rupiah
     "USDTHB=X"   # US Dollar to Thai Baht
 ]
+Bonds = ["^IRX","^FVX","^TNX","^TYX","2YY=F","ZN=F"]

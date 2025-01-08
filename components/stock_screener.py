@@ -485,6 +485,8 @@ def stock_screener_app():
         df['Ultimate_Oscillator'] = (4 * (df['Close'] - df['Low']).rolling(window=7).sum() + 2 * (df['Close'] - df['Low']).rolling(window=14).sum() + (df['Close'] - df['Low']).rolling(window=28).sum()) / ((df['High'] - df['Low']).rolling(window=7).sum() + (df['High'] - df['Low']).rolling(window=14).sum() + (df['High'] - df['Low']).rolling(window=28).sum()) * 100
 
         # Volume Indicators
+        df['10_Volume_MA'] = df['Volume'].rolling(window=10).mean()
+        df['30_Volume_MA'] = df['Volume'].rolling(window=30).mean()
         df['AD'] = (df['Close'] - df['Low'] - (df['High'] - df['Close'])) / (df['High'] - df['Low']) * df['Volume']
         df['BoP'] = (df['Close'] - df['Open']) / (df['High'] - df['Low'])
         df['CMF'] = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low']) * df['Volume']
@@ -747,11 +749,12 @@ def stock_screener_app():
             # Calculate MACD AND SIGNAL
             data['MACD'] = data['EMA_12'] - data['EMA_26']
             data['MACD_signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
+            data['MACD_hist'] = data['MACD'] - data['MACD_signal']
             # Query stocks where macd is above the macd signal in the last 5 days
             for i in range(1, len(recent_data)):
                 if (recent_data['MACD'].iloc[i] > recent_data['MACD_signal'].iloc[i] and
                     recent_data['MACD'].iloc[i-1] < recent_data['MACD_signal'].iloc[i-1] and
-                    recent_data['MACD'].iloc[i] > 0):
+                    recent_data['MACD_hist'].iloc[i] > 0):
                     return recent_data.index[i]
 
         elif strategy == "Mean Reversion":
@@ -762,10 +765,12 @@ def stock_screener_app():
                     return recent_data.index[i]
 
         elif strategy == "Volume Driven":
-            data['VWAP'] = (data['Close'] * data['Volume']).cumsum() / data['Volume'].cumsum()
+            data['10_Volume_MA'] = data['Volume'].rolling(window=10).mean()
+            data['30_Volume_MA'] = data['Volume'].rolling(window=30).mean()
+
             for i in range(1, len(recent_data)):
-                if (recent_data['Close'].iloc[i] > recent_data['VWAP'].iloc[i] and
-                    recent_data['Close'].iloc[i-1] <= recent_data['VWAP'].iloc[i-1]):
+                if (recent_data['10_Volume_MA'].iloc[i] > recent_data['30_Volume_MA'].iloc[i] and
+                    recent_data['10_Volume_MA'].iloc[i-1] <= recent_data['30_Volume_MA'].iloc[i-1]):
                     return recent_data.index[i]
                 
         elif strategy == "Trend Following":
@@ -790,7 +795,8 @@ def stock_screener_app():
 
             # Query stocks where price breaks out of the Keltner Channel
             for i in range(1, len(recent_data)):
-                if recent_data['Close'].iloc[i] > recent_data['KC_High'].iloc[i]:  # Price breakout above the channel
+                if (recent_data['Close'].iloc[i] > recent_data['KC_High'].iloc[i] and  
+                    recent_data['Close'].iloc[i-1] <= recent_data['KC_High'].iloc[i-1]): # Price breakout above the channel
                     return recent_data.index[i]
         
         elif strategy == "Reversal":
@@ -811,7 +817,8 @@ def stock_screener_app():
 
             # Query stocks where GMMA Short is greater than GMMA Long (indicating a potential breakout)
             for i in range(1, len(recent_data)):
-                if recent_data['GMMA_Short'].iloc[i] > recent_data['GMMA_Long'].iloc[i]:  # GMMA Short above GMMA Long
+                if (recent_data['GMMA_Short'].iloc[i] > recent_data['GMMA_Long'].iloc[i] and 
+                    recent_data['GMMA_Short'].iloc[i-1] <= recent_data['GMMA_Long'].iloc[i-1]):  # GMMA Short above GMMA Long
                     return recent_data.index[i]
                 
         elif strategy == "Volatility Reversion":
