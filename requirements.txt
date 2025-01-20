@@ -124,3 +124,5 @@ selenium==4.27.1
 newspaper3k     ==                   0.2.8
 lxml_html_clean == 0.4.1
 transformers==4.48.0
+
+beautifulsoup4 == 4.12.3

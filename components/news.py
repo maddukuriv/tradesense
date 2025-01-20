@@ -11,8 +11,6 @@ from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
 
 def news_app():
-
-
     # Function to summarize articles
     def summarize_article(url):
         try:
