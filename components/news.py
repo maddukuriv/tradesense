@@ -113,4 +113,4 @@ def news_app():
 
 
 if __name__ == "__main__":
-    news_app_app()
+    news_app()
