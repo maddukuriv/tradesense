@@ -122,3 +122,4 @@ vaderSentiment==3.3.2
 nltk==3.7
 selenium==4.27.1
 newspaper3k     ==                   0.2.8
+lxml_html_clean == 0.4.1
