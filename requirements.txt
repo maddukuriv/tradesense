@@ -121,3 +121,4 @@ newsapi-python==0.2.7
 vaderSentiment==3.3.2
 nltk==3.7
 selenium==4.27.1
+newspaper3k     ==                   0.2.8
