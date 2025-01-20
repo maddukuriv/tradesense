@@ -120,3 +120,4 @@ pmdarima==2.0.3
 newsapi-python==0.2.7
 vaderSentiment==3.3.2
 nltk==3.7
+selenium==4.27.1
