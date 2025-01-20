@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -59,15 +60,21 @@ def news_app():
 
     # Function to fetch article links
     def get_article_links_selenium(main_url, max_clicks):
-        # Ensure the correct version of ChromeDriver is installed
+        # Install the correct version of ChromeDriver
         chromedriver_autoinstaller.install()
 
-        # Set up Chrome options for headless mode
+        # Specify Chrome executable path
+        chrome_path = "/usr/bin/google-chrome"  # Adjust this path if different
+        if not os.path.exists(chrome_path):
+            raise ValueError("Chrome executable not found. Ensure it is installed on the system.")
+
+        # Set up Chrome options
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.binary_location = chrome_path
 
         # Initialize the WebDriver
         driver = webdriver.Chrome(service=Service(chromedriver_autoinstaller.install()), options=chrome_options)
