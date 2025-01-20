@@ -1,21 +1,18 @@
-import os
 import streamlit as st
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from newspaper import Article
 from transformers import pipeline
-import chromedriver_autoinstaller
 import time
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
 
-
 def news_app():
+
+
     # Function to summarize articles
     def summarize_article(url):
         try:
@@ -60,24 +57,7 @@ def news_app():
 
     # Function to fetch article links
     def get_article_links_selenium(main_url, max_clicks):
-        # Install the correct version of ChromeDriver
-        chromedriver_autoinstaller.install()
-
-        # Specify Chrome executable path
-        chrome_path = "/usr/bin/google-chrome"  # Adjust this path if different
-        if not os.path.exists(chrome_path):
-            raise ValueError("Chrome executable not found. Ensure it is installed on the system.")
-
-        # Set up Chrome options
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.binary_location = chrome_path
-
-        # Initialize the WebDriver
-        driver = webdriver.Chrome(service=Service(chromedriver_autoinstaller.install()), options=chrome_options)
+        driver = webdriver.Chrome()  # Ensure ChromeDriver is installed and in PATH
         driver.get(main_url)
         time.sleep(3)
 
