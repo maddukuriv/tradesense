@@ -2,7 +2,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from utils.mongodb import init_db
 from authentication import login, signup, forgot_password
-from components import my_account, my_portfolio, my_watchlist, markets, stock_screener, stock_analysis, admin, home_page,stock_comparision
+from components import my_account, my_portfolio, my_watchlist, markets, stock_screener, stock_analysis, admin, home_page,stock_comparision,news
 
 # Initialize MongoDB collections
 init_db()
@@ -46,6 +46,7 @@ def main_menu():
         "Screener",
         "Analysis",
         "Comparision",
+        "News",
         "My Account"
 
     ]
@@ -90,7 +91,8 @@ else:
             my_portfolio.display_portfolio()
         elif choice == "Markets":
             markets.markets_app()
-
+        elif choice == "News":
+            news.news_app()
         elif choice == "Screener":
             stock_screener.stock_screener_app()
         elif choice == "Analysis":
