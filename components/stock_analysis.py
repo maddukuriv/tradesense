@@ -1682,7 +1682,7 @@ def create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
                         name=indicator, marker_color=colors, hoverinfo='x+y'
                     ), secondary_y=True)
                 else:
-                    secondary_y = True if group_name == "Momentum" else False
+                    secondary_y = True if group_name == "Momentum" or "Volume" or "Volatility" else False
                     fig.add_trace(go.Scatter(
                         x=data.index, y=data[indicator], mode='lines', 
                         name=indicator, hoverinfo='x+y', line=dict(width=2, color=color)
