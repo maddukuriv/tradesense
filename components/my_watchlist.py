@@ -346,16 +346,27 @@ def display_watchlist():
                 data['Fibo_50'] = max_price - 0.5 * diff
                 data['Fibo_61_8'] = max_price - 0.618 * diff
 
+                # Calculate volume moving averages
+                data['Volume_MA10'] = data['Volume'].rolling(window=10).mean()
+                data['Volume_MA30'] = data['Volume'].rolling(window=30).mean()
+
+                # Moving Averages
+                data['MA50'] = data['Close'].rolling(window=50).mean()
+                data['MA200'] = data['Close'].rolling(window=200).mean()
+
+                # Identify volume spikes (days where volume is 50% higher than 10-day MA)
+                volume_spikes = data[data['Volume'] > data['Volume_MA30'] * 1.5].index
+
                 # Step 3: Create Subplots for all indicators
            
 
-                fig = sp.make_subplots(rows=7, cols=3, subplot_titles=[
+                fig = sp.make_subplots(rows=8, cols=3, subplot_titles=[
                     'VWAP', 'MFI', 'OBV', 'CMF', 
                     'A/D', 'Ichimoku Cloud', 'MACD', 'SuperTrend', 
                     'Bollinger Bands', 'Parabolic SAR', 'GMMA', 'RSI', 
                     'Stochastic Oscillator', 'DMI', 'Awesome Oscillator', 'BB%',
                     'Mass Index', 'RVI', 'ZigZag', 'Pivot Points', 
-                    'Fibonacci Levels'],
+                    'Fibonacci Levels','Volume','Moving Averages'],
                     vertical_spacing=0.05, horizontal_spacing=0.05)
 
                 # Plot VWAP and Close
@@ -458,6 +469,17 @@ def display_watchlist():
                 fig.add_trace(go.Scatter(x=data.index, y=data['Fibo_50'], name='Fibo 50%', line={'dash': 'dot'}), row=7, col=3)
                 fig.add_trace(go.Scatter(x=data.index, y=data['Fibo_61_8'], name='Fibo 61.8%', line={'dash': 'dot'}), row=7, col=3)
                 fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Close', line={'color': 'blue', 'width': 2}), row=7, col=3)
+
+
+                # Plot Volume
+                fig.add_trace(go.Bar(x=data.index, y=data['Volume'], name='Volume', marker_color='blue'), row=8, col=1)
+                fig.add_trace(go.Scatter(x=volume_spikes, y=data.loc[volume_spikes, 'Volume'], mode='markers', name='Volume_Spike', marker=dict(color='red', size=8)), row=8, col=1)
+                fig.add_trace(go.Scatter(x=data.index, y=data['Volume_MA10'], name='Vol MA10', line={'color': 'green', 'width': 2}), row=8, col=1)
+                fig.add_trace(go.Scatter(x=data.index, y=data['Volume_MA30'], name='Vol MA30', line={'color': 'red', 'width': 2}), row=8, col=1)
+
+                # Plot Moving Averages
+                fig.add_trace(go.Scatter(x=data.index, y=data['MA50'], name='MA50', line={'color': 'green', 'width': 2}), row=8, col=2)
+                fig.add_trace(go.Scatter(x=data.index, y=data['MA200'], name='MA200', line={'color': 'red', 'width': 2}), row=8, col=2)
 
                 # Layout
                 fig.update_layout(
