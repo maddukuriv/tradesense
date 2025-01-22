@@ -5,6 +5,7 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime
 import plotly.graph_objects as go
+import plotly.express as px
 
 # Function to get company name from the dictionary
 def get_company_name(ticker, ticker_to_company):
@@ -208,45 +209,66 @@ def display_portfolio():
         portfolio_df['P&L (%)'] = (portfolio_df['P&L'] / (portfolio_df['Quantity'] * portfolio_df['Average Cost'])) * 100
         st.dataframe(portfolio_df, use_container_width=True)
 
+
+        # Streamlit layout with two columns
         col1, col2 = st.columns(2)
+
         with col1:
             st.subheader("Portfolio Distribution")
-            fig1 = go.Figure(go.Pie(labels=portfolio_df['Company Name'], values=portfolio_df['Current Value'], hole=.3))
+            
+            # Pie chart using Plotly Express
+            fig1 = px.pie(portfolio_df, 
+                        names='Company Name', 
+                        values='Current Value', 
+                        #title="Portfolio Distribution",
+                        hole=0.3)
             fig1.update_layout(showlegend=True, legend_title_text='Companies')
             st.plotly_chart(fig1, use_container_width=True)
+
         with col2:
-            # total values
+            # Total values
             total_invested = portfolio_df['Invested Value'].sum()
             total_current = portfolio_df['Current Value'].sum()
 
-            # Create a bar chart for total values
             st.subheader("Current Holdings P&L")
-            fig3 = go.Figure(data=[
-                go.Bar(name='Invested Value', x=['Total'], y=[total_invested], marker_color='gray'),
-                go.Bar(name='Current Value', x=['Total'], y=[total_current], marker_color='blue')
-            ])
+            
+            # Create a DataFrame for the data
+            data = pd.DataFrame({
+                'Metric': ['Invested Value', 'Current Value'],
+                'Value': [total_invested, total_current]
+            })
+            
+            # Bar chart for current holdings P&L
+            fig3 = px.bar(data, 
+                        x='Metric', 
+                        y='Value', 
+                        color='Metric',
+                        color_discrete_sequence=['gray', 'blue'],
+                        #title="Current Holdings P&L"
+                        )
+            
             fig3.update_layout(
-                barmode='group',
                 xaxis_title='Metric',
                 yaxis_title='Value',
-                showlegend=True,
-                legend_title_text='Metrics'
+                showlegend=False,  # Hide legend since color already represents metrics
+                bargap=0.2         # Add gap between bars
             )
             st.plotly_chart(fig3, use_container_width=True)
-
 
         # Sort the DataFrame by 'P&L (%)' in ascending order
         portfolio_df_sorted = portfolio_df.sort_values(by='P&L (%)', ascending=True)
 
         # Create the bar chart using the sorted DataFrame
         st.subheader("Current Holdings - Individual P&L(%)")
-        fig2 = go.Figure(go.Bar(
-            x=portfolio_df_sorted['Company Name'], 
-            y=portfolio_df_sorted['P&L (%)']
-        ))
+        fig2 = px.bar(portfolio_df_sorted, 
+                    x='Company Name', 
+                    y='P&L (%)', 
+                    #title="Current Holdings - Individual P&L(%)",
+                    labels={'Company Name': 'Company', 'P&L (%)': 'P&L (%)'},
+                    color='Company Name')  # Optional: color for variety
         fig2.update_layout(
-            xaxis_title='Company', 
-            yaxis_title='P&L (%)', 
+            xaxis_title='Company',
+            yaxis_title='P&L (%)',
             showlegend=False
         )
         st.plotly_chart(fig2, use_container_width=True)
