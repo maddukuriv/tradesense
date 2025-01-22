@@ -234,9 +234,21 @@ def display_portfolio():
             )
             st.plotly_chart(fig3, use_container_width=True)
 
+
+        # Sort the DataFrame by 'P&L (%)' in ascending order
+        portfolio_df_sorted = portfolio_df.sort_values(by='P&L (%)', ascending=True)
+
+        # Create the bar chart using the sorted DataFrame
         st.subheader("Current P&L(%) of Individual Stock")
-        fig2 = go.Figure(go.Bar(x=portfolio_df['Company Name'], y=portfolio_df['P&L (%)']))
-        fig2.update_layout(xaxis_title='Company', yaxis_title='P&L (%)', showlegend=False)
+        fig2 = go.Figure(go.Bar(
+            x=portfolio_df_sorted['Company Name'], 
+            y=portfolio_df_sorted['P&L (%)']
+        ))
+        fig2.update_layout(
+            xaxis_title='Company', 
+            yaxis_title='P&L (%)', 
+            showlegend=False
+        )
         st.plotly_chart(fig2, use_container_width=True)
 
     else:
