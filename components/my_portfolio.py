@@ -202,6 +202,7 @@ def display_portfolio():
         portfolio_df = st.session_state.portfolio.copy()
         portfolio_df['Company Name'] = portfolio_df['Stock'].apply(lambda x: get_company_name(x, ticker_to_company_dict))
         portfolio_df['Last Traded Price'] = portfolio_df['Stock'].apply(lambda x: yf.Ticker(x).history(period="1d")['Close'].iloc[-1])
+        portfolio_df['Invested Value'] = portfolio_df['Quantity'] * portfolio_df['Average Cost']
         portfolio_df['Current Value'] = portfolio_df['Quantity'] * portfolio_df['Last Traded Price']
         portfolio_df['P&L'] = portfolio_df['Current Value'] - (portfolio_df['Quantity'] * portfolio_df['Average Cost'])
         portfolio_df['P&L (%)'] = (portfolio_df['P&L'] / (portfolio_df['Quantity'] * portfolio_df['Average Cost'])) * 100
@@ -214,10 +215,30 @@ def display_portfolio():
             fig1.update_layout(showlegend=True, legend_title_text='Companies')
             st.plotly_chart(fig1, use_container_width=True)
         with col2:
-            st.subheader("Current P&L(%)")
-            fig2 = go.Figure(go.Bar(x=portfolio_df['Company Name'], y=portfolio_df['P&L (%)']))
-            fig2.update_layout(title_text='Profit/Loss Percentage per Stock', xaxis_title='Company', yaxis_title='P&L (%)', showlegend=False)
-            st.plotly_chart(fig2, use_container_width=True)
+            # total values
+            total_invested = portfolio_df['Invested Value'].sum()
+            total_current = portfolio_df['Current Value'].sum()
+
+            # Create a bar chart for total values
+            st.subheader("Portfolio Current P&L(%)")
+            fig3 = go.Figure(data=[
+                go.Bar(name='Invested Value', x=['Total'], y=[total_invested], marker_color='blue'),
+                go.Bar(name='Current Value', x=['Total'], y=[total_current], marker_color='green')
+            ])
+            fig3.update_layout(
+                barmode='group',
+                xaxis_title='Metric',
+                yaxis_title='Value',
+                showlegend=True,
+                legend_title_text='Metrics'
+            )
+            st.plotly_chart(fig3, use_container_width=True)
+
+        st.subheader("Current P&L(%) of Individual Stock")
+        fig2 = go.Figure(go.Bar(x=portfolio_df['Company Name'], y=portfolio_df['P&L (%)']))
+        fig2.update_layout(xaxis_title='Company', yaxis_title='P&L (%)', showlegend=False)
+        st.plotly_chart(fig2, use_container_width=True)
+
     else:
         st.info("No current holdings in your portfolio.")
 
