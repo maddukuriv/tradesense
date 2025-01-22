@@ -220,10 +220,10 @@ def display_portfolio():
             total_current = portfolio_df['Current Value'].sum()
 
             # Create a bar chart for total values
-            st.subheader("Portfolio Current P&L(%)")
+            st.subheader("Current Holdings P&L")
             fig3 = go.Figure(data=[
-                go.Bar(name='Invested Value', x=['Total'], y=[total_invested], marker_color='blue'),
-                go.Bar(name='Current Value', x=['Total'], y=[total_current], marker_color='green')
+                go.Bar(name='Invested Value', x=['Total'], y=[total_invested], marker_color='gray'),
+                go.Bar(name='Current Value', x=['Total'], y=[total_current], marker_color='blue')
             ])
             fig3.update_layout(
                 barmode='group',
@@ -239,7 +239,7 @@ def display_portfolio():
         portfolio_df_sorted = portfolio_df.sort_values(by='P&L (%)', ascending=True)
 
         # Create the bar chart using the sorted DataFrame
-        st.subheader("Current P&L(%) of Individual Stock")
+        st.subheader("Current Holdings - Individual P&L(%)")
         fig2 = go.Figure(go.Bar(
             x=portfolio_df_sorted['Company Name'], 
             y=portfolio_df_sorted['P&L (%)']
