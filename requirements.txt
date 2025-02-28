@@ -126,4 +126,4 @@ lxml_html_clean == 0.4.1
 transformers==4.48.0
 
 beautifulsoup4 == 4.12.3
-supabase == 1.137.3
+supabase
