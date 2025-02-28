@@ -156,31 +156,7 @@ def home_page_app():
         "^XDN": "Japanese Yen Currency Index"
     }
 
-    # Create two columns
-    col1, col2 = st.columns(2)
-
-    # User input for ticker
-    with col1:
-        ticker = st.selectbox("Select Stock Index:", options=list(indices.keys()), format_func=lambda x: indices[x])
-
-    # Select indicators
-    with col2:
-        indicators = st.multiselect("Select Indicators", ["MA_10", "MA_20", "MA_50"], default=["MA_10", "MA_20", "MA_50"])
-
-    if ticker:
-        stock_data = get_stock_data(ticker)
-        stock_data = calculate_technical_indicators(stock_data)
-        
-        if stock_data is not None:
-            #st.subheader("Stock Data Preview")
-            #st.dataframe(stock_data.tail())
-            
-            # Plot chart
-            fig = create_figure(stock_data, indicators, ticker)
-            st.plotly_chart(fig)
-
-
-    st.divider()
+    
 
 
     # Time periods for performance calculation
@@ -254,36 +230,57 @@ def home_page_app():
         return fig
 
 
-    st.write("Select a timeframe to view performance trends:")
+    
 
-    # Create horizontal radio buttons using columns
-    timeframes = list(periods.values())
-    cols = st.columns(len(timeframes))
+    tab1, tab2 = st.tabs(["📈Trend", "📊Performance"])
 
-    selected_period = None
-    for i, col in enumerate(cols):
-        with col:
-            if st.button(timeframes[i]):
-                selected_period = timeframes[i]
+    with tab1:
+        # Create two columns
+        col1, col2 = st.columns(2)
 
-    # Default selection (if no button is clicked)
-    if selected_period is None:
-        selected_period = timeframes[7]  # Default to "1Y"
+        # User input for ticker
+        with col1:
+            ticker = st.selectbox("Select Stock Index:", options=list(indices.keys()), format_func=lambda x: indices[x])
 
-    # Fetch performance data
-    performance_df = get_indices_performance()
+        # Select indicators
+        with col2:
+            indicators = st.multiselect("Select Indicators", ["MA_10", "MA_20", "MA_50"], default=["MA_10", "MA_20", "MA_50"])
 
-    if not performance_df.empty:
-        # Display table of performance
-        #st.write("### Performance Data")
-        #st.dataframe(performance_df)
+        if ticker:
+            stock_data = get_stock_data(ticker)
+            stock_data = calculate_technical_indicators(stock_data)
+            
+            if stock_data is not None:
+                #st.subheader("Stock Data Preview")
+                #st.dataframe(stock_data.tail())
+                
+                # Plot chart
+                fig = create_figure(stock_data, indicators, ticker)
+                st.plotly_chart(fig)
 
-        # Display selected period chart
-        #st.write(f"#### {selected_period} Performance Chart")
-        fig = create_performance_chart(performance_df, selected_period)
-        st.plotly_chart(fig)
-    else:
-        st.warning("No performance data available.")
+
+        st.divider()
+
+    with tab2:
+        # Radio buttons for timeframes
+        selected_period = st.radio("Select a timeframe to view performance trends", list(periods.values()), index=7,horizontal=True)
+
+        # Fetch performance data
+        performance_df = get_indices_performance()
+
+        if not performance_df.empty:
+            # Display table of performance
+            #st.write("### Performance Data")
+            #st.dataframe(performance_df)
+
+            # Display selected period chart
+            # st.write(f"### {selected_period} Performance Chart")
+            fig = create_performance_chart(performance_df, selected_period)
+            st.plotly_chart(fig)
+        else:
+            st.warning("No performance data available.")
+        
+        st.divider()
 
     
 # To run the app
