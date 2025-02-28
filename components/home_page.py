@@ -89,7 +89,7 @@ def home_page_app():
             'xanchor': 'center',
             'yanchor': 'top'
         },
-            height=900,
+            height=600,
             yaxis=dict(title='Price'),
             yaxis2=dict(title='Volume', overlaying='y', side='right'),
             xaxis=dict(

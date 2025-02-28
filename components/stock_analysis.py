@@ -16,9 +16,13 @@ import requests
 from utils.constants import ticker_to_company_dict
 import nltk
 import plotly.express as px
-
+from supabase import create_client
 nltk.download('vader_lexicon')
 
+ # Supabase Credentials
+
+SUPABASE_URL= 'https://kbhdeynmboawkjtxvlek.supabase.co'
+SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaGRleW5tYm9hd2tqdHh2bGVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA2NDg3NjAsImV4cCI6MjA1NjIyNDc2MH0.T3L5iIn1FiBlBo5HZMqysgokD8cfOw2n3u_YCJV0DkQ'
 
 
 # Initialize NewsApiClient with your API key
@@ -27,21 +31,72 @@ analyzer = SentimentIntensityAnalyzer()
 
 # Helper functions
 
-# Generate the ticker to company mapping using the predefined dictionary
-ticker_to_company = {ticker: ticker_to_company_dict.get(ticker, ticker) for ticker in ticker_to_company_dict.keys()}
+# Placeholder for ticker_to_company_dict
+tickers = {
+        "^GSPC": "S&P 500",
+        "^DJI": "Dow Jones Industrial Average",
+        "^IXIC": "NASDAQ Composite",
+        "^NYA": "NYSE Composite",
+        "^XAX": "NYSE AMEX Composite Index",
+        "^RUT": "Russell 2000",
+        "^VIX": "CBOE Volatility Index",
+        "^FTSE": "FTSE 100 (UK)",
+        "^GDAXI": "DAX (Germany)",
+        "^FCHI": "CAC 40 (France)",
+        "^STOXX50E": "EURO STOXX 50",
+        "^N100": "Euronext 100",
+        "^BFX": "BEL 20 (Belgium)",
+        "^GSPTSE": "S&P/TSX Composite Index (Canada)",
+        "^HSI": "Hang Seng Index (Hong Kong)",
+        "^STI": "STI Index (Singapore)",
+        "^AXJO": "S&P/ASX 200 (Australia)",
+        "^AORD": "All Ordinaries (Australia)",
+        "^BSESN": "S&P BSE SENSEX (India)",
+        "^JKSE": "IDX Composite (Indonesia)",
+        "^KLSE": "FTSE Bursa Malaysia KLCI",
+        "^NZ50": "S&P/NZX 50 Index (New Zealand)",
+        "^KS11": "KOSPI Composite Index (South Korea)",
+        "^TWII": "TWSE Capitalization Weighted Stock Index (Taiwan)",
+        "000001.SS": "SSE Composite Index (China)",
+        "^N225": "Nikkei 225 (Japan)",
+        "^BVSP": "IBOVESPA (Brazil)",
+        "^MXX": "IPC Mexico",
+        "^IPSA": "S&P IPSA (Chile)",
+        "^MERV": "MERVAL (Argentina)",
+        "^TA125.TA": "TA-125 (Israel)",
+        "^CASE30": "EGX 30 (Egypt)",
+        "^JN0U.JO": "Top 40 USD Net TRI Index (South Africa)",
+        "DX-Y.NYB": "US Dollar Index",
+        "^XDB": "British Pound Currency Index",
+        "^XDE": "Euro Currency Index",
+        "^XDN": "Japanese Yen Currency Index"
+    }
 
-# Convert the ticker_to_company dictionary to a list of company names
-company_names = list(ticker_to_company.values())
 
-
-
+# Initialize Supabase client
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @st.cache_data(ttl=300)
-def download_data(ticker, start_date, end_date):
-    data = yf.download(ticker, start=start_date, end=end_date, interval="1d")
-    return data
-
-
+# Function to fetch stock data
+def get_stock_data(ticker):
+    try:
+        response = supabase.table("stock_data").select("*").filter("ticker", "eq", ticker).execute()
+        
+        if response.data:
+            data = pd.DataFrame(response.data)
+            
+            # Convert date column to datetime and set as index if present
+            if 'date' in data.columns:
+                data['date'] = pd.to_datetime(data['date'])
+                data.set_index('date', inplace=True)
+            
+            return data
+        else:
+            st.warning(f"No data found for ticker: {ticker}")
+            return None
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
+        return None
 
 # manual technical formaulas
 def atr(high, low, close, window=14):
@@ -114,13 +169,13 @@ def parabolic_sar(high, low, close, af=0.02, max_af=0.2):
     return psar
 
 def calculate_adx(df):
-    plus_dm = df['High'].diff()
-    minus_dm = df['Low'].diff()
+    plus_dm = df['high'].diff()
+    minus_dm = df['low'].diff()
     plus_dm[plus_dm < 0] = 0
     minus_dm[minus_dm > 0] = 0
-    tr = pd.concat([df['High'] - df['Low'], 
-                    (df['High'] - df['Close'].shift()).abs(), 
-                    (df['Low'] - df['Close'].shift()).abs()], axis=1).max(axis=1)
+    tr = pd.concat([df['high'] - df['low'], 
+                    (df['high'] - df['close'].shift()).abs(), 
+                    (df['low'] - df['close'].shift()).abs()], axis=1).max(axis=1)
     atr = tr.rolling(window=14).mean()
     plus_di = 100 * (plus_dm.ewm(alpha=1/14).mean() / atr)
     minus_di = abs(100 * (minus_dm.ewm(alpha=1/14).mean() / atr))
@@ -129,16 +184,16 @@ def calculate_adx(df):
 
 def volume_profile_fixed_range(df, start_idx, end_idx, bins=50):
     data = df.iloc[start_idx:end_idx]
-    price_min, price_max = data['Close'].min(), data['Close'].max()
+    price_min, price_max = data['close'].min(), data['close'].max()
     price_range = np.linspace(price_min, price_max, bins)
     volume_profile = np.zeros(len(price_range))
 
     for i in range(len(price_range) - 1):
-        mask = (data['Close'] >= price_range[i]) & (data['Close'] < price_range[i + 1])
-        volume_profile[i] = data['Volume'][mask].sum()
+        mask = (data['close'] >= price_range[i]) & (data['close'] < price_range[i + 1])
+        volume_profile[i] = data['volume'][mask].sum()
 
     df['VPFR'] = 0
-    df.iloc[start_idx:end_idx, df.columns.get_loc('VPFR')] = volume_profile[np.searchsorted(price_range, data['Close']) - 1]
+    df.iloc[start_idx:end_idx, df.columns.get_loc('VPFR')] = volume_profile[np.searchsorted(price_range, data['close']) - 1]
 
     return df['VPFR']
 
@@ -149,7 +204,7 @@ def volume_profile_visible_range(df, visible_range=100, bins=50):
 
 def calculate_accelerator_oscillator(df):
     # Awesome Oscillator
-    df['AO'] = df['High'].rolling(window=5).mean() - df['Low'].rolling(window=34).mean()
+    df['AO'] = df['high'].rolling(window=5).mean() - df['low'].rolling(window=34).mean()
     # 5-period SMA of AO
     df['AO_SMA_5'] = df['AO'].rolling(window=5).mean()
     # Accelerator Oscillator
@@ -157,7 +212,7 @@ def calculate_accelerator_oscillator(df):
     return df['AC']
 
 def calculate_awesome_oscillator(df):
-    midpoint = (df['High'] + df['Low']) / 2
+    midpoint = (df['high'] + df['low']) / 2
     df['AO'] = midpoint.rolling(window=5).mean() - midpoint.rolling(window=34).mean()
     return df['AO']
 
@@ -180,12 +235,12 @@ def triple_ema(series, window):
 
 def volatility_close_to_close(df, window):
     # Close-to-Close Volatility
-    df['Vol_CtC'] = df['Close'].pct_change().rolling(window=window).std() * np.sqrt(window)
+    df['Vol_CtC'] = df['close'].pct_change().rolling(window=window).std() * np.sqrt(window)
     return df['Vol_CtC']
 
 def volatility_zero_trend_close_to_close(df, window):
     # Zero Trend Close-to-Close Volatility
-    returns = df['Close'].pct_change()
+    returns = df['close'].pct_change()
     zero_returns = returns[returns == 0]
     df['Vol_ZtC'] = zero_returns.rolling(window=window).std() * np.sqrt(window)
     df['Vol_ZtC'].fillna(0, inplace=True)  # Handle NaNs
@@ -193,19 +248,19 @@ def volatility_zero_trend_close_to_close(df, window):
 
 def volatility_ohlc(df, window):
     # OHLC Volatility
-    df['HL'] = df['High'] - df['Low']
-    df['OC'] = np.abs(df['Close'] - df['Open'])
+    df['HL'] = df['high'] - df['low']
+    df['OC'] = np.abs(df['close'] - df['open'])
     df['Vol_OHLC'] = df[['HL', 'OC']].max(axis=1).rolling(window=window).mean()
     return df['Vol_OHLC']
 
 def volatility_index(df, window):
     # Volatility Index (standard deviation of returns)
-    df['Vol_Index'] = df['Close'].pct_change().rolling(window=window).std() * np.sqrt(window)
+    df['Vol_Index'] = df['close'].pct_change().rolling(window=window).std() * np.sqrt(window)
     return df['Vol_Index']
 
 def historical_volatility(df, window=252):
     # Calculate the daily returns
-    df['Returns'] = df['Close'].pct_change()
+    df['Returns'] = df['close'].pct_change()
     
     # Calculate the rolling standard deviation of returns over the specified window
     df['Hist_Vol'] = df['Returns'].rolling(window=window).std()
@@ -217,18 +272,18 @@ def historical_volatility(df, window=252):
 
 def williams_fractal(df):
     def fractal_high(df, n):
-        return df['High'][(df['High'] == df['High'].rolling(window=n, center=True).max()) &
-                        (df['High'] > df['High'].shift(1)) &
-                        (df['High'] > df['High'].shift(2)) &
-                        (df['High'] > df['High'].shift(-1)) &
-                        (df['High'] > df['High'].shift(-2))]
+        return df['high'][(df['high'] == df['high'].rolling(window=n, center=True).max()) &
+                        (df['high'] > df['high'].shift(1)) &
+                        (df['high'] > df['high'].shift(2)) &
+                        (df['high'] > df['high'].shift(-1)) &
+                        (df['high'] > df['high'].shift(-2))]
 
     def fractal_low(df, n):
-        return df['Low'][(df['Low'] == df['Low'].rolling(window=n, center=True).min()) &
-                        (df['Low'] < df['Low'].shift(1)) &
-                        (df['Low'] < df['Low'].shift(2)) &
-                        (df['Low'] < df['Low'].shift(-1)) &
-                        (df['Low'] < df['Low'].shift(-2))]
+        return df['low'][(df['low'] == df['low'].rolling(window=n, center=True).min()) &
+                        (df['low'] < df['low'].shift(1)) &
+                        (df['low'] < df['low'].shift(2)) &
+                        (df['low'] < df['low'].shift(-1)) &
+                        (df['low'] < df['low'].shift(-2))]
 
     n = 5  # Number of periods, typical value for Williams Fractal
     df['Fractal_Up'] = fractal_high(df, n)
@@ -359,68 +414,68 @@ def zigzag(close, percentage=5):
 def calculate_technical_indicators(df):
     ##Trend Indicators--------------------------------------------------------
     # Moving Averages
-    df['5_day_EMA'] = df['Close'].ewm(span=5, adjust=False).mean()
-    df['10_day_EMA'] = df['Close'].ewm(span=10, adjust=False).mean()
-    df['20_day_EMA'] = df['Close'].ewm(span=20, adjust=False).mean()
+    df['5_day_EMA'] = df['close'].ewm(span=5, adjust=False).mean()
+    df['10_day_EMA'] = df['close'].ewm(span=10, adjust=False).mean()
+    df['20_day_EMA'] = df['close'].ewm(span=20, adjust=False).mean()
     # Arnaud Legoux Moving Average (ALMA)
-    df['ALMA'] = ta.alma(df['Close'])
+    df['ALMA'] = ta.alma(df['close'])
     # Aroon Indicator
-    df['Aroon_Up'], df['Aroon_Down'] = aroon_up_down(df['High'], df['Low'])
+    df['Aroon_Up'], df['Aroon_Down'] = aroon_up_down(df['high'], df['low'])
     # ADX calculation
     df['ADX'], df['Plus_DI'], df['Minus_DI'] = calculate_adx(df) 
     # Bollinger Bands
-    df['BB_Middle'] = df['Close'].rolling(window=20).mean()
-    df['BB_Std'] = df['Close'].rolling(window=20).std()
+    df['BB_Middle'] = df['close'].rolling(window=20).mean()
+    df['BB_Std'] = df['close'].rolling(window=20).std()
     df['BB_High'] = df['BB_Middle'] + (df['BB_Std'] * 2)
     df['BB_Low'] = df['BB_Middle'] - (df['BB_Std'] * 2)
     # Double Exponential Moving Average (DEMA)
-    df['EMA_20'] = df['Close'].ewm(span=20, adjust=False).mean()
+    df['EMA_20'] = df['close'].ewm(span=20, adjust=False).mean()
     df['DEMA'] = 2 * df['EMA_20'] - df['EMA_20'].ewm(span=20, adjust=False).mean()
     # Envelopes
-    df['Envelope_High'] = df['Close'].rolling(window=20).mean() * 1.02
-    df['Envelope_Low'] = df['Close'].rolling(window=20).mean() * 0.98
+    df['Envelope_High'] = df['close'].rolling(window=20).mean() * 1.02
+    df['Envelope_Low'] = df['close'].rolling(window=20).mean() * 0.98
     # Guppy Multiple Moving Average (GMMA)
-    df['GMMA_Short'] = df['Close'].ewm(span=3, adjust=False).mean()
-    df['GMMA_Long'] = df['Close'].ewm(span=30, adjust=False).mean()
+    df['GMMA_Short'] = df['close'].ewm(span=3, adjust=False).mean()
+    df['GMMA_Long'] = df['close'].ewm(span=30, adjust=False).mean()
     # Hull Moving Average (HMA)
-    df['HMA'] = hull_moving_average(df['Close'])
+    df['HMA'] = hull_moving_average(df['close'])
     # Ichimoku Cloud
-    df['Ichimoku_Tenkan'] = (df['High'].rolling(window=9).max() + df['Low'].rolling(window=9).min()) / 2
-    df['Ichimoku_Kijun'] = (df['High'].rolling(window=26).max() + df['Low'].rolling(window=26).min()) / 2
+    df['Ichimoku_Tenkan'] = (df['high'].rolling(window=9).max() + df['low'].rolling(window=9).min()) / 2
+    df['Ichimoku_Kijun'] = (df['high'].rolling(window=26).max() + df['low'].rolling(window=26).min()) / 2
     df['Ichimoku_Senkou_Span_A'] = ((df['Ichimoku_Tenkan'] + df['Ichimoku_Kijun']) / 2).shift(26)
-    df['Ichimoku_Senkou_Span_B'] = ((df['High'].rolling(window=52).max() + df['Low'].rolling(window=52).min()) / 2).shift(26)
+    df['Ichimoku_Senkou_Span_B'] = ((df['high'].rolling(window=52).max() + df['low'].rolling(window=52).min()) / 2).shift(26)
     # Keltner Channels
-    df['KC_Middle'] = df['Close'].rolling(window=20).mean()
-    df['ATR_10'] = atr(df['High'], df['Low'], df['Close'], window=10)
+    df['KC_Middle'] = df['close'].rolling(window=20).mean()
+    df['ATR_10'] = atr(df['high'], df['low'], df['close'], window=10)
     df['KC_High'] = df['KC_Middle'] + (df['ATR_10'] * 2)
     df['KC_Low'] = df['KC_Middle'] - (df['ATR_10'] * 2)
     # Least Squares Moving Average (LSMA)
-    df['LSMA'] = lsma(df['Close'])
+    df['LSMA'] = lsma(df['close'])
     # Moving Average Channel (MAC)
-    df['MAC_Upper'], df['MAC_Lower'] = moving_average_channel(df['Close'], window=20, offset=2)
+    df['MAC_Upper'], df['MAC_Lower'] = moving_average_channel(df['close'], window=20, offset=2)
     # MACD
-    df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
-    df['EMA_26'] = df['Close'].ewm(span=26, adjust=False).mean()
+    df['EMA_12'] = df['close'].ewm(span=12, adjust=False).mean()
+    df['EMA_26'] = df['close'].ewm(span=26, adjust=False).mean()
     df['MACD'] = df['EMA_12'] - df['EMA_26']
     df['MACD_signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
     df['MACD_hist'] = df['MACD'] - df['MACD_signal']
     # Parabolic SAR
-    df['Parabolic_SAR'] = parabolic_sar(df['High'], df['Low'], df['Close'])
+    df['Parabolic_SAR'] = parabolic_sar(df['high'], df['low'], df['close'])
     # SuperTrend
-    supertrend = ta.supertrend(df['High'], df['Low'], df['Close'], length=7, multiplier=3.0)
+    supertrend = ta.supertrend(df['high'], df['low'], df['close'], length=7, multiplier=3.0)
     df['SuperTrend'] = supertrend['SUPERT_7_3.0']
     # Price Channel
-    df['Price_Channel_Upper'], df['Price_Channel_Lower'] = price_channel(df['High'], df['Low'], window=20)
+    df['Price_Channel_Upper'], df['Price_Channel_Lower'] = price_channel(df['high'], df['low'], window=20)
     # Triple EMA (TEMA)
-    df['TEMA_20'] = triple_ema(df['Close'], window=20)
+    df['TEMA_20'] = triple_ema(df['close'], window=20)
     # Calculate Advance/Decline
-    df['Advance_Decline'] = df['Close'].diff().apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0)).cumsum()
+    df['Advance_Decline'] = df['close'].diff().apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0)).cumsum()
     # Chande kroll stop
-    df['Chande_Kroll_Stop_Long'], df['Chande_Kroll_Stop_Short'] = chande_kroll_stop(df['High'], df['Low'], df['Close'])
+    df['Chande_Kroll_Stop_Long'], df['Chande_Kroll_Stop_Short'] = chande_kroll_stop(df['high'], df['low'], df['close'])
     # William Alligator
-    df['Williams_Alligator_Jaw'], df['Williams_Alligator_Teeth'], df['Williams_Alligator_Lips'] = alligator(df['High'], df['Low'], df['Close'])
+    df['Williams_Alligator_Jaw'], df['Williams_Alligator_Teeth'], df['Williams_Alligator_Lips'] = alligator(df['high'], df['low'], df['close'])
     # Donchian Channels
-    donchian = ta.donchian(df['High'], df['Low'])
+    donchian = ta.donchian(df['high'], df['low'])
     df['Donchian_High'] = donchian['DCU_20_20']
     df['Donchian_Low'] = donchian['DCL_20_20']
 
@@ -431,136 +486,136 @@ def calculate_technical_indicators(df):
     # Accelerator Oscillator (AC)
     df['AC'] = calculate_accelerator_oscillator(df)
     # Chande Momentum Oscillator (CMO):
-    df['CMO'] = rsi(df['Close'], window=14) - 50
+    df['CMO'] = rsi(df['close'], window=14) - 50
     # Commodity Channel Index (CCI)
-    df['CCI'] = (df['Close'] - df['Close'].rolling(window=20).mean()) / (0.015 * df['Close'].rolling(window=20).std())
+    df['CCI'] = (df['close'] - df['close'].rolling(window=20).mean()) / (0.015 * df['close'].rolling(window=20).std())
     # Connors RSI
-    df['CRSI'] = (rsi(df['Close'], window=3) + rsi(df['Close'], window=2) + rsi(df['Close'], window=5)) / 3
+    df['CRSI'] = (rsi(df['close'], window=3) + rsi(df['close'], window=2) + rsi(df['close'], window=5)) / 3
     # Coppock Curve
-    df['Coppock'] = df['Close'].diff(14).ewm(span=10, adjust=False).mean() + df['Close'].diff(11).ewm(span=10, adjust=False).mean()
+    df['Coppock'] = df['close'].diff(14).ewm(span=10, adjust=False).mean() + df['close'].diff(11).ewm(span=10, adjust=False).mean()
     # Detrended Price Oscillator (DPO):
-    df['DPO'] = df['Close'].shift(int(20 / 2 + 1)) - df['Close'].rolling(window=20).mean()
+    df['DPO'] = df['close'].shift(int(20 / 2 + 1)) - df['close'].rolling(window=20).mean()
     # Directional Movement Index (DMI)
 
     # Know Sure Thing (KST)
-    df['KST'] = df['Close'].rolling(window=10).mean() + df['Close'].rolling(window=15).mean() + df['Close'].rolling(window=20).mean() + df['Close'].rolling(window=30).mean()
+    df['KST'] = df['close'].rolling(window=10).mean() + df['close'].rolling(window=15).mean() + df['close'].rolling(window=20).mean() + df['close'].rolling(window=30).mean()
     df['KST_Signal'] = df['KST'].rolling(window=9).mean()
     # Momentum
-    df['Momentum'] = df['Close'] - df['Close'].shift(10)
+    df['Momentum'] = df['close'] - df['close'].shift(10)
     # Relative Strength Index (RSI)
-    df['RSI'] = rsi(df['Close'])
+    df['RSI'] = rsi(df['close'])
     # Rate of Change (ROC)
-    df['ROC'] = df['Close'].pct_change(12)
+    df['ROC'] = df['close'].pct_change(12)
     # Stochastic Oscillator
-    df['Stochastic_%K'] = (df['Close'] - df['Low'].rolling(window=14).min()) / (df['High'].rolling(window=14).max() - df['Low'].rolling(window=14).min()) * 100
+    df['Stochastic_%K'] = (df['close'] - df['low'].rolling(window=14).min()) / (df['high'].rolling(window=14).max() - df['low'].rolling(window=14).min()) * 100
     df['Stochastic_%D'] = df['Stochastic_%K'].rolling(window=3).mean()
     # Stochastic RSI:
-    df['Stochastic_RSI'] = (rsi(df['Close'], window=14) - rsi(df['Close'], window=14).rolling(window=14).min()) / (rsi(df['Close'], window=14).rolling(window=14).max() - rsi(df['Close'], window=14).rolling(window=14).min())
+    df['Stochastic_RSI'] = (rsi(df['close'], window=14) - rsi(df['close'], window=14).rolling(window=14).min()) / (rsi(df['close'], window=14).rolling(window=14).max() - rsi(df['close'], window=14).rolling(window=14).min())
     # TRIX
-    df['TRIX'] = df['Close'].ewm(span=15, adjust=False).mean().pct_change(1)
-    trix = ta.trix(df['Close'])
+    df['TRIX'] = df['close'].ewm(span=15, adjust=False).mean().pct_change(1)
+    trix = ta.trix(df['close'])
     df['TRIX'] = trix['TRIX_30_9']
     df['TRIX_Signal'] = trix['TRIXs_30_9']
     # True Strength Index (TSI)
-    df['TSI'] = df['Close'].diff(1).ewm(span=25, adjust=False).mean() / df['Close'].diff(1).abs().ewm(span=13, adjust=False).mean()
+    df['TSI'] = df['close'].diff(1).ewm(span=25, adjust=False).mean() / df['close'].diff(1).abs().ewm(span=13, adjust=False).mean()
     df['TSI_Signal'] = df['TSI'].ewm(span=9, adjust=False).mean()
     # Ultimate Oscillator
-    df['Ultimate_Oscillator'] = (4 * (df['Close'] - df['Low']).rolling(window=7).sum() + 2 * (df['Close'] - df['Low']).rolling(window=14).sum() + (df['Close'] - df['Low']).rolling(window=28).sum()) / ((df['High'] - df['Low']).rolling(window=7).sum() + (df['High'] - df['Low']).rolling(window=14).sum() + (df['High'] - df['Low']).rolling(window=28).sum()) * 100
+    df['Ultimate_Oscillator'] = (4 * (df['close'] - df['low']).rolling(window=7).sum() + 2 * (df['close'] - df['low']).rolling(window=14).sum() + (df['close'] - df['low']).rolling(window=28).sum()) / ((df['high'] - df['low']).rolling(window=7).sum() + (df['high'] - df['low']).rolling(window=14).sum() + (df['high'] - df['low']).rolling(window=28).sum()) * 100
     # Relative Vigor Index (RVI)
-    df['Relative_Vigor_Index'] = relative_vigor_index(df['Open'], df['High'], df['Low'], df['Close'])
+    df['Relative_Vigor_Index'] = relative_vigor_index(df['open'], df['high'], df['low'], df['close'])
     df['RVI_Signal'] = df['Relative_Vigor_Index'].ewm(span=14, adjust=False).mean()
     # SMI Ergodic Indicator/Oscillator:
-    df['SMI_Ergodic'], df['SMI_Ergodic_Signal'] = smi_ergodic(df['Close'])
+    df['SMI_Ergodic'], df['SMI_Ergodic_Signal'] = smi_ergodic(df['close'])
     # Fisher Transform
-    df['Fisher_Transform'], df['Fisher_Transform_Signal'] = fisher_transform(df['Close'])
+    df['Fisher_Transform'], df['Fisher_Transform_Signal'] = fisher_transform(df['close'])
     # William %R
-    df['Williams_%R'] = williams_r(df['High'], df['Low'], df['Close'])
+    df['Williams_%R'] = williams_r(df['high'], df['low'], df['close'])
   
 
 
     ## Volume Indicators--------------------------------------------------------------
     # Accumulation/Distribution Line (A/D)
-    df['AD'] = (df['Close'] - df['Low'] - (df['High'] - df['Close'])) / (df['High'] - df['Low']) * df['Volume']
+    df['AD'] = (df['close'] - df['low'] - (df['high'] - df['close'])) / (df['high'] - df['low']) * df['volume']
     # Balance of Power (BOP)
-    df['BoP'] = (df['Close'] - df['Open']) / (df['High'] - df['Low'])
+    df['BoP'] = (df['close'] - df['open']) / (df['high'] - df['low'])
     # Chaikin Money Flow (CMF)
-    df['CMF'] = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low']) * df['Volume']
+    df['CMF'] = ((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low']) * df['volume']
     # Chaikin Oscillator
-    df['CO'] = df['Close'].diff(3).ewm(span=10, adjust=False).mean()
+    df['CO'] = df['close'].diff(3).ewm(span=10, adjust=False).mean()
     # Ease of Movement (EMV)
-    df['EMV'] = (df['High'] - df['Low']) / df['Volume']
+    df['EMV'] = (df['high'] - df['low']) / df['volume']
     # Elder's Force Index (EFI)
-    df['EFI'] = df['Close'].diff(1) * df['Volume']
+    df['EFI'] = df['close'].diff(1) * df['volume']
     # Klinger Oscillator
-    df['KVO'] = (df['High'] - df['Low']).ewm(span=34, adjust=False).mean() - (df['High'] - df['Low']).ewm(span=55, adjust=False).mean()
+    df['KVO'] = (df['high'] - df['low']).ewm(span=34, adjust=False).mean() - (df['high'] - df['low']).ewm(span=55, adjust=False).mean()
     df['KVO_Signal'] = df['KVO'].ewm(span=13, adjust=False).mean()
     # Money Flow Index (MFI)
-    df['MFI'] = (df['Close'].diff(1) / df['Close'].shift(1) * df['Volume']).rolling(window=14).mean()
+    df['MFI'] = (df['close'].diff(1) / df['close'].shift(1) * df['volume']).rolling(window=14).mean()
     # Net Volume
-    df['Net_Volume'] = df['Volume'] * (df['Close'].diff() / df['Close'].shift(1))
+    df['Net_Volume'] = df['volume'] * (df['close'].diff() / df['close'].shift(1))
     # On Balance Volume (OBV):
-    df['OBV'] = (np.sign(df['Close'].diff()) * df['Volume']).cumsum()
+    df['OBV'] = (np.sign(df['close'].diff()) * df['volume']).cumsum()
     # Price Volume Trend (PVT)
-    df['PVT'] = (df['Close'].pct_change(1) * df['Volume']).cumsum()
+    df['PVT'] = (df['close'].pct_change(1) * df['volume']).cumsum()
     # VWAP (Volume Weighted Average Price)
-    df['VWAP'] = (df['Volume'] * (df['High'] + df['Low'] + df['Close']) / 3).cumsum() / df['Volume'].cumsum()
+    df['VWAP'] = (df['volume'] * (df['high'] + df['low'] + df['close']) / 3).cumsum() / df['volume'].cumsum()
     # Volume Oscillator
-    df['VO'] = df['Volume'].pct_change(12)
+    df['VO'] = df['volume'].pct_change(12)
     # Vortex Indicator:
-    df['Vortex_Pos'] = df['High'].diff(1).abs().rolling(window=14).sum() / atr(df['High'], df['Low'], df['Close'])
-    df['Vortex_Neg'] = df['Low'].diff(1).abs().rolling(window=14).sum() / atr(df['High'], df['Low'], df['Close'])
+    df['Vortex_Pos'] = df['high'].diff(1).abs().rolling(window=14).sum() / atr(df['high'], df['low'], df['close'])
+    df['Vortex_Neg'] = df['low'].diff(1).abs().rolling(window=14).sum() / atr(df['high'], df['low'], df['close'])
     # Volume
-    df['Volume'] = df['Volume']
+    df['volume'] = df['volume']
     # Volume Weighted Moving Average (VWMA)
-    df['VWMA'] = ta.vwma(df['Close'], df['Volume'], length=20)
+    df['VWMA'] = ta.vwma(df['close'], df['volume'], length=20)
     # Volume Profile Fixed Range (VPFR)
     df['VPFR'] = volume_profile_fixed_range(df, start_idx=0, end_idx=len(df)-1)
     # Volume Profile Visible Range (VPVR)
     df['VPVR'] = volume_profile_visible_range(df, visible_range=100)
     # Spread
-    df['Spread'] = df['High'] - df['Low']
+    df['Spread'] = df['high'] - df['low']
     # Elder-Ray Bull Power and Bear Power
-    bull_power = df['High'] - ta.ema(df['Close'], length=13)
-    bear_power = df['Low'] - ta.ema(df['Close'], length=13)
+    bull_power = df['high'] - ta.ema(df['close'], length=13)
+    bear_power = df['low'] - ta.ema(df['close'], length=13)
     df['Elder_Ray_Bull'] = bull_power
     df['Elder_Ray_Bear'] = bear_power
     # Volume profile
-    df['Volume_Profile'] = df.groupby(pd.cut(df['Close'], bins=20))['Volume'].transform('sum')
+    df['Volume_Profile'] = df.groupby(pd.cut(df['close'], bins=20))['volume'].transform('sum')
     # Price to Volume
-    df['Price_to_Volume'] = df['Close'] / df['Volume']
+    df['Price_to_Volume'] = df['close'] / df['volume']
     # McClellan Oscillator
-    df['McClellan_Oscillator'] = df['Close'].ewm(span=19, adjust=False).mean() - df['Close'].ewm(span=39, adjust=False).mean()
+    df['McClellan_Oscillator'] = df['close'].ewm(span=19, adjust=False).mean() - df['close'].ewm(span=39, adjust=False).mean()
     # TRIN
-    df['TRIN'] = (df['Close'].rolling(window=14).mean() / df['Volume'].rolling(window=14).mean())
+    df['TRIN'] = (df['close'].rolling(window=14).mean() / df['volume'].rolling(window=14).mean())
     # Williams Accumulation/Distribution
-    wad = ta.ad(df['High'], df['Low'], df['Close'], df['Volume'])
+    wad = ta.ad(df['high'], df['low'], df['close'], df['volume'])
     df['Williams_AD'] = wad
     # Ease of Movement
-    distance_moved = ((df['High'] + df['Low']) / 2) - ((df['High'].shift(1) + df['Low'].shift(1)) / 2)
-    box_ratio = (df['Volume'] / 1e8) / (df['High'] - df['Low'])
+    distance_moved = ((df['high'] + df['low']) / 2) - ((df['high'].shift(1) + df['low'].shift(1)) / 2)
+    box_ratio = (df['volume'] / 1e8) / (df['high'] - df['low'])
     emv = distance_moved / box_ratio
     df['Ease_of_Movement'] = emv.rolling(window=14).mean()
 
 
     ## Volatility Indicators----------------------------------------------------
     # Average True Range (ATR)
-    df['ATR'] = atr(df['High'], df['Low'], df['Close'])
+    df['ATR'] = atr(df['high'], df['low'], df['close'])
     # Bollinger Bands %B:    
-    df['BB_%B'] = (df['Close'] - df['BB_Low']) / (df['BB_High'] - df['BB_Low'])
+    df['BB_%B'] = (df['close'] - df['BB_Low']) / (df['BB_High'] - df['BB_Low'])
     # Bollinger Bands Width:
-    df['BB_Width'] = (df['BB_High'] - df['BB_Low']) / df['Close']
+    df['BB_Width'] = (df['BB_High'] - df['BB_Low']) / df['close']
     # Chaikin Volatility:
-    df['Chaikin_Volatility'] = (df['High'] - df['Low']).ewm(span=10, adjust=False).mean()
+    df['Chaikin_Volatility'] = (df['high'] - df['low']).ewm(span=10, adjust=False).mean()
     # Choppiness Index:
-    df['Choppiness_Index'] = np.log10((df['High'] - df['Low']).rolling(window=14).sum() / (df['High'].rolling(window=14).max() - df['Low'].rolling(window=14).min())) * 100
+    df['Choppiness_Index'] = np.log10((df['high'] - df['low']).rolling(window=14).sum() / (df['high'].rolling(window=14).max() - df['low'].rolling(window=14).min())) * 100
     # Historical Volatility
     df['Hist_Vol_Annualized'] = historical_volatility(df)
     # Mass Index:
-    df['Mass_Index'] = (df['High'] - df['Low']).rolling(window=25).sum() / (df['High'] - df['Low']).rolling(window=9).sum()
+    df['Mass_Index'] = (df['high'] - df['low']).rolling(window=25).sum() / (df['high'] - df['low']).rolling(window=9).sum()
     # Relative Volatility Index (RVI):
-    df['RVI'] = df['Close'].rolling(window=10).mean() / df['Close'].rolling(window=10).std()
+    df['RVI'] = df['close'].rolling(window=10).mean() / df['close'].rolling(window=10).std()
     # Standard Deviation:
-    df['Standard_Deviation'] = df['Close'].rolling(window=20).std()
+    df['Standard_Deviation'] = df['close'].rolling(window=20).std()
     # Volatility Close-to-Close
     df['Vol_CtC'] = volatility_close_to_close(df, window=20)
     # Volatility Zero Trend Close-to-Close
@@ -570,11 +625,11 @@ def calculate_technical_indicators(df):
     # Volatility Index
     df['Vol_Index'] = volatility_index(df, window=20)
     # Chop Zone
-    df['Chop_Zone'] = choppiness_index(df['High'], df['Low'], df['Close'])
+    df['Chop_Zone'] = choppiness_index(df['high'], df['low'], df['close'])
     # ZigZag
-    df['ZigZag'] = zigzag(df['Close'])
+    df['ZigZag'] = zigzag(df['close'])
     # Keltner 
-    keltner = ta.kc(df['High'], df['Low'], df['Close'])
+    keltner = ta.kc(df['high'], df['low'], df['close'])
     df['Keltner_High'] = keltner['KCUe_20_2']
     df['Keltner_Low'] = keltner['KCLe_20_2']
 
@@ -594,15 +649,15 @@ def calculate_technical_indicators(df):
         r3 = high + 2 * (pp - low)
         s3 = low - 2 * (high - pp)
         return pp, r1, s1, r2, s2, r3, s3
-    df['Pivot_Point'], df['Resistance_1'], df['Support_1'], df['Resistance_2'], df['Support_2'], df['Resistance_3'], df['Support_3'] = pivot_points(df['High'], df['Low'], df['Close'])
+    df['Pivot_Point'], df['Resistance_1'], df['Support_1'], df['Resistance_2'], df['Support_2'], df['Resistance_3'], df['Support_3'] = pivot_points(df['high'], df['low'], df['close'])
     # Typical Price
-    df['Typical_Price'] = (df['High'] + df['Low'] + df['Close']) / 3
+    df['Typical_Price'] = (df['high'] + df['low'] + df['close']) / 3
     # Darvas Box Theory
-    df['Darvas_High'] = df['High'].rolling(window=20).max()
-    df['Darvas_Low'] = df['Low'].rolling(window=20).min()
+    df['Darvas_High'] = df['high'].rolling(window=20).max()
+    df['Darvas_Low'] = df['low'].rolling(window=20).min()
     # Fibonacci_levels
-    high = df['High'].max()
-    low = df['Low'].min()
+    high = df['high'].max()
+    low = df['low'].min()
     diff = high - low
     df['Fib_0.0'] = high
     df['Fib_0.236'] = high - 0.236 * diff
@@ -614,24 +669,24 @@ def calculate_technical_indicators(df):
 
     ## Statistical indicators--------------------------------------------------------
     # Correlation Coefficient:
-    df['Correlation_Coefficient'] = correlation_coefficient(df['Close'], df['Close'].shift(1))
+    df['Correlation_Coefficient'] = correlation_coefficient(df['close'], df['close'].shift(1))
     # Correlation - Log
-    df['Log_Correlation'] = log_correlation(df['Close'], df['Close'].shift(1))
+    df['Log_Correlation'] = log_correlation(df['close'], df['close'].shift(1))
     # Linear Regression Curve
-    df['Linear_Regression_Curve'] = linear_regression_curve(df['Close'])
+    df['Linear_Regression_Curve'] = linear_regression_curve(df['close'])
     # Linear Regression Slope
-    df['Linear_Regression_Slope'] = linear_regression_slope(df['Close'])
+    df['Linear_Regression_Slope'] = linear_regression_slope(df['close'])
     # Standard Error:
-    df['Standard_Error'] = standard_error(df['Close'])
+    df['Standard_Error'] = standard_error(df['close'])
     # Standard Error Bands:
-    df['Standard_Error_Band_Upper'], df['Standard_Error_Band_Lower'] = standard_error_bands(df['Close'])
+    df['Standard_Error_Band_Upper'], df['Standard_Error_Band_Lower'] = standard_error_bands(df['close'])
     # Median Price
-    df['Median_Price'] = (df['High'] + df['Low']) / 2
+    df['Median_Price'] = (df['high'] + df['low']) / 2
 
 
     
     # Simple Moving Average (SMA)
-    df['SMA_20'] = df['Close'].rolling(window=20).mean()
+    df['SMA_20'] = df['close'].rolling(window=20).mean()
         # Exponential Moving Average (EMA)
         
     df = df.loc[:, ~df.columns.duplicated()]  # Remove any duplicate columns
@@ -668,7 +723,7 @@ def calculate_scores(df):
         details['Trend'] += "EMA: Bearish; "
 
     # 2. ALMA (Arnaud Legoux Moving Average)
-    if df['Close'].iloc[-1] > df['ALMA'].iloc[-1]:
+    if df['close'].iloc[-1] > df['ALMA'].iloc[-1]:
         trend_score += 1
         details['Trend'] += "ALMA: Bullish; "
     else:
@@ -699,7 +754,7 @@ def calculate_scores(df):
         details['Trend'] += "ADX: Weak Trend; "
 
     # 5. Bollinger Bands
-    current_price = df['Close'].iloc[-1]
+    current_price = df['close'].iloc[-1]
     if current_price > df['BB_High'].iloc[-1]:
         trend_score += 0
         details['Trend'] += "Bollinger Bands: Overbought (Bearish); "
@@ -1533,7 +1588,7 @@ def calculate_scores(df):
         details['Support_Resistance'] += "Fractal: No significant support/resistance detected; "
 
     # 2. Pivot Points
-    price = df['Close'].iloc[-1]
+    price = df['close'].iloc[-1]
     if price > df['Resistance_3'].iloc[-1]:
         support_resistance_score += 0
         details['Support_Resistance'] += "Pivot Points: Price significantly above Resistance 3 (Overbought); "
@@ -1659,16 +1714,16 @@ def create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
         if use_candlestick:
             fig.add_trace(go.Candlestick(
                 x=data.index,
-                open=data['Open'],
-                high=data['High'],
-                low=data['Low'],
-                close=data['Close'],
+                open=data['open'],
+                high=data['high'],
+                low=data['low'],
+                close=data['close'],
                 name='Candlestick',
                 increasing_line_color='green', decreasing_line_color='red'
             ))
         else:
             fig.add_trace(go.Scatter(
-                x=data.index, y=data['Close'], mode='lines', 
+                x=data.index, y=data['close'], mode='lines', 
                 name='Close Price', hoverinfo='x+y', line=dict(color='blue', width=2)
             ))
 
@@ -1692,16 +1747,16 @@ def create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
         if 'BB_High' in indicators and 'BB_Low' in indicators:
             fig.add_trace(go.Scatter(
                 x=data.index, y=data['BB_High'], mode='lines', 
-                name='BB High', line=dict(color='rgba(255, 0, 255, 0.1)', width=1)
+                name='BB high', line=dict(color='rgba(255, 0, 255, 0.1)', width=1)
             ))
             fig.add_trace(go.Scatter(
                 x=data.index, y=data['BB_Low'], mode='lines', 
-                name='BB Low', line=dict(color='rgba(255, 0, 255, 0.1)', width=1), fill='tonexty'
+                name='BB low', line=dict(color='rgba(255, 0, 255, 0.1)', width=1), fill='tonexty'
             ))
 
         # Add annotations for key indicators
         fig.add_annotation(
-            x=data.index[-1], y=data['Close'].iloc[-1],
+            x=data.index[-1], y=data['close'].iloc[-1],
             text="Current Price", showarrow=True, arrowhead=1
         )
 
@@ -1960,114 +2015,97 @@ def sentiment_analysis_section(ticker, start_date, end_date):
 def stock_analysis_app():
     st.sidebar.subheader("Stock Analysis")
 
-    # Replace text input with a selectbox for company name auto-suggestion
-    selected_company = st.sidebar.selectbox('Select or Enter Company Name:', company_names)
-
     # Retrieve the corresponding ticker for the selected company
-    ticker = [ticker for ticker, company in ticker_to_company.items() if company == selected_company][0]
+    ticker = st.sidebar.selectbox("Select Stock Index:", options=list(tickers.keys()), format_func=lambda x: tickers[x])
 
-    submenu = st.sidebar.selectbox("Select Analysis Type", ["Technical Analysis", "Sentiment Analysis", "Price Forecast"])
-    start_date, end_date = st.sidebar.date_input("Start Date", value=datetime.now() - timedelta(days=365)), st.sidebar.date_input("End Date", value=datetime.now() + timedelta(days=1))
+    if ticker:
+        data = get_stock_data(ticker)
+        if data.empty:
+            st.write("No data available for the selected ticker.")
+            return
 
-    if submenu == "Technical Analysis":
-        st.title('Stock Technical Analysis')
+        data = calculate_technical_indicators(data)
+        
+        # Calculate scores and details
+        scores, details = calculate_scores(data)
 
-        if ticker:
-            data = download_data(ticker, start_date, end_date)
-            if data.empty:
-                st.write("No data available for the selected ticker.")
-                return
+    st.title('Stock Technical Analysis')
+    tab1, tab2, tab3 = st.tabs(["📈Technical Charts", "📊Analysis","📈Price Forecast"])
 
-            data = calculate_technical_indicators(data)
-            
-            # Calculate scores and details
-            scores, details = calculate_scores(data)
+    # Define columns for each category
+    indicator_groups = {
+        "Trend": ["MACD_hist", "5_day_EMA", "10_day_EMA", "20_day_EMA", "ALMA", "Aroon_Up", "Aroon_Down", "ADX", "Plus_DI", "Minus_DI"],
+        "Momentum": ["RSI", "AO", "AC", "CMO", "CCI", "CRSI", "Coppock", "DPO", "KST", "KST_Signal", "Momentum"],
+        "Volatility": ["ATR", "BB_%B", "BB_Width", "Chaikin_Volatility", "Choppiness_Index", "Hist_Vol_Annualized", "Mass_Index"],
+        "Volume": ["AD", "BoP", "CMF", "CO", "EMV", "EFI", "KVO", "KVO_Signal", "MFI", "Net_Volume"],
+        "Support_Resistance": ["Pivot_Point", "Fractal_Up", "Fractal_Down", "Resistance_1", "Support_1", "Resistance_2", "Support_2"],
+    }
 
-            # Define columns for each category
-            trend_columns = ["MACD_hist","5_day_EMA", "10_day_EMA", "20_day_EMA", "ALMA", "Aroon_Up", "Aroon_Down", "ADX", "Plus_DI", "Minus_DI", "BB_Middle", "BB_Std", "BB_High", "BB_Low", "DEMA", "Envelope_High", "Envelope_Low", "GMMA_Short", "GMMA_Long", "HMA", "Ichimoku_Tenkan", "Ichimoku_Kijun", "Ichimoku_Senkou_Span_A", "Ichimoku_Senkou_Span_B", "KC_Middle", "ATR_10", "KC_High", "KC_Low", "LSMA", "MAC_Upper", "MAC_Lower", "EMA_12", "EMA_26", "MACD", "MACD_signal",  "Parabolic_SAR", "SuperTrend", "Price_Channel_Upper", "Price_Channel_Lower", "TEMA_20", "Advance_Decline", "Chande_Kroll_Stop_Long", "Chande_Kroll_Stop_Short", "Williams_Alligator_Jaw", "Williams_Alligator_Teeth", "Williams_Alligator_Lips", "Donchian_High", "Donchian_Low"]
-            momentum_columns = ["RSI","AO", "AC", "CMO", "CCI", "CRSI", "Coppock", "DPO", "KST", "KST_Signal", "Momentum",  "ROC",  "Stochastic_%K", "Stochastic_%D", "Stochastic_RSI", "TRIX", "TRIX_Signal", "TSI", "TSI_Signal", "Ultimate_Oscillator", "Relative_Vigor_Index", "RVI_Signal", "SMI_Ergodic", "SMI_Ergodic_Signal", "Fisher_Transform", "Fisher_Transform_Signal", "Williams_%R", "Plus_DI", "Minus_DI"]
-            volatility_columns = ["ATR", "BB_%B", "BB_Width", "Chaikin_Volatility",  "Choppiness_Index", "Hist_Vol_Annualized", "Mass_Index", "RVI", "Standard_Deviation", "Vol_CtC", "Vol_ZtC", "Vol_OHLC", "Vol_Index", "Chop_Zone", "ZigZag", "Keltner_High", "Keltner_Low"]
-            volume_columns = ["AD", "BoP", "CMF", "CO", "EMV", "EFI", "KVO", "KVO_Signal", "MFI", "Net_Volume", "OBV", "PVT", "VWAP", "VO", "Vortex_Pos", "Vortex_Neg", "Volume", "VWMA", "VPFR", "VPVR", "Spread", "Elder_Ray_Bull", "Elder_Ray_Bear", "Volume_Profile", "Price_to_Volume", "McClellan_Oscillator", "TRIN", "Williams_AD", "Ease_of_Movement"]
-            support_resistance_columns = ["Pivot_Point","Fractal_Up", "Fractal_Down",  "Resistance_1", "Support_1", "Resistance_2", "Support_2", "Resistance_3", "Support_3", "Typical_Price", "Darvas_High", "Darvas_Low", "Fib_0.0", "Fib_0.236", "Fib_0.382", "Fib_0.5", "Fib_0.618", "Fib_1.0"]
-            #statistical_columns = ["Correlation_Coefficient", "Log_Correlation", "Linear_Regression_Curve", "Linear_Regression_Slope", "Standard_Error", "Standard_Error_Band_Upper",  "Standard_Error_Band_Lower", "Median_Price"]
+    # Calculate overall weightage score
+    overall_score = (
+        scores['Trend'] * 0.30 + 
+        scores['Momentum'] * 0.25 + 
+        scores['Volume'] * 0.25 + 
+        scores['Volatility'] * 0.10 + 
+        scores['Support_Resistance'] * 0.10
+    )
 
-            indicator_groups = {
-                "Trend": trend_columns,
-                "Momentum": momentum_columns,
-                "Volatility": volatility_columns,
-                "Volume": volume_columns,
-                "Support_Resistance": support_resistance_columns,
-                #"Statistics":statistical_columns
-            }
+    with tab1:
 
-            # Checkbox to toggle candlestick chart
-            use_candlestick = st.sidebar.checkbox("Use Candlestick Chart", value=False)
+        use_candlestick = st.checkbox("Use Candlestick Chart", value=False)
 
-            # Process each section
-            for group_name, indicators in indicator_groups.items():
-                st.subheader(f'{group_name} Indicators')
+        for group_name, indicators in indicator_groups.items():
+            st.subheader(f'{group_name} Indicators')
+            create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
+            st.divider()
 
-                col1, col2 = st.columns([1, 2])
+    with tab2:
 
-                with col1:
-                    # Display the gauge for the group
-                    st.plotly_chart(create_gauge(scores[group_name], f'{group_name} Score'))
+        for group_name, indicators in indicator_groups.items():
+            #st.subheader(f'{group_name} Indicators')
 
-                with col2:
-                    # Set table height using CSS
-                    table_css = """
-                    <style>
-                    .custom-table {
-                        height: 250px;
-                        overflow-y: auto;
-                        display: block;
-                        padding-left: 10px;
-                    }
-                    </style>
-                    """
-                    st.markdown(table_css, unsafe_allow_html=True)
-
-                    # Display the indicator table with custom height
-                    indicator_table = create_indicator_table(details, group_name)
-                    st.markdown(f'<div class="custom-table">{indicator_table.to_html(index=False)}</div>', unsafe_allow_html=True)
-
-                # Display the combined chart with selected indicators
-                create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
-
-                st.divider()
-
-            # Calculate overall weightage score
-            overall_score = (
-                scores['Trend'] * 0.30 + 
-                scores['Momentum'] * 0.25 + 
-                scores['Volume'] * 0.25 + 
-                scores['Volatility'] * 0.10 + 
-                scores['Support_Resistance'] * 0.10
-            )
-            recommendation = get_recommendation(overall_score)
-
-            st.subheader("Overall Analysis")
-
-            col1, col2 = st.columns([1, 2])  # Layout for overall score
+            col1, col2 = st.columns([1, 2])
 
             with col1:
-                st.plotly_chart(create_gauge(overall_score, 'Overall Score'))
+                # Display the gauge for the group
+                st.plotly_chart(create_gauge(scores[group_name], f'{group_name} Score'))
 
             with col2:
-                st.markdown(f"### Overall Score: {overall_score:.2f}")
-                st.markdown(f"<p style='font-size:20px;'>Recommendation: {recommendation}</p>", unsafe_allow_html=True)
+                # Set table height using CSS
+                table_css = """
+                <style>
+                .custom-table {
+                    height: 250px;
+                    overflow-y: auto;
+                    display: block;
+                    padding-left: 10px;
+                }
+                </style>
+                """
+                st.markdown(table_css, unsafe_allow_html=True)
 
-    elif submenu == "Sentiment Analysis":
-        st.title('Stock Sentiment Analysis')
-        if ticker:
-            sentiment_analysis_section(ticker, start_date, end_date)
-        else:
-            st.write("Please enter a valid stock ticker to perform sentiment analysis.")
+                # Display the indicator table with custom height
+                indicator_table = create_indicator_table(details, group_name)
+                st.markdown(f'<div class="custom-table">{indicator_table.to_html(index=False)}</div>', unsafe_allow_html=True)
 
-    elif submenu == "Price Forecast":
+        # Display overall score
+        st.subheader("Overall Analysis")
+
+        col1, col2 = st.columns([1, 2])  # Layout for overall score
+
+        with col1:
+            st.plotly_chart(create_gauge(overall_score, 'Overall Score'))
+
+        with col2:
+            recommendation = get_recommendation(overall_score)
+            st.markdown(f"### Overall Score: {overall_score:.2f}")
+            st.markdown(f"<p style='font-size:20px;'>Recommendation: {recommendation}</p>", unsafe_allow_html=True)
+
+    with tab2:
         pass
 
 if __name__ == '__main__':
     stock_analysis_app()
 
 
+    
