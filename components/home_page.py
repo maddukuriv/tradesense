@@ -183,6 +183,107 @@ def home_page_app():
     st.divider()
 
 
+    # Time periods for performance calculation
+    periods = {
+        252: "1Y",  # ~252 trading days (~1 year)
+        126: "6M",  # ~126 trading days (~6 months)
+        63: "3M",   # ~63 trading days (~3 months)
+        21: "1M",   # ~21 trading days (~1 month)
+        15: "15D",  # 15 trading days
+        5: "5D",    # 5 trading days
+        3: "3D",    # 3 trading days
+        1: "1D"     # 1 trading day
+    }
+
+    # Function to compute performance for different timeframes
+    def compute_performance(data):
+        performance = {}
+        latest_price = data['close'].iloc[-1]
+
+        for period, label in periods.items():
+            if len(data) >= period:
+                if period == 1 and len(data) > 1:
+                    past_price = data['close'].iloc[-2]  # Ensure it picks the previous trading day
+                else:
+                    past_price = data['close'].iloc[-period]
+                
+                if past_price != 0:  # Avoid division by zero
+                    performance[label] = ((latest_price - past_price) / past_price) * 100
+                else:
+                    performance[label] = None
+            else:
+                performance[label] = None  # Not enough data
+        
+        return performance
+
+    # Function to fetch performance of all indices
+    @st.cache_data
+    def get_indices_performance():
+        performance_data = []
+
+        for ticker, name in indices.items():
+            data = get_stock_data(ticker)
+            
+            if data is not None and 'close' in data.columns and not data.empty:
+                performance = compute_performance(data)
+                performance["Index"] = name
+                performance_data.append(performance)
+        
+        if performance_data:
+            return pd.DataFrame(performance_data).set_index("Index")
+        else:
+            return pd.DataFrame(columns=["Index"] + list(periods.values()))
+
+    # Function to create a bar chart
+    def create_performance_chart(performance_df, period):
+        fig = go.Figure()
+        
+        fig.add_trace(go.Bar(
+            y=performance_df.index,
+            x=performance_df[period],
+            orientation='h'
+        ))
+        
+        fig.update_layout(
+            title=f"Stock Index Performance ({period})",
+            xaxis_title="Performance %",
+            yaxis_title="Index",
+            height=700
+        )
+        
+        return fig
+
+
+    st.write("Select a timeframe to view performance trends:")
+
+    # Create horizontal radio buttons using columns
+    timeframes = list(periods.values())
+    cols = st.columns(len(timeframes))
+
+    selected_period = None
+    for i, col in enumerate(cols):
+        with col:
+            if st.button(timeframes[i]):
+                selected_period = timeframes[i]
+
+    # Default selection (if no button is clicked)
+    if selected_period is None:
+        selected_period = timeframes[7]  # Default to "1Y"
+
+    # Fetch performance data
+    performance_df = get_indices_performance()
+
+    if not performance_df.empty:
+        # Display table of performance
+        #st.write("### Performance Data")
+        #st.dataframe(performance_df)
+
+        # Display selected period chart
+        #st.write(f"#### {selected_period} Performance Chart")
+        fig = create_performance_chart(performance_df, selected_period)
+        st.plotly_chart(fig)
+    else:
+        st.warning("No performance data available.")
 
     
 # To run the app
