@@ -2101,11 +2101,10 @@ def stock_analysis_app():
             st.markdown(f"### Overall Score: {overall_score:.2f}")
             st.markdown(f"<p style='font-size:20px;'>Recommendation: {recommendation}</p>", unsafe_allow_html=True)
 
-    with tab2:
+    with tab3:
         pass
 
 if __name__ == '__main__':
     stock_analysis_app()
 
 
-    
