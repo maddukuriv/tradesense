@@ -1,76 +1,29 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import yfinance as yf
+
 import pandas_ta as ta
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.stats import linregress
-from newsapi.newsapi_client import NewsApiClient
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-import nltk
-from wordcloud import WordCloud
+
 import matplotlib.pyplot as plt
 import requests
-from utils.constants import ticker_to_company_dict
-import nltk
+from utils.constants import ticker_to_company_dict,SUPABASE_URL,SUPABASE_KEY
+
 import plotly.express as px
 from supabase import create_client
-nltk.download('vader_lexicon')
-
- # Supabase Credentials
-
-SUPABASE_URL= 'https://kbhdeynmboawkjtxvlek.supabase.co'
-SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaGRleW5tYm9hd2tqdHh2bGVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA2NDg3NjAsImV4cCI6MjA1NjIyNDc2MH0.T3L5iIn1FiBlBo5HZMqysgokD8cfOw2n3u_YCJV0DkQ'
 
 
-# Initialize NewsApiClient with your API key
-newsapi = NewsApiClient(api_key='252b2075083945dfbed8945ddc240a2b')
-analyzer = SentimentIntensityAnalyzer()
+
+
+
 
 # Helper functions
 
-# Placeholder for ticker_to_company_dict
-tickers = {
-        "^GSPC": "S&P 500",
-        "^DJI": "Dow Jones Industrial Average",
-        "^IXIC": "NASDAQ Composite",
-        "^NYA": "NYSE Composite",
-        "^XAX": "NYSE AMEX Composite Index",
-        "^RUT": "Russell 2000",
-        "^VIX": "CBOE Volatility Index",
-        "^FTSE": "FTSE 100 (UK)",
-        "^GDAXI": "DAX (Germany)",
-        "^FCHI": "CAC 40 (France)",
-        "^STOXX50E": "EURO STOXX 50",
-        "^N100": "Euronext 100",
-        "^BFX": "BEL 20 (Belgium)",
-        "^GSPTSE": "S&P/TSX Composite Index (Canada)",
-        "^HSI": "Hang Seng Index (Hong Kong)",
-        "^STI": "STI Index (Singapore)",
-        "^AXJO": "S&P/ASX 200 (Australia)",
-        "^AORD": "All Ordinaries (Australia)",
-        "^BSESN": "S&P BSE SENSEX (India)",
-        "^JKSE": "IDX Composite (Indonesia)",
-        "^KLSE": "FTSE Bursa Malaysia KLCI",
-        "^NZ50": "S&P/NZX 50 Index (New Zealand)",
-        "^KS11": "KOSPI Composite Index (South Korea)",
-        "^TWII": "TWSE Capitalization Weighted Stock Index (Taiwan)",
-        "000001.SS": "SSE Composite Index (China)",
-        "^N225": "Nikkei 225 (Japan)",
-        "^BVSP": "IBOVESPA (Brazil)",
-        "^MXX": "IPC Mexico",
-        "^IPSA": "S&P IPSA (Chile)",
-        "^MERV": "MERVAL (Argentina)",
-        "^TA125.TA": "TA-125 (Israel)",
-        "^CASE30": "EGX 30 (Egypt)",
-        "^JN0U.JO": "Top 40 USD Net TRI Index (South Africa)",
-        "DX-Y.NYB": "US Dollar Index",
-        "^XDB": "British Pound Currency Index",
-        "^XDE": "Euro Currency Index",
-        "^XDN": "Japanese Yen Currency Index"
-    }
+# Convert the ticker_to_company_dict dictionary to a list of company names
+company_names = list(ticker_to_company_dict.values())
 
 
 # Initialize Supabase client
@@ -80,23 +33,19 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Function to fetch stock data
 def get_stock_data(ticker):
     try:
-        response = supabase.table("stock_data").select("*").filter("ticker", "eq", ticker).execute()
-        
-        if response.data:
-            data = pd.DataFrame(response.data)
-            
-            # Convert date column to datetime and set as index if present
-            if 'date' in data.columns:
-                data['date'] = pd.to_datetime(data['date'])
-                data.set_index('date', inplace=True)
-            
-            return data
-        else:
-            st.warning(f"No data found for ticker: {ticker}")
-            return None
+            response = supabase.table("stock_data").select("*").eq("ticker", ticker).execute()
+            if response.data:
+                df = pd.DataFrame(response.data)
+                if 'date' in df.columns:
+                    df['date'] = pd.to_datetime(df['date'])
+                    df.drop_duplicates(subset=['date'], keep='first', inplace=True)  # Fix here
+                    df.set_index('date', inplace=True)
+                    df = df.sort_index()
+                return df
+            else:
+                return pd.DataFrame()
     except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        return None
+        return pd.DataFrame()
 
 # manual technical formaulas
 def atr(high, low, close, window=14):
@@ -1807,207 +1756,7 @@ def get_macd_hist_colors(macd_hist):
 
 
 
-def get_available_sources():
-    try:
-        sources = newsapi.get_sources(language='en')
-        available_sources = [source['id'] for source in sources['sources']]
-        return available_sources
-    except Exception as e:
-        st.error(f"An error occurred while fetching sources: {e}")
-        return []
 
-def fetch_news(company_name, start_date, end_date, selected_sources=None):
-    try:
-        if selected_sources:
-            all_articles = newsapi.get_everything(
-                q=company_name,
-                language='en',
-                from_param=start_date.strftime('%Y-%m-%d'),
-                to=end_date.strftime('%Y-%m-%d'),
-                sort_by='publishedAt',
-                page_size=50,
-                sources=','.join(selected_sources)
-            )
-        else:
-            all_articles = newsapi.get_everything(
-                q=company_name,
-                language='en',
-                from_param=start_date.strftime('%Y-%m-%d'),
-                to=end_date.strftime('%Y-%m-%d'),
-                sort_by='publishedAt',
-                page_size=50
-            )
-        
-        articles = []
-        if 'articles' in all_articles:
-            for article in all_articles['articles']:
-                articles.append({
-                    'title': article['title'],
-                    'description': article.get('description', ''),
-                    'url': article['url'],
-                    'publishedAt': article['publishedAt'],
-                    'source': article['source']['name']
-                })
-        return articles
-    except Exception as e:
-        st.error(f"An error occurred while fetching news: {e}")
-        return []
-
-def perform_sentiment_analysis(articles):
-    sentiments = []
-    for article in articles:
-        if article['description']:
-            description_score = analyzer.polarity_scores(article['description'])
-            title_score = analyzer.polarity_scores(article['title'])
-            
-            # Weighted average of title and description sentiments
-            combined_score = {
-                'compound': (description_score['compound'] * 0.7 + title_score['compound'] * 0.3),
-                'neg': (description_score['neg'] * 0.7 + title_score['neg'] * 0.3),
-                'neu': (description_score['neu'] * 0.7 + title_score['neu'] * 0.3),
-                'pos': (description_score['pos'] * 0.7 + title_score['pos'] * 0.3)
-            }
-            
-            article['sentiment'] = combined_score
-            article['length'] = len(article['description']) + len(article['title'])  # Add article length
-            sentiments.append(article)
-        else:
-            article['sentiment'] = {'compound': 0, 'neg': 0, 'neu': 0, 'pos': 0}
-            article['length'] = len(article['title'])
-            sentiments.append(article)
-    return sentiments
-
-def make_recommendation(sentiments):
-    current_date = datetime.now().date()
-    
-    # Calculate weighted average sentiment
-    total_weighted_score = 0
-    total_weight = 0
-    
-    for article in sentiments:
-        days_old = (current_date - pd.to_datetime(article['publishedAt']).date()).days + 1
-        weight = (1 / days_old) * article['length']  # Weight by recency and length
-        total_weighted_score += article['sentiment']['compound'] * weight
-        total_weight += weight
-    
-    weighted_avg_sentiment = total_weighted_score / total_weight if total_weight > 0 else 0
-
-    if weighted_avg_sentiment > 0.15:
-        return f"Based on the weighted sentiment analysis, it is recommended to BUY the stock. (Score: {weighted_avg_sentiment:.2f})"
-    elif weighted_avg_sentiment < -0.15:
-        return f"Based on the weighted sentiment analysis, it is recommended to SELL the stock. (Score: {weighted_avg_sentiment:.2f})"
-    else:
-        return f"Based on the weighted sentiment analysis, it is recommended to HOLD the stock. (Score: {weighted_avg_sentiment:.2f})"
-
-def count_sentiments(sentiments):
-    positive = sum(1 for s in sentiments if s['sentiment']['compound'] > 0.15)
-    negative = sum(1 for s in sentiments if s['sentiment']['compound'] < -0.15)
-    neutral = len(sentiments) - positive - negative
-    return positive, negative, neutral
-
-def generate_wordcloud(text, title):
-    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
-    plt.figure(figsize=(10, 5))
-    plt.imshow(wordcloud, interpolation='bilinear')
-    plt.title(title)
-    plt.axis('off')
-    st.pyplot(plt)
-
-def plot_sentiment_histogram(df):
-    fig_hist = px.histogram(df, x=df['sentiment'].apply(lambda x: x['compound']),
-                            nbins=20, labels={'x': 'Sentiment Score'},
-                            title='Sentiment Score Distribution')
-    st.plotly_chart(fig_hist)
-
-def plot_sentiment_over_time(df):
-    df['publishedAt'] = pd.to_datetime(df['publishedAt']).dt.tz_localize(None)
-    df = df.sort_values(by='publishedAt')
-
-    fig_time = px.scatter(df, x='publishedAt', y=df['sentiment'].apply(lambda x: x['compound']),
-                          color=df['sentiment'].apply(lambda x: 'Positive' if x['compound'] > 0 else ('Negative' if x['compound'] < 0 else 'Neutral')),
-                          labels={'x': 'Date', 'y': 'Sentiment Score'},
-                          title='Sentiment Score Over Time')
-    st.plotly_chart(fig_time)
-
-def sentiment_analysis_section(ticker, start_date, end_date):
-    st.subheader(f"Sentiment Analysis for {ticker}")
-
-    # Fetch company name using yfinance
-    try:
-        company_info = yf.Ticker(ticker)
-        company_name = company_info.info['shortName']
-    except KeyError:
-        company_name = ticker
-
-    st.write(f"Fetching news for: {company_name}")
-
-    if company_name:
-        # Fetch available news sources
-        available_sources = get_available_sources()
-        selected_sources = st.multiselect('Select News Sources', available_sources)
-
-        with st.spinner("Fetching news..."):
-            articles = fetch_news(company_name, end_date - timedelta(days=29), end_date, selected_sources)
-
-        if articles:
-            with st.spinner("Performing sentiment analysis..."):
-                sentiments = perform_sentiment_analysis(articles)
-
-            df = pd.DataFrame(sentiments)
-
-            # Display Articles or Summary
-            view_option = st.sidebar.radio("View Options", ["Articles", "Summary"])
-
-            if view_option == "Articles":
-                st.write("Recent News Articles:")
-                for i, row in df.iterrows():
-                    st.write(f"**Article {i+1}:** {row['title']}")
-                    st.write(f"**Published At:** {row['publishedAt']}")
-                    st.write(f"**Source:** {row['source']}")
-                    st.write(f"**Description:** {row['description']}")
-                    st.write(f"**URL:** [Read more]({row['url']})")
-                    st.write(f"**Sentiment Score:** {row['sentiment']['compound']:.2f}")
-                    st.write("---")
-
-            elif view_option == "Summary":
-                st.subheader("Sentiment Analysis Summary:")
-                avg_sentiment = sum(df['sentiment'].apply(lambda x: x['compound'])) / len(df)
-                st.write(f"Average Sentiment Score: {avg_sentiment:.2f}")
-
-                positive, negative, neutral = count_sentiments(sentiments)
-                st.write(f"Positive Articles: {positive}")
-                st.write(f"Negative Articles: {negative}")
-                st.write(f"Neutral Articles: {neutral}")
-
-                # Sentiment distribution histogram
-                plot_sentiment_histogram(df)
-
-                # Sentiment over time graph
-                plot_sentiment_over_time(df)
-
-                # Sentiment distribution pie chart
-                sentiment_counts = pd.Series([positive, negative, neutral], index=['Positive', 'Negative', 'Neutral'])
-                fig_pie = px.pie(sentiment_counts, values=sentiment_counts, names=sentiment_counts.index, title='Sentiment Distribution')
-                st.plotly_chart(fig_pie)
-
-                # Generate and display word clouds for positive and negative articles
-                positive_text = ' '.join(df[df['sentiment'].apply(lambda x: x['compound']) > 0.15]['description'].dropna())
-                negative_text = ' '.join(df[df['sentiment'].apply(lambda x: x['compound']) < -0.15]['description'].dropna())
-                if positive_text:
-                    st.write("Positive Articles Word Cloud:")
-                    generate_wordcloud(positive_text, 'Positive Articles')
-                if negative_text:
-                    st.write("Negative Articles Word Cloud:")
-                    generate_wordcloud(negative_text, 'Negative Articles')
-
-                recommendation = make_recommendation(sentiments)
-                st.subheader("Investment Recommendation:")
-                st.write(recommendation)
-
-        else:
-            st.write("No recent news headlines found.")
-    else:
-        st.write("Invalid ticker symbol.")
 
 
 
@@ -2015,8 +1764,14 @@ def sentiment_analysis_section(ticker, start_date, end_date):
 def stock_analysis_app():
     st.sidebar.subheader("Stock Analysis")
 
+    # selectbox for company name auto-suggestion
+    selected_company = st.sidebar.selectbox('Select the Stock:', company_names)
+
     # Retrieve the corresponding ticker for the selected company
-    ticker = st.sidebar.selectbox("Select Stock Index:", options=list(tickers.keys()), format_func=lambda x: tickers[x])
+    ticker = [ticker for ticker, company in ticker_to_company_dict.items() if company == selected_company][0]
+
+    # Retrieve the corresponding ticker for the selected company
+    #ticker = st.sidebar.selectbox("Select Stock Index:", options=list(tickers.keys()), format_func=lambda x: tickers[x])
 
     if ticker:
         data = get_stock_data(ticker)

@@ -1,18 +1,36 @@
 import streamlit as st
 from utils.mongodb import trades_collection, users_collection
 from utils.constants import ticker_to_company_dict
-import yfinance as yf
+from supabase import create_client
 import pandas as pd
 from datetime import datetime
 import plotly.graph_objects as go
 import plotly.express as px
 
+# Supabase client setup 
+
+SUPABASE_URL= 'https://kbhdeynmboawkjtxvlek.supabase.co'
+SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaGRleW5tYm9hd2tqdHh2bGVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA2NDg3NjAsImV4cCI6MjA1NjIyNDc2MH0.T3L5iIn1FiBlBo5HZMqysgokD8cfOw2n3u_YCJV0DkQ'
+
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+def get_last_traded_price(ticker):
+    try:
+        response = supabase.table("stock_data").select("*").filter("ticker", "eq", ticker).order("date", desc=True).limit(1).execute()
+        
+        if response.data:
+            return response.data[0]['close']  # Assuming 'close' column holds the last traded price
+        else:
+            return None  # Return None if no data found
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
+        return None
+
 # Function to get company name from the dictionary
 def get_company_name(ticker, ticker_to_company):
     return ticker_to_company.get(ticker, ticker)
 
-# Set Streamlit page configuration
-st.set_page_config(page_title="Real-Time Trading Portfolio", layout="wide")
 
 # Updated get_user_id function
 def get_user_id(email):
@@ -202,12 +220,27 @@ def display_portfolio():
     if not st.session_state.portfolio.empty:
         portfolio_df = st.session_state.portfolio.copy()
         portfolio_df['Company Name'] = portfolio_df['Stock'].apply(lambda x: get_company_name(x, ticker_to_company_dict))
-        portfolio_df['Last Traded Price'] = portfolio_df['Stock'].apply(lambda x: yf.Ticker(x).history(period="1d")['Close'].iloc[-1])
+        portfolio_df['Last Traded Price'] = portfolio_df['Stock'].apply(lambda x: get_last_traded_price(x))
         portfolio_df['Invested Value'] = portfolio_df['Quantity'] * portfolio_df['Average Cost']
         portfolio_df['Current Value'] = portfolio_df['Quantity'] * portfolio_df['Last Traded Price']
         portfolio_df['P&L'] = portfolio_df['Current Value'] - (portfolio_df['Quantity'] * portfolio_df['Average Cost'])
         portfolio_df['P&L (%)'] = (portfolio_df['P&L'] / (portfolio_df['Quantity'] * portfolio_df['Average Cost'])) * 100
-        st.dataframe(portfolio_df, use_container_width=True)
+      
+
+        # Split into two DataFrames
+        portfolio_table_1 = portfolio_df[['Stock','Quantity','Average Cost','Last Traded Price']]
+        portfolio_table_2 = portfolio_df[['Company Name','Invested Value' , 'Current Value', 'P&L', 'P&L (%)']]
+
+        # Streamlit layout with two columns
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("Investment Details")
+            st.dataframe(portfolio_table_1, use_container_width=True)
+
+        with col2:
+            st.subheader("Performance")
+            st.dataframe(portfolio_table_2, use_container_width=True)
 
 
         # Streamlit layout with two columns

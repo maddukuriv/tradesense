@@ -1,10 +1,9 @@
 import streamlit as st
 from components.my_portfolio import get_user_id
 from utils.mongodb import watchlists_collection
-import yfinance as yf
+from supabase import create_client
 import pandas as pd
-from utils.constants import ticker_to_company_dict 
-
+from utils.constants import ticker_to_company_dict,rsi,calculate_adx,calculate_bollinger_bands,SUPABASE_URL,SUPABASE_KEY
 
 import plotly.graph_objects as go
 import plotly.subplots as sp
@@ -12,54 +11,24 @@ import pandas_ta as ta
 import numpy as np
 from datetime import datetime, timedelta
 
-
-# Helper function to calculate RSI
-def rsi(series, window=14):
-    delta = series.diff(1)
-    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-    rs = gain / loss
-    rsi = 100 - (100 / (1 + rs))
-    return rsi
-
-# Helper function to calculate ADX
-def calculate_adx(df):
-    plus_dm = df['High'].diff()
-    minus_dm = df['Low'].diff()
-    plus_dm[plus_dm < 0] = 0
-    minus_dm[minus_dm > 0] = 0
-    tr = pd.concat([df['High'] - df['Low'], 
-                    (df['High'] - df['Close'].shift()).abs(), 
-                    (df['Low'] - df['Close'].shift()).abs()], axis=1).max(axis=1)
-    atr = tr.rolling(window=14).mean()
-    plus_di = 100 * (plus_dm.ewm(alpha=1/14).mean() / atr)
-    minus_di = abs(100 * (minus_dm.ewm(alpha=1/14).mean() / atr))
-    adx = 100 * (abs(plus_di - minus_di) / (plus_di + minus_di)).ewm(alpha=1/14).mean()
-    return adx, plus_di, minus_di
-
-# Helper function to calculate Bollinger Bands
-def calculate_bollinger_bands(df, window=20):
-    df['BB_Middle'] = df['Close'].rolling(window=window).mean()
-    df['BB_Std'] = df['Close'].rolling(window=window).std()
-    df['Bollinger_High'] = df['BB_Middle'] + (df['BB_Std'] * 2)
-    df['Bollinger_Low'] = df['BB_Middle'] - (df['BB_Std'] * 2)
-    return df['Bollinger_High'], df['Bollinger_Low']
+# Supabase client setup 
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Helper function to calculate indicators
 def calculate_indicators(data):
     try:
-        data['5_day_EMA'] = data['Close'].ewm(span=5, adjust=False).mean()
-        data['15_day_EMA'] = data['Close'].ewm(span=15, adjust=False).mean()
+        data['5_day_EMA'] = data['close'].ewm(span=5, adjust=False).mean()
+        data['15_day_EMA'] = data['close'].ewm(span=15, adjust=False).mean()
         
         # MACD calculations
-        exp1 = data['Close'].ewm(span=12, adjust=False).mean()
-        exp2 = data['Close'].ewm(span=26, adjust=False).mean()
+        exp1 = data['close'].ewm(span=12, adjust=False).mean()
+        exp2 = data['close'].ewm(span=26, adjust=False).mean()
         data['MACD'] = exp1 - exp2
         data['MACD_Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
         data['MACD_Hist'] = data['MACD'] - data['MACD_Signal']
 
         # Manual RSI calculation
-        data['RSI'] = rsi(data['Close'])
+        data['RSI'] = rsi(data['close'])
 
         # Manual ADX calculation
         data['ADX'], data['+DI'], data['-DI'] = calculate_adx(data)
@@ -68,27 +37,34 @@ def calculate_indicators(data):
         data['Bollinger_High'], data['Bollinger_Low'] = calculate_bollinger_bands(data)
 
         # Volume MA calculation
-        data['20_day_vol_MA'] = data['Volume'].rolling(window=20).mean()
+        data['20_day_vol_MA'] = data['volume'].rolling(window=20).mean()
         
         return data
     except Exception as e:
         raise ValueError(f"Error calculating indicators: {str(e)}")
 
-# Helper function to fetch ticker data from yfinance
+# Helper function to fetch ticker data
 def fetch_ticker_data(ticker):
+    
     try:
-        stock = yf.Ticker(ticker)
-        data = stock.history(period="1y")
-        if data.empty:
-            raise ValueError(f"Ticker {ticker} not found")
-        return data
+            response = supabase.table("stock_data").select("*").eq("ticker", ticker).execute()
+            if response.data:
+                df = pd.DataFrame(response.data)
+                if 'date' in df.columns:
+                    df['date'] = pd.to_datetime(df['date'])
+                    df.drop_duplicates(subset=['date'], keep='first', inplace=True)  # Fix here
+                    df.set_index('date', inplace=True)
+                    df = df.sort_index()
+                return df
+            else:
+                return pd.DataFrame()
     except Exception as e:
-        raise ValueError(f"Error fetching data for ticker {ticker}: {str(e)}")
+        return pd.DataFrame()
 
-# Helper function to fetch company info from yfinance
+# Helper function to fetch company info 
 def get_company_info(ticker):
     try:
-        stock = yf.Ticker(ticker)
+        stock = fetch_ticker_data(ticker)
         info = stock.info
         return info.get('longName', 'N/A'), info.get('sector', 'N/A'), info.get('industry', 'N/A')
     except Exception as e:
@@ -103,8 +79,10 @@ def display_watchlist():
     user_id = get_user_id(st.session_state.email)
     watchlist = list(watchlists_collection.find({"user_id": user_id}))
 
-    # Replace text input with a selectbox for company name auto-suggestion
-    selected_company = st.sidebar.selectbox('Select or Enter Company Name:', company_names)
+    st.sidebar.header("Watchlist Management")
+
+    # selectbox for company name auto-suggestion
+    selected_company = st.sidebar.selectbox('Select the Stock:', company_names)
 
     # Retrieve the corresponding ticker for the selected company
     ticker = [ticker for ticker, company in ticker_to_company_dict.items() if company == selected_company][0]
@@ -137,7 +115,7 @@ def display_watchlist():
                     'Company Name': company_name,
                     'Sector': sector,
                     'Industry': industry,
-                    'Close': latest_data['Close'],
+                    'Close': latest_data['close'],
                     '5_day_EMA': latest_data['5_day_EMA'],
                     '15_day_EMA': latest_data['15_day_EMA'],
                     'MACD': latest_data['MACD'],
@@ -147,7 +125,7 @@ def display_watchlist():
                     'ADX': latest_data['ADX'],
                     'Bollinger_High': latest_data['Bollinger_High'],
                     'Bollinger_Low': latest_data['Bollinger_Low'],
-                    'Volume': latest_data['Volume'],
+                    'Volume': latest_data['volume'],
                     '20_day_vol_MA': latest_data['20_day_vol_MA']
                 }
                 ticker_to_name_map[ticker] = company_name
@@ -183,7 +161,7 @@ def display_watchlist():
                 end_date = st.date_input('End Date', value=datetime.now() + timedelta(days=1))
 
             # Step 1: Download Stock Data
-            data = yf.download(stock_symbol, start=start_date, end=end_date)
+            data = fetch_ticker_data(ticker)
 
             # Check if data is available
             if data.empty:
@@ -191,40 +169,40 @@ def display_watchlist():
             else:
                 # Step 2: Calculate Technical Indicators
                 # VWAP (Volume Weighted Average Price)
-                data['VWAP'] = (data['Close'] * data['Volume']).cumsum() / data['Volume'].cumsum()
+                data['VWAP'] = (data['close'] * data['volume']).cumsum() / data['volume'].cumsum()
 
                 # MFI (Money Flow Index)
-                data['MFI'] = ta.mfi(data['High'], data['Low'], data['Close'], data['Volume'], length=14)
+                data['MFI'] = ta.mfi(data['high'], data['low'], data['close'], data['volume'], length=14)
 
                 # OBV (On-Balance Volume)
-                data['OBV'] = ta.obv(data['Close'], data['Volume'])
+                data['OBV'] = ta.obv(data['close'], data['volume'])
 
                 # CMF (Chaikin Money Flow)
-                data['CMF'] = ta.cmf(data['High'], data['Low'], data['Close'], data['Volume'], length=20)
+                data['CMF'] = ta.cmf(data['high'], data['low'], data['close'], data['volume'], length=20)
 
                 # A/D (Accumulation/Distribution)
-                data['AD'] = ta.ad(data['High'], data['Low'], data['Close'], data['Volume'])
+                data['AD'] = ta.ad(data['high'], data['low'], data['close'], data['volume'])
 
                 # Ichimoku Cloud
-                data['Ichimoku_Tenkan'] = (data['High'].rolling(window=9).max() + data['Low'].rolling(window=9).min()) / 2
-                data['Ichimoku_Kijun'] = (data['High'].rolling(window=26).max() + data['Low'].rolling(window=26).min()) / 2
+                data['Ichimoku_Tenkan'] = (data['high'].rolling(window=9).max() + data['low'].rolling(window=9).min()) / 2
+                data['Ichimoku_Kijun'] = (data['high'].rolling(window=26).max() + data['low'].rolling(window=26).min()) / 2
                 data['Ichimoku_Senkou_Span_A'] = ((data['Ichimoku_Tenkan'] + data['Ichimoku_Kijun']) / 2).shift(26)
-                data['Ichimoku_Senkou_Span_B'] = ((data['High'].rolling(window=52).max() + data['Low'].rolling(window=52).min()) / 2).shift(26)
+                data['Ichimoku_Senkou_Span_B'] = ((data['high'].rolling(window=52).max() + data['low'].rolling(window=52).min()) / 2).shift(26)
 
                 # MACD (Moving Average Convergence Divergence)
-                data['EMA_12'] = data['Close'].ewm(span=12, adjust=False).mean()
-                data['EMA_26'] = data['Close'].ewm(span=26, adjust=False).mean()
+                data['EMA_12'] = data['close'].ewm(span=12, adjust=False).mean()
+                data['EMA_26'] = data['close'].ewm(span=26, adjust=False).mean()
                 data['MACD'] = data['EMA_12'] - data['EMA_26']
                 data['MACD_signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
                 data['MACD_hist'] = data['MACD'] - data['MACD_signal']
 
                 # SuperTrend
-                supertrend = ta.supertrend(data['High'], data['Low'], data['Close'], length=7, multiplier=3.0)
+                supertrend = ta.supertrend(data['high'], data['low'], data['close'], length=7, multiplier=3.0)
                 data['SuperTrend'] = supertrend['SUPERT_7_3.0']
 
                 # Bollinger Bands
-                data['BB_Middle'] = data['Close'].rolling(window=20).mean()
-                data['BB_Std'] = data['Close'].rolling(window=20).std()
+                data['BB_Middle'] = data['close'].rolling(window=20).mean()
+                data['BB_Std'] = data['close'].rolling(window=20).std()
                 data['BB_High'] = data['BB_Middle'] + (data['BB_Std'] * 2)
                 data['BB_Low'] = data['BB_Middle'] - (data['BB_Std'] * 2)
 
@@ -268,31 +246,31 @@ def display_watchlist():
                                 psar[i] = high[i - 2]
                     return psar
 
-                data['PSAR'] = parabolic_sar(data['High'], data['Low'], data['Close'])
+                data['PSAR'] = parabolic_sar(data['high'], data['low'], data['close'])
 
                 # GMMA (Guppy Multiple Moving Average)
-                short_ema = ta.ema(data['Close'], length=3)
-                long_ema = ta.ema(data['Close'], length=30)
+                short_ema = ta.ema(data['close'], length=3)
+                long_ema = ta.ema(data['close'], length=30)
 
                 # RSI (Relative Strength Index)
-                data['RSI'] = ta.rsi(data['Close'], length=14)
+                data['RSI'] = ta.rsi(data['close'], length=14)
 
                 # Stochastic Oscillator
-                data['Stochastic_%K'] = (data['Close'] - data['Low'].rolling(window=14).min()) / (data['High'].rolling(window=14).max() - data['Low'].rolling(window=14).min()) * 100
+                data['Stochastic_%K'] = (data['close'] - data['low'].rolling(window=14).min()) / (data['high'].rolling(window=14).max() - data['low'].rolling(window=14).min()) * 100
                 data['Stochastic_%D'] = data['Stochastic_%K'].rolling(window=3).mean()
 
                 # DMI (Directional Movement Index)
                 def calculate_adx(data):
                     # Calculate the Directional Movements
-                    plus_dm = data['High'].diff()
-                    minus_dm = data['Low'].diff()
+                    plus_dm = data['high'].diff()
+                    minus_dm = data['low'].diff()
                     plus_dm[plus_dm < 0] = 0
                     minus_dm[minus_dm > 0] = 0
                     
                     # Calculate the True Range (TR) and Average True Range (ATR)
-                    tr = pd.concat([data['High'] - data['Low'], 
-                                    (data['High'] - data['Close'].shift()).abs(), 
-                                    (data['Low'] - data['Close'].shift()).abs()], axis=1).max(axis=1)
+                    tr = pd.concat([data['high'] - data['low'], 
+                                    (data['high'] - data['close'].shift()).abs(), 
+                                    (data['low'] - data['close'].shift()).abs()], axis=1).max(axis=1)
                     atr = tr.rolling(window=14).mean()
                     
                     # Calculate the Positive Directional Indicator (Plus DI) and Negative Directional Indicator (Minus DI)
@@ -308,16 +286,16 @@ def display_watchlist():
                 data['ADX'], data['Plus_DI'], data['Minus_DI'] = calculate_adx(data)
 
                 # Awesome Oscillator
-                data['AO'] = ta.ao(data['High'], data['Low'])
+                data['AO'] = ta.ao(data['high'], data['low'])
 
                 # Bollinger Bands %B
-                data['BB%'] =  (data['Close'] - data['BB_Low']) / (data['BB_High'] - data['BB_Low'])
+                data['BB%'] =  (data['close'] - data['BB_Low']) / (data['BB_High'] - data['BB_Low'])
 
                 # Mass Index
-                data['Mass_Index'] = (data['High'] - data['Low']).rolling(window=25).sum() / (data['High'] - data['Low']).rolling(window=9).sum()
+                data['Mass_Index'] = (data['high'] - data['low']).rolling(window=25).sum() / (data['high'] - data['low']).rolling(window=9).sum()
 
                 # Relative Volatility Index (RVI)
-                data['RVI'] = ta.rvi(data['High'], data['Low'], data['Close'], length=14)
+                data['RVI'] = ta.rvi(data['high'], data['low'], data['close'], length=14)
 
                 # ZigZag
                 def zigzag(close, percentage=5):
@@ -330,16 +308,16 @@ def display_watchlist():
                     zigzag_series.iloc[zz] = close.iloc[zz]
                     return zigzag_series.ffill()
 
-                data['ZigZag'] = zigzag(data['Close'])
+                data['ZigZag'] = zigzag(data['close'])
 
                 # Pivot Points Standard
-                data['Pivot'] = (data['High'] + data['Low'] + data['Close']) / 3
-                data['R1'] = 2 * data['Pivot'] - data['Low']
-                data['S1'] = 2 * data['Pivot'] - data['High']
+                data['Pivot'] = (data['high'] + data['low'] + data['close']) / 3
+                data['R1'] = 2 * data['Pivot'] - data['low']
+                data['S1'] = 2 * data['Pivot'] - data['high']
 
                 # Fibonacci Levels
-                max_price = data['High'].max()
-                min_price = data['Low'].min()
+                max_price = data['high'].max()
+                min_price = data['low'].min()
                 diff = max_price - min_price
                 data['Fibo_23_6'] = max_price - 0.236 * diff
                 data['Fibo_38_2'] = max_price - 0.382 * diff
@@ -347,15 +325,15 @@ def display_watchlist():
                 data['Fibo_61_8'] = max_price - 0.618 * diff
 
                 # Calculate volume moving averages
-                data['Volume_MA10'] = data['Volume'].rolling(window=10).mean()
-                data['Volume_MA30'] = data['Volume'].rolling(window=30).mean()
+                data['Volume_MA10'] = data['volume'].rolling(window=10).mean()
+                data['Volume_MA30'] = data['volume'].rolling(window=30).mean()
 
                 # Moving Averages
-                data['MA50'] = data['Close'].rolling(window=50).mean()
-                data['MA200'] = data['Close'].rolling(window=200).mean()
+                data['MA50'] = data['close'].rolling(window=50).mean()
+                data['MA200'] = data['close'].rolling(window=200).mean()
 
                 # Identify volume spikes (days where volume is 50% higher than 10-day MA)
-                volume_spikes = data[data['Volume'] > data['Volume_MA30'] * 1.5].index
+                volume_spikes = data[data['volume'] > data['Volume_MA30'] * 1.5].index
 
                 # Step 3: Create Subplots for all indicators
            
@@ -371,7 +349,7 @@ def display_watchlist():
 
                 # Plot VWAP and Close
                 fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], name='VWAP',line={'color': 'red', 'width': 2}), row=1, col=1)
-                fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Close',line={'color': 'blue', 'width': 2}), row=1, col=1)
+                fig.add_trace(go.Scatter(x=data.index, y=data['close'], name='close',line={'color': 'blue', 'width': 2}), row=1, col=1)
 
 
                 # Plot MFI with red lines at 20 and 80
@@ -393,7 +371,7 @@ def display_watchlist():
                 # Plot Ichimoku Cloud
                 fig.add_trace(go.Scatter(x=data.index, y=data['Ichimoku_Senkou_Span_A'], name='Ichimoku A', fill='tonexty', fillcolor='rgba(0,128,0,0.3)'), row=2, col=3)
                 fig.add_trace(go.Scatter(x=data.index, y=data['Ichimoku_Senkou_Span_B'], name='Ichimoku B', fill='tonexty', fillcolor='rgba(255,0,0,0.8)'), row=2, col=3)
-                fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Close',line={'color': 'blue', 'width': 2}), row=2, col=3)
+                fig.add_trace(go.Scatter(x=data.index, y=data['close'], name='close',line={'color': 'blue', 'width': 2}), row=2, col=3)
 
 
 
@@ -405,17 +383,17 @@ def display_watchlist():
 
                 # Plot SuperTrend
                 fig.add_trace(go.Scatter(x=data.index, y=data['SuperTrend'], name='SuperTrend', line=dict(color='red')), row=3, col=2)
-                fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Close', line={'color': 'blue', 'width': 2}), row=3, col=2)
+                fig.add_trace(go.Scatter(x=data.index, y=data['close'], name='close', line={'color': 'blue', 'width': 2}), row=3, col=2)
 
                 # Plot Bollinger Bands
                 fig.add_trace(go.Scatter(x=data.index, y=data['BB_High'], name='BB High', line=dict(color='red')), row=3, col=3)
                 fig.add_trace(go.Scatter(x=data.index, y=data['BB_Low'], name='BB Low', line=dict(color='green')), row=3, col=3)
                 fig.add_trace(go.Scatter(x=data.index, y=data['BB_Middle'], name='BB Middle', line={'dash': 'dot'}), row=3, col=3)
-                fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Close', line={'color': 'blue', 'width': 2}), row=3, col=3)
+                fig.add_trace(go.Scatter(x=data.index, y=data['close'], name='close', line={'color': 'blue', 'width': 2}), row=3, col=3)
 
                 # Plot Parabolic SAR
                 fig.add_trace(go.Scatter(x=data.index, y=data['PSAR'], mode='markers', name='PSAR', marker=dict(color='red', size=3)), row=4, col=1)
-                fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Close', line={'color': 'blue', 'width': 2}), row=4, col=1)
+                fig.add_trace(go.Scatter(x=data.index, y=data['close'], name='close', line={'color': 'blue', 'width': 2}), row=4, col=1)
 
                 # Plot GMMA
                 fig.add_trace(go.Scatter(x=data.index, y=short_ema, name='Short EMA', line=dict(color='green')), row=4, col=2)
@@ -461,19 +439,19 @@ def display_watchlist():
                 fig.add_trace(go.Scatter(x=data.index, y=data['Pivot'], name='Pivot'), row=7, col=2)
                 fig.add_trace(go.Scatter(x=data.index, y=data['R1'], name='R1', line={'dash': 'dot'}), row=7, col=2)
                 fig.add_trace(go.Scatter(x=data.index, y=data['S1'], name='S1', line={'dash': 'dot'}), row=7, col=2)
-                fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Close', line={'color': 'blue', 'width': 2}), row=7, col=2)
+                fig.add_trace(go.Scatter(x=data.index, y=data['close'], name='Close', line={'color': 'blue', 'width': 2}), row=7, col=2)
 
                 # Plot Fibonacci Levels
                 fig.add_trace(go.Scatter(x=data.index, y=data['Fibo_23_6'], name='Fibo 23.6%', line={'dash': 'dot'}), row=7, col=3)
                 fig.add_trace(go.Scatter(x=data.index, y=data['Fibo_38_2'], name='Fibo 38.2%', line={'dash': 'dot'}), row=7, col=3)
                 fig.add_trace(go.Scatter(x=data.index, y=data['Fibo_50'], name='Fibo 50%', line={'dash': 'dot'}), row=7, col=3)
                 fig.add_trace(go.Scatter(x=data.index, y=data['Fibo_61_8'], name='Fibo 61.8%', line={'dash': 'dot'}), row=7, col=3)
-                fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Close', line={'color': 'blue', 'width': 2}), row=7, col=3)
+                fig.add_trace(go.Scatter(x=data.index, y=data['close'], name='Close', line={'color': 'blue', 'width': 2}), row=7, col=3)
 
 
                 # Plot Volume
-                fig.add_trace(go.Bar(x=data.index, y=data['Volume'], name='Volume', marker_color='blue'), row=8, col=1)
-                fig.add_trace(go.Scatter(x=volume_spikes, y=data.loc[volume_spikes, 'Volume'], mode='markers', name='Volume_Spike', marker=dict(color='red', size=8)), row=8, col=1)
+                fig.add_trace(go.Bar(x=data.index, y=data['volume'], name='Volume', marker_color='blue'), row=8, col=1)
+                fig.add_trace(go.Scatter(x=volume_spikes, y=data.loc[volume_spikes, 'volume'], mode='markers', name='Volume_Spike', marker=dict(color='red', size=8)), row=8, col=1)
                 fig.add_trace(go.Scatter(x=data.index, y=data['Volume_MA10'], name='Vol MA10', line={'color': 'green', 'width': 2}), row=8, col=1)
                 fig.add_trace(go.Scatter(x=data.index, y=data['Volume_MA30'], name='Vol MA30', line={'color': 'red', 'width': 2}), row=8, col=1)
 
