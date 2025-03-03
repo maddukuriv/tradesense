@@ -33,6 +33,7 @@ def home_page_app():
                 if 'date' in data.columns:
                     data['date'] = pd.to_datetime(data['date'])
                     data.set_index('date', inplace=True)
+                    data = data.sort_index()
                 
                 return data
             else:
