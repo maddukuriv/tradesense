@@ -2,7 +2,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from utils.mongodb import init_db
 from authentication import login, signup, forgot_password
-from components import my_account, my_portfolio, my_watchlist, markets, stock_screener, stock_analysis, admin, home_page,stock_comparision,news
+from components import my_account, my_portfolio, my_watchlist, markets, stock_screener, stock_analysis, admin, home_page,stock_comparision,news,etl
 
 # Initialize MongoDB collections
 init_db()
@@ -54,6 +54,8 @@ def main_menu():
     # Add Database Admin Page only if the user is an admin
     if st.session_state.is_admin:
         menu_options.append("Database Admin Page")
+        menu_options.append("ETL Page")
+
 
     choice = st.selectbox("Select an option", menu_options)
     return choice
@@ -101,5 +103,7 @@ else:
             stock_comparision.display_stock_comparison()
         elif choice == "Database Admin Page" and st.session_state.is_admin:
             admin.display_tables()
+        elif choice == "ETL Page" and st.session_state.is_admin:
+            etl.etl_app()
         else:
             st.error("You don't have permission to access this page.")
