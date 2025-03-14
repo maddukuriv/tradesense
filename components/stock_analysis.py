@@ -33,7 +33,13 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Function to fetch stock data
 def get_stock_data(ticker):
     try:
-            response = supabase.table("stock_data").select("*").eq("ticker", ticker).execute()
+            response = (
+            supabase.table("stock_data")
+            .select("*")
+            .filter("ticker", "eq", ticker)
+            .order("date", desc=True)  # Order by latest date
+            .execute()
+        )
             if response.data:
                 df = pd.DataFrame(response.data)
                 if 'date' in df.columns:

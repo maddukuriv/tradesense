@@ -24,7 +24,13 @@ def home_page_app():
     # Function to fetch stock data
     def get_stock_data(ticker):
         try:
-            response = supabase.table("stock_data").select("*").filter("ticker", "eq", ticker).execute()
+            response = (
+            supabase.table("stock_data")
+            .select("*")
+            .filter("ticker", "eq", ticker)
+            .order("date", desc=True)  # Order by latest date
+            .execute()
+        )
             
             if response.data:
                 data = pd.DataFrame(response.data)

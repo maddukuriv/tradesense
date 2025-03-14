@@ -418,7 +418,13 @@ def stock_screener_app():
 
 
         try:
-            response = supabase.table("stock_data").select("*").eq("ticker", ticker).execute()
+            response = (
+            supabase.table("stock_data")
+            .select("*")
+            .filter("ticker", "eq", ticker)
+            .order("date", desc=True)  # Order by latest date
+            .execute()
+        )
             if response.data:
                 data = pd.DataFrame(response.data)
                 if 'date' in data.columns:
