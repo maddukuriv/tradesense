@@ -47,7 +47,13 @@ def calculate_indicators(data):
 def fetch_ticker_data(ticker):
     
     try:
-            response = supabase.table("stock_data").select("*").eq("ticker", ticker).execute()
+            response = (
+            supabase.table("stock_data")
+            .select("*")
+            .filter("ticker", "eq", ticker)
+            .order("date", desc=False)  # Order by latest date
+            .execute()
+        )
             if response.data:
                 df = pd.DataFrame(response.data)
                 if 'date' in df.columns:
@@ -64,11 +70,32 @@ def fetch_ticker_data(ticker):
 # Helper function to fetch company info 
 def get_company_info(ticker):
     try:
-        stock = fetch_ticker_data(ticker)
-        info = stock.info
-        return info.get('longName', 'N/A'), info.get('sector', 'N/A'), info.get('industry', 'N/A')
+        # Fetch data from the Supabase database
+        response = supabase.table("stock_info").select("*").execute()
+
+        # Check if data exists and convert it to a DataFrame
+        if response.data:
+            df = pd.DataFrame(response.data)
+            
+            # Filter the data based on the ticker symbol
+            company_data = df[df['ticker'] == ticker]
+            
+            if not company_data.empty:
+                long_name = company_data['longname'].iloc[0]  # Get the long name
+                sector = company_data['sector'].iloc[0]  # Get the sector
+                industry = company_data['industry'].iloc[0]  # Get the industry
+                return long_name, sector, industry
+            else:
+                st.error(f"No data found for ticker '{ticker}' in the database.")
+                return None, None, None
+        else:
+            st.error(f"No data found in the database.")
+            return None, None, None
+
     except Exception as e:
-        return 'N/A', 'N/A', 'N/A'
+        st.error(f"Error fetching company info for ticker '{ticker}': {e}")
+        return None, None, None
+
 
 # Convert the ticker_to_company_dict dictionary to a list of company names
 company_names = list(ticker_to_company_dict.values())

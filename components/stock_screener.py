@@ -422,7 +422,7 @@ def stock_screener_app():
             supabase.table("stock_data")
             .select("*")
             .filter("ticker", "eq", ticker)
-            .order("date", desc=True)  # Order by latest date
+            .order("date", desc=False)  # Order by latest date
             .execute()
         )
             if response.data:
@@ -670,8 +670,28 @@ def stock_screener_app():
 
     def fetch_company_info(ticker):
         try:
-            ticker_info = get_stock_data(ticker)
-            return ticker_info.get('longName'), ticker_info.get('sector'), ticker_info.get('industry')
+            # Fetch data from the Supabase database
+            response = supabase.table("stock_info").select("*").execute()
+
+            # Check if data exists and convert it to a DataFrame
+            if response.data:
+                df = pd.DataFrame(response.data)
+                
+                # Filter the data based on the ticker symbol
+                company_data = df[df['ticker'] == ticker]
+                
+                if not company_data.empty:
+                    long_name = company_data['longname'].iloc[0]  # Get the long name
+                    sector = company_data['sector'].iloc[0]  # Get the sector
+                    industry = company_data['industry'].iloc[0]  # Get the industry
+                    return long_name, sector, industry
+                else:
+                    st.error(f"No data found for ticker '{ticker}' in the database.")
+                    return None, None, None
+            else:
+                st.error(f"No data found in the database.")
+                return None, None, None
+
         except Exception as e:
             st.error(f"Error fetching company info for ticker '{ticker}': {e}")
             return None, None, None
