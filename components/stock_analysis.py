@@ -372,6 +372,8 @@ def calculate_technical_indicators(df):
     df['5_day_EMA'] = df['close'].ewm(span=5, adjust=False).mean()
     df['10_day_EMA'] = df['close'].ewm(span=10, adjust=False).mean()
     df['20_day_EMA'] = df['close'].ewm(span=20, adjust=False).mean()
+    df['50_day_EMA'] = df['close'].ewm(span=50, adjust=False).mean()
+    df['200_day_EMA'] = df['close'].ewm(span=200, adjust=False).mean()
     # Arnaud Legoux Moving Average (ALMA)
     df['ALMA'] = ta.alma(df['close'])
     # Aroon Indicator
@@ -1795,12 +1797,13 @@ def stock_analysis_app():
 
     # Define columns for each category
     indicator_groups = {
-        "Trend": ["MACD_hist", "5_day_EMA", "10_day_EMA", "20_day_EMA", "ALMA", "Aroon_Up", "Aroon_Down", "ADX", "Plus_DI", "Minus_DI"],
-        "Momentum": ["RSI", "AO", "AC", "CMO", "CCI", "CRSI", "Coppock", "DPO", "KST", "KST_Signal", "Momentum"],
-        "Volatility": ["ATR", "BB_%B", "BB_Width", "Chaikin_Volatility", "Choppiness_Index", "Hist_Vol_Annualized", "Mass_Index"],
-        "Volume": ["AD", "BoP", "CMF", "CO", "EMV", "EFI", "KVO", "KVO_Signal", "MFI", "Net_Volume"],
-        "Support_Resistance": ["Pivot_Point", "Fractal_Up", "Fractal_Down", "Resistance_1", "Support_1", "Resistance_2", "Support_2"],
+        "Trend": ["MACD_hist","MACD", "MACD_signal", "5_day_EMA", "10_day_EMA", "20_day_EMA", "50_day_EMA","200_day_EMA", "ALMA", "Aroon_Up", "Aroon_Down", "ADX", "Plus_DI", "Minus_DI","DEMA","Envelope_High","Envelope_Low","GMMA_Short","GMMA_Long","HMA","Ichimoku_Tenkan","Ichimoku_Kijun","Ichimoku_Senkou_Span_A","Ichimoku_Senkou_Span_B","KC_High","KC_Low","KC_Middle","LSMA","MAC_Upper","MAC_Lower","Parabolic_SAR","SuperTrend","Price_Channel_Upper","Price_Channel_Lower","TEMA_20","Jaw", "Teeth", "Lips"],
+        "Momentum": ["RSI", "AO", "AC", "CMO", "CCI", "CRSI", "Coppock", "DPO", "KST", "KST_Signal", "Momentum","Stochastic_%K", "Stochastic_%D","ROC","Stochastic_RSI","TRIX","TRIX_Signal","TSI","TSI_Signal","Ultimate_Oscillator","Relative_Vigor_Index","RVI_Signal","SMI_Ergodic","Fisher_Transform","Williams_%R"],
+        "Volatility": ["ATR", "BB_High", "BB_Low","20_day_SMA", "BB_%B", "BB_Width", "Chaikin_Volatility", "Choppiness_Index","Chande_Kroll_Stop_Long","Chande_Kroll_Stop_Short", "Hist_Vol_Annualized", "Mass_Index","RVI","RVI_Signal","Std_Dev","Vol_CtC","Vol_ZtC","Vol_OHLC","Vol_Index","Chop_Zone","ZigZag"],
+        "Volume": ["AD", "BoP", "CMF", "CO", "EMV", "EFI", "KVO", "KVO_Signal", "MFI", "Net_Volume","OBV","PVT","VWAP","VWMA","VO","VPFR","VPVR","Vortex_Pos","Vortex_Neg"],
+        "Support_Resistance": ["Fractal_Up", "Fractal_Down", "Pivot_Point", "Resistance_1", "Support_1", "Resistance_2", "Resistance_3", "Support_3", "Support_2","Donchian_High", "Donchian_Low", "Fib_0.0", "Fib_0.236", "Fib_0.382", "Fib_0.5", "Fib_0.618", "Fib_1.0", "Darvas_High", "Darvas_Low"],
     }
+
 
     # Calculate overall weightage score
     overall_score = (
