@@ -16,10 +16,6 @@ import plotly.express as px
 from supabase import create_client
 
 
-
-
-
-
 # Helper functions
 
 # Convert the ticker_to_company_dict dictionary to a list of company names
@@ -30,28 +26,43 @@ company_names = list(ticker_to_company_dict.values())
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @st.cache_data(ttl=300)
-# Function to fetch stock data
+# Function to fetch stock data with pagination
 def get_stock_data(ticker):
     try:
+        all_data = []  # List to hold all the rows from different pages
+        response = None
+        page = 1
+        while True:
+            # Fetch data from Supabase, limiting it to a reasonable number (e.g., 1000 rows per page)
             response = (
-            supabase.table("stock_data")
-            .select("*")
-            .filter("ticker", "eq", ticker)
-            .order("date", desc=True)  # Order by latest date
-            .execute()
-        )
+                supabase.table("stock_data")
+                .select("*")
+                .filter("ticker", "eq", ticker)
+                .order("date", desc=True)  # Order by latest date
+                .range((page - 1) * 1000, page * 1000 - 1)  # Pagination, fetch 1000 rows at a time
+                .execute()
+            )
             if response.data:
-                df = pd.DataFrame(response.data)
-                if 'date' in df.columns:
-                    df['date'] = pd.to_datetime(df['date'])
-                    df.drop_duplicates(subset=['date'], keep='first', inplace=True)  # Fix here
-                    df.set_index('date', inplace=True)
-                    df = df.sort_index()
-                return df
+                all_data.extend(response.data)  # Append the fetched data
+                page += 1  # Move to the next page
             else:
-                return pd.DataFrame()
+                break  # No more data, exit the loop
+
+        if all_data:
+            df = pd.DataFrame(all_data)
+            if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'])
+                df.drop_duplicates(subset=['date'], keep='first', inplace=True)  # Ensure no duplicates
+                df.set_index('date', inplace=True)
+                df = df.sort_index()  # Ensure data is sorted by date
+            return df
+        else:
+            return pd.DataFrame()  # No data found
     except Exception as e:
+        print(f"Error fetching data: {e}")
         return pd.DataFrame()
+
+
 
 # manual technical formaulas
 def atr(high, low, close, window=14):
@@ -1732,8 +1743,10 @@ def create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
                         dict(count=14, label='14d', step='day', stepmode='backward'),
                         dict(count=1, label='1m', step='month', stepmode='backward'),
                         dict(count=3, label='3m', step='month', stepmode='backward'),
-                        dict(count=6, label='6m', step='month', stepmode='backward'),
+                        dict(count=6, label='6m', step='month', stepmode='backward', visible=True),  # Default to 6 months
                         dict(count=1, label='1y', step='year', stepmode='backward'),
+                        dict(count=3, label='3y', step='year', stepmode='backward'),
+                        dict(count=5, label='5y', step='year', stepmode='backward'),  # Add 5 years option
                         dict(step='all')
                     ])
                 ),
@@ -1751,6 +1764,7 @@ def create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
 
 
 
+
 def get_macd_hist_colors(macd_hist):
     colors = []
     for i in range(1, len(macd_hist)):
@@ -1760,12 +1774,6 @@ def get_macd_hist_colors(macd_hist):
             color = 'red' if macd_hist.iloc[i] < macd_hist.iloc[i - 1] else 'lightcoral'
         colors.append(color)
     return colors
-
-
-
-
-
-
 
 
 # Main Streamlit App
@@ -1793,7 +1801,7 @@ def stock_analysis_app():
         scores, details = calculate_scores(data)
 
     st.title('Stock Technical Analysis')
-    tab1, tab2, tab3 = st.tabs(["📈Technical Charts", "📊Analysis","📈Price Forecast"])
+    tab1, tab2 = st.tabs(["📈Technical Charts", "📊Analysis"])
 
     # Define columns for each category
     indicator_groups = {
@@ -1823,6 +1831,7 @@ def stock_analysis_app():
             create_combined_chart(data, group_name, indicators, ticker, use_candlestick)
             st.divider()
 
+        st.dataframe(data)
     with tab2:
 
         for group_name, indicators in indicator_groups.items():
@@ -1865,8 +1874,6 @@ def stock_analysis_app():
             st.markdown(f"### Overall Score: {overall_score:.2f}")
             st.markdown(f"<p style='font-size:20px;'>Recommendation: {recommendation}</p>", unsafe_allow_html=True)
 
-    with tab3:
-        pass
 
 if __name__ == '__main__':
     stock_analysis_app()
