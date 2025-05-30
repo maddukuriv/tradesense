@@ -123,7 +123,7 @@ def home_page_app():
 
 
     # Dictionary of stock indices
-    indices = {
+    ticker_names = {
         "^GSPC": "S&P 500",
         "^DJI": "Dow Jones Industrial Average",
         "^IXIC": "NASDAQ Composite",
@@ -160,10 +160,66 @@ def home_page_app():
         "DX-Y.NYB": "US Dollar Index",
         "^XDB": "British Pound Currency Index",
         "^XDE": "Euro Currency Index",
-        "^XDN": "Japanese Yen Currency Index"
-    }
-
+        "^XDN": "Japanese Yen Currency Index",
+  
+        "GC=F": "Gold Futures",
+        "SI=F": "Silver Futures",
+        "PL=F": "Platinum Futures",
+        "HG=F": "Copper Futures",
+        "PA=F": "Palladium Futures",
+        
+        "CL=F": "Crude Oil WTI Futures",
+        "HO=F": "Heating Oil Futures",
+        "NG=F": "Natural Gas Futures",
+        "RB=F": "RBOB Gasoline Futures",
+        "BZ=F": "Brent Crude Oil Futures",
+        
+        "ZC=F": "Corn Futures",
+        "ZO=F": "Oats Futures",
+        "KE=F": "Wheat Futures (Kansas)",
+        "ZR=F": "Rough Rice Futures",
+        "ZL=F": "Soybean Oil Futures",
+        "ZS=F": "Soybean Futures",
+        
+        "CC=F": "Cocoa Futures",
+        "KC=F": "Coffee Futures",
+        "CT=F": "Cotton Futures",
+        "OJ=F": "Orange Juice Futures",
+        "SB=F": "Sugar Futures",
     
+        "BTC-USD": "Bitcoin (BTC)",
+        "ETH-USD": "Ethereum (ETH)",
+        "XRP-USD": "Ripple (XRP)",
+        "USDT-USD": "Tether (USDT)",
+        "SOL-USD": "Solana (SOL)",
+        "BNB-USD": "Binance Coin (BNB)",
+        "DOGE-USD": "Dogecoin (DOGE)",
+        "ADA-USD": "Cardano (ADA)"
+        }
+
+
+    # Ticker Categories
+    categories = {
+        'Indices': [
+            "^GSPC", "^DJI", "^IXIC", "^NYA", "^XAX", "^RUT", "^VIX",
+            "^FTSE", "^GDAXI", "^FCHI", "^STOXX50E", "^N100", "^BFX",
+            "^GSPTSE", "^HSI", "^STI", "^AXJO", "^AORD", "^BSESN",
+            "^JKSE", "^KLSE", "^NZ50", "^KS11", "^TWII", "000001.SS",
+            "^N225", "^BVSP", "^MXX", "^IPSA", "^MERV", "^TA125.TA",
+            "^CASE30", "^JN0U.JO","GC=F", "SI=F", "PL=F", "HG=F", "PA=F","CL=F", "HO=F", "NG=F", "RB=F", "BZ=F","ZC=F", "ZO=F", "KE=F", "ZR=F", "ZL=F", "ZS=F", "CC=F", "KC=F", "CT=F", "OJ=F", "SB=F"
+        ],
+        'America_tickers' : [ "^GSPC", "^DJI", "^IXIC", "^NYA", "^XAX", "^RUT", "^VIX","^GSPTSE", "^BVSP", "^MXX", "^IPSA", "^MERV"],
+        'Europe_tickers' : ["^FTSE", "^GDAXI", "^FCHI", "^STOXX50E", "^N100", "^BFX"],
+        'Asia_tickers' : ["^HSI", "^STI", "^AXJO", "^AORD", "^BSESN", "^JKSE", "^KLSE","^NZ50", "^KS11", "^TWII", "000001.SS", "^N225"],
+        'Middle_east_africa_tickers' : ["^TA125.TA", "^CASE30", "^JN0U.JO"],
+
+
+        'Commodities': ["GC=F", "SI=F", "PL=F", "HG=F", "PA=F","CL=F", "HO=F", "NG=F", "RB=F", "BZ=F","ZC=F", "ZO=F", "KE=F", "ZR=F", "ZL=F", "ZS=F", "CC=F", "KC=F", "CT=F", "OJ=F", "SB=F"],
+        
+        'Forex': ["DX-Y.NYB", "^XDB", "^XDE", "^XDN"],
+        'Crypto': ["BTC-USD","ETH-USD","XRP-USD","USDT-USD","SOL-USD","BNB-USD","DOGE-USD","ADA-USD"],   
+        'Overview' :["BTC-USD","^GSPC","^FTSE", "^BSESN","GC=F"]
+}
 
 
     # Time periods for performance calculation
@@ -201,17 +257,16 @@ def home_page_app():
 
     # Function to fetch performance of all indices
     @st.cache_data
-    def get_indices_performance():
+    def get_performance_by_category(category_tickers):
         performance_data = []
 
-        for ticker, name in indices.items():
+        for ticker in category_tickers:
             data = get_stock_data(ticker)
-            
             if data is not None and 'close' in data.columns and not data.empty:
-                performance = compute_performance(data)
-                performance["Index"] = name
-                performance_data.append(performance)
-        
+                perf = compute_performance(data)
+                perf["Index"] = ticker_names.get(ticker, ticker)  # <-- changed here
+                performance_data.append(perf)
+
         if performance_data:
             return pd.DataFrame(performance_data).set_index("Index")
         else:
@@ -222,16 +277,20 @@ def home_page_app():
         fig = go.Figure()
         
         fig.add_trace(go.Bar(
-            y=performance_df.index,
-            x=performance_df[period],
-            orientation='h'
+            x=performance_df.index, 
+            y=performance_df[period],
+            text=[f"{v:.2f}%" if v is not None else "" for v in performance_df[period]],  # Show % on bars
+            textposition='outside',  # Text outside bars
         ))
         
         fig.update_layout(
-            title=f"Stock Index Performance ({period})",
-            xaxis_title="Performance %",
-            yaxis_title="Index",
-            height=700
+            title=f"Performance ({period})",
+            xaxis_title="Index",
+            yaxis_title="% Change",
+            height=500,
+            xaxis_tickangle=-45,  # Tilt x-axis labels for better readability
+            uniformtext_minsize=8,
+            uniformtext_mode='hide'
         )
         
         return fig
@@ -247,7 +306,8 @@ def home_page_app():
 
         # User input for ticker
         with col1:
-            ticker = st.selectbox("Select Stock Index:", options=list(indices.keys()), format_func=lambda x: indices[x])
+            ticker = st.selectbox("Select Stock Index:", options=list(ticker_names.keys()), format_func=lambda x: ticker_names[x])
+
 
         # Select indicators
         with col2:
@@ -271,21 +331,77 @@ def home_page_app():
     with tab2:
         # Radio buttons for timeframes
         selected_period = st.radio("Select a timeframe to view performance trends", list(periods.values()), index=7,horizontal=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("📈 Indices - America")
+            indices_perf = get_performance_by_category(categories['America_tickers'])
+            if not indices_perf.empty:
+                st.plotly_chart(create_performance_chart(indices_perf, selected_period))
+            else:
+                st.warning("No Indices data.")
 
-        # Fetch performance data
-        performance_df = get_indices_performance()
+        with col2:
+            st.subheader("📈 Indices - Europe")
+            forex_perf = get_performance_by_category(categories['Europe_tickers'])
+            if not forex_perf.empty:
+                st.plotly_chart(create_performance_chart(forex_perf, selected_period))
+            else:
+                st.warning("No Indices data.")      
 
-        if not performance_df.empty:
-            # Display table of performance
-            #st.write("### Performance Data")
-            #st.dataframe(performance_df)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("📈 Indices - Asia")
+            indices_perf = get_performance_by_category(categories['Asia_tickers'])
+            if not indices_perf.empty:
+                st.plotly_chart(create_performance_chart(indices_perf, selected_period))
+            else:
+                st.warning("No Indices data.")
 
-            # Display selected period chart
-            # st.write(f"### {selected_period} Performance Chart")
-            fig = create_performance_chart(performance_df, selected_period)
-            st.plotly_chart(fig)
-        else:
-            st.warning("No performance data available.")
+        with col2:
+            st.subheader("📈 Indices - Middle East & Africa")
+            forex_perf = get_performance_by_category(categories['Middle_east_africa_tickers'])
+            if not forex_perf.empty:
+                st.plotly_chart(create_performance_chart(forex_perf, selected_period))
+            else:
+                st.warning("No Indices data.")  
+
+
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("💰 Crypto")
+            crypto_perf = get_performance_by_category(categories['Crypto'])
+            if not crypto_perf.empty:
+                st.plotly_chart(create_performance_chart(crypto_perf, selected_period))
+            else:
+                st.warning("No Crypto data.")
+
+        with col2:
+            st.subheader("💱 Forex")
+            forex_perf = get_performance_by_category(categories['Forex'])
+            if not forex_perf.empty:
+                st.plotly_chart(create_performance_chart(forex_perf, selected_period))
+            else:
+                st.warning("No Forex data.")
+
+        col3, col4 = st.columns(2)
+
+        with col3:
+            st.subheader("🛢️ Commodities")
+            commodities_perf = get_performance_by_category(categories['Commodities'])
+            if not commodities_perf.empty:
+                st.plotly_chart(create_performance_chart(commodities_perf, selected_period))
+            else:
+                st.warning("No Commodities data.")
+
+        with col4:
+            st.subheader("📊 Overview")
+            crypto_perf = get_performance_by_category(categories['Overview'])
+            if not crypto_perf.empty:
+                st.plotly_chart(create_performance_chart(crypto_perf, selected_period))
+            else:
+                st.warning("No Overview data.")
+
         
         st.divider()
 
