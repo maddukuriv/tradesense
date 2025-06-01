@@ -306,7 +306,7 @@ def home_page_app():
 
         # User input for ticker
         with col1:
-            ticker = st.selectbox("Select Stock Index:", options=list(ticker_names.keys()), format_func=lambda x: ticker_names[x])
+            ticker = st.selectbox("Select Asset:", options=list(ticker_names.keys()), format_func=lambda x: ticker_names[x])
 
 
         # Select indicators

@@ -414,29 +414,47 @@ def stock_screener_app():
         return zigzag_series.ffill()
 
     
+
+
+
     def get_stock_data(ticker):
-
-
         try:
-            response = (
-            supabase.table("stock_data")
-            .select("*")
-            .filter("ticker", "eq", ticker)
-            .order("date", desc=False)  # Order by latest date
-            .execute()
-        )
-            if response.data:
-                data = pd.DataFrame(response.data)
-                if 'date' in data.columns:
-                    data['date'] = pd.to_datetime(data['date'])
-                    data.drop_duplicates(subset=['date'], keep='first', inplace=True)  # Fix here
-                    data.set_index('date', inplace=True)
-                    
-                return data
+            all_data = []
+            page = 1
+            while True:
+                response = (
+                    supabase.table("stock_data")
+                    .select("*")
+                    .filter("ticker", "eq", ticker)
+                    .range((page - 1) * 1000, page * 1000 - 1)
+                    .execute()
+                )
+                if response.data:
+                    all_data.extend(response.data)
+                    page += 1
+                else:
+                    break
+
+            if all_data:
+                df = pd.DataFrame(all_data)
+                if 'date' in df.columns:
+                    df['date'] = pd.to_datetime(df['date'])
+                    df = df.drop_duplicates(subset=['date'], keep='first')
+                    df = df.sort_values(by='date', ascending=True)  # Sort newest first
+                    df.set_index('date', inplace=True)
+
+                    # 🔁 Filter for last 6 months only
+                    six_months_ago = pd.Timestamp.today() - pd.DateOffset(months=6)
+                    df = df[df.index >= six_months_ago]
+
+                return df
             else:
                 return pd.DataFrame()
         except Exception as e:
+            print(f"Error fetching data: {e}")
             return pd.DataFrame()
+
+
 
 
     @st.cache_data
