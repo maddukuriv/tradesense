@@ -51,8 +51,9 @@ def fetch_ticker_data(ticker):
             supabase.table("stock_data")
             .select("*")
             .filter("ticker", "eq", ticker)
-            .order("date", desc=False)  # Order by latest date
+            .order("date", desc=True)  # Order by latest date
             .execute()
+      
         )
             if response.data:
                 df = pd.DataFrame(response.data)
@@ -179,7 +180,6 @@ def display_watchlist():
             col1, col2, col3 = st.columns(3)
             with col1:
                 stock_symbol = st.selectbox("Select Stock", watchlist_df['Ticker'].tolist())
-                #st.text_input("Stock Symbol", "APOLLOHOSP.NS")
                 
                 watchlist_data[ticker]
             with col2:
@@ -508,11 +508,6 @@ def display_watchlist():
             st.write("No valid data found for the tickers in your watchlist.")
     else:
         st.write("Your watchlist is empty.")
-
-
-
-
-
 
 
 

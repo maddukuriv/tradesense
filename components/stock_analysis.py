@@ -377,6 +377,28 @@ def zigzag(close, percentage=5):
     zigzag_series.iloc[zz] = close.iloc[zz]
     return zigzag_series.ffill()
 
+# Chaikin Money Flow (CMF)
+def cmf(high, low, close, volume, window=20):
+    mf_multiplier = ((close - low) - (high - close)) / (high - low)
+    mf_volume = mf_multiplier * volume
+    cmf = mf_volume.rolling(window=window).sum() / volume.rolling(window=window).sum()
+    return cmf
+
+# Money Flow Index (MFI)
+def mfi(high, low, close, volume, window=14):
+    typical_price = (high + low + close) / 3
+    raw_money_flow = typical_price * volume
+    
+    positive_mf = raw_money_flow.where(typical_price > typical_price.shift(1), 0)
+    negative_mf = raw_money_flow.where(typical_price < typical_price.shift(1), 0)
+    
+    positive_mf_sum = positive_mf.rolling(window=window).sum()
+    negative_mf_sum = negative_mf.rolling(window=window).sum()
+    
+    money_flow_ratio = positive_mf_sum / negative_mf_sum.replace(0, 1)
+    mfi = 100 - (100 / (1 + money_flow_ratio))
+    return mfi
+
 def calculate_technical_indicators(df):
     ##Trend Indicators--------------------------------------------------------
     # Moving Averages
@@ -507,7 +529,7 @@ def calculate_technical_indicators(df):
     # Balance of Power (BOP)
     df['BoP'] = (df['close'] - df['open']) / (df['high'] - df['low'])
     # Chaikin Money Flow (CMF)
-    df['CMF'] = ((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low']) * df['volume']
+    df['CMF'] = cmf(df['high'], df['low'], df['close'], df['volume'], window=20)
     # Chaikin Oscillator
     df['CO'] = df['close'].diff(3).ewm(span=10, adjust=False).mean()
     # Ease of Movement (EMV)
@@ -518,7 +540,7 @@ def calculate_technical_indicators(df):
     df['KVO'] = (df['high'] - df['low']).ewm(span=34, adjust=False).mean() - (df['high'] - df['low']).ewm(span=55, adjust=False).mean()
     df['KVO_Signal'] = df['KVO'].ewm(span=13, adjust=False).mean()
     # Money Flow Index (MFI)
-    df['MFI'] = (df['close'].diff(1) / df['close'].shift(1) * df['volume']).rolling(window=14).mean()
+    df['MFI'] = mfi(df['high'], df['low'], df['close'], df['volume'], window=14)
     # Net Volume
     df['Net_Volume'] = df['volume'] * (df['close'].diff() / df['close'].shift(1))
     # On Balance Volume (OBV):
@@ -1806,7 +1828,7 @@ def stock_analysis_app():
     # Define columns for each category
     indicator_groups = {
         "Trend": ["MACD_hist","MACD", "MACD_signal", "5_day_EMA", "10_day_EMA", "20_day_EMA", "50_day_EMA","200_day_EMA", "ALMA", "Aroon_Up", "Aroon_Down", "ADX", "Plus_DI", "Minus_DI","DEMA","Envelope_High","Envelope_Low","GMMA_Short","GMMA_Long","HMA","Ichimoku_Tenkan","Ichimoku_Kijun","Ichimoku_Senkou_Span_A","Ichimoku_Senkou_Span_B","KC_High","KC_Low","KC_Middle","LSMA","MAC_Upper","MAC_Lower","Parabolic_SAR","SuperTrend","Price_Channel_Upper","Price_Channel_Lower","TEMA_20","Jaw", "Teeth", "Lips"],
-        "Momentum": ["RSI", "AO", "AC", "CMO", "CCI", "CRSI", "Coppock", "DPO", "KST", "KST_Signal", "Momentum","Stochastic_%K", "Stochastic_%D","ROC","Stochastic_RSI","TRIX","TRIX_Signal","TSI","TSI_Signal","Ultimate_Oscillator","Relative_Vigor_Index","RVI_Signal","SMI_Ergodic","Fisher_Transform","Williams_%R"],
+        "Momentum": ["RSI", "AO", "AC", "CMO", "CCI", "CRSI", "Coppock", "DPO", "KST", "KST_Signal", "Momentum","Stochastic_%K", "Stochastic_%D","ROC","Stochastic_RSI","TRIX","TRIX_Signal","TSI","TSI_Signal","Ultimate_Oscillator","Relative_Vigor_Index","RVI_Signal","SMI_Ergodic","Fisher_Transform","Fisher_Transform_Signal","Williams_%R"],
         "Volatility": ["ATR", "BB_High", "BB_Low","20_day_SMA", "BB_%B", "BB_Width", "Chaikin_Volatility", "Choppiness_Index","Chande_Kroll_Stop_Long","Chande_Kroll_Stop_Short", "Hist_Vol_Annualized", "Mass_Index","RVI","RVI_Signal","Std_Dev","Vol_CtC","Vol_ZtC","Vol_OHLC","Vol_Index","Chop_Zone","ZigZag"],
         "Volume": ["AD", "BoP", "CMF", "CO", "EMV", "EFI", "KVO", "KVO_Signal", "MFI", "Net_Volume","OBV","PVT","VWAP","VWMA","VO","VPFR","VPVR","Vortex_Pos","Vortex_Neg"],
         "Support_Resistance": ["Fractal_Up", "Fractal_Down", "Pivot_Point", "Resistance_1", "Support_1", "Resistance_2", "Resistance_3", "Support_3", "Support_2","Donchian_High", "Donchian_Low", "Fib_0.0", "Fib_0.236", "Fib_0.382", "Fib_0.5", "Fib_0.618", "Fib_1.0", "Darvas_High", "Darvas_Low"],
