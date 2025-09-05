@@ -43,28 +43,31 @@ def calculate_indicators(data):
     except Exception as e:
         raise ValueError(f"Error calculating indicators: {str(e)}")
 
+
 # Helper function to fetch ticker data
 def fetch_ticker_data(ticker):
-    
     try:
-            response = (
+        response = (
             supabase.table("stock_data")
             .select("*")
             .filter("ticker", "eq", ticker)
             .order("date", desc=True)  # Order by latest date
             .execute()
-      
         )
-            if response.data:
-                df = pd.DataFrame(response.data)
-                if 'date' in df.columns:
-                    df['date'] = pd.to_datetime(df['date'])
-                    df.drop_duplicates(subset=['date'], keep='first', inplace=True)  # Fix here
-                    df.set_index('date', inplace=True)
-                    df = df.sort_index()
-                return df
-            else:
-                return pd.DataFrame()
+        if response.data:
+            df = pd.DataFrame(response.data)
+            if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'])
+                df.drop_duplicates(subset=['date'], keep='first', inplace=True)
+                df.set_index('date', inplace=True)
+                df = df.sort_index()
+
+                six_months_ago = datetime.today() - timedelta(days=180)
+                df = df[df.index >= six_months_ago]
+
+            return df
+        else:
+            return pd.DataFrame()
     except Exception as e:
         return pd.DataFrame()
 
@@ -172,23 +175,23 @@ def display_watchlist():
             st.dataframe(styled_df.set_properties(**{'text-align': 'center'}).set_table_styles(
                 [{'selector': 'th', 'props': [('text-align', 'center')]}]
             ))
+            
+            
 
-            # Streamlit App Title
-            st.subheader("Technical Indicators and Price Analysis")
+            # Selectionbox for Inputs
+            col1, col2 = st.columns(2)
 
-            # Sidebar for Inputs
-            col1, col2, col3 = st.columns(3)
             with col1:
-                stock_symbol = st.selectbox("Select Stock", watchlist_df['Ticker'].tolist())
-                
-                watchlist_data[ticker]
+                st.subheader("Technical Indicators Vs Price")
             with col2:
-                start_date = st.date_input('Start Date', value=datetime.now() - timedelta(days=365))
-            with col3:
-                end_date = st.date_input('End Date', value=datetime.now() + timedelta(days=1))
+                stock_symbol = st.selectbox("Select Stock", watchlist_df['Ticker'].tolist())
+
+                
+            #watchlist_data[ticker]
+
 
             # Step 1: Download Stock Data
-            data = fetch_ticker_data(ticker)
+            data = fetch_ticker_data(stock_symbol)
 
             # Check if data is available
             if data.empty:
@@ -488,8 +491,14 @@ def display_watchlist():
 
                 # Layout
                 fig.update_layout(
-                    height=3000, width=1500,
-                    title='Technical Indicators and Price Analysis',
+                    height=3000,
+                    width=2000,
+                    title={
+                        'text': f"Technical Indicators and Price Analysis of {stock_symbol}",
+                        'x': 0.5,   # Center horizontally
+                        'xanchor': 'center',
+                        'yanchor': 'top'
+                    },
                     showlegend=False
                 )
 

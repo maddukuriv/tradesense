@@ -21,17 +21,15 @@ def stock_screener_app():
     ticker_category = st.sidebar.selectbox("Select Index/Crypto", [ "Indices","Commodities","Currencies","Cryptocurrencies","Stocks-Largecap","Stocks-Midcap","Stocks-Smallcap","Stocks-Largemidcap","Stocks-Midsmall","Stocks-Multicap","Stocks-S&P 500", "Stocks-FTSE 100"])
 
     # Dropdown for Strategies
-    #submenu = st.sidebar.selectbox("Select Strategy", ["Momentum", "Mean Reversion", "volume Driven", "Trend Following","Breakout","Volatility Based","Reversal","Trend Conformation","Volatility Reversion","volume & Momentum"])
-
-
+    #submenu = st.sidebar.selectbox("Select Strategy", ["Trend Following", "Mean Reversion", "Momentum", "volume Driven", "Breakout","Volatility Based","Reversal","Trend Conformation","Volatility Reversion","volume & Momentum"])
 
 
     # Define strategy options with icons
     strategy_map = {
-        "Momentum": ":chart_with_upwards_trend:",
-        "Mean Reversion": ":repeat:",
-        "Volume Driven": ":bar_chart:",
         "Trend Following": ":chart:",
+        "Mean Reversion": ":repeat:",
+        "Momentum": ":chart_with_upwards_trend:",
+        "Volume Driven": ":bar_chart:",
         "Breakout": ":fire:",
         "Volatility Based": ":cyclone:",
         "Reversal": ":arrows_clockwise:",
@@ -43,7 +41,7 @@ def stock_screener_app():
     st.sidebar.write("## Select Strategy")
 
     # Initialize selected strategy with "Momentum" as default
-    selected_strategy = "Momentum"
+    selected_strategy = "Trend Following"
 
     # Display buttons in sidebar (single column)
     for strategy, icon in strategy_map.items():
@@ -582,7 +580,7 @@ def stock_screener_app():
 
     def check_signal(data, strategy):
         recent_data = data[-5:]
-        if strategy == "Momentum":
+        if strategy == "Trend Following":
             # Calculate MACD AND SIGNAL
             data['MACD'] = data['EMA_12'] - data['EMA_26']
             data['MACD_signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
@@ -610,7 +608,7 @@ def stock_screener_app():
                     recent_data['10_volume_MA'].iloc[i-1] <= recent_data['30_volume_MA'].iloc[i-1]):
                     return recent_data.index[i]
                 
-        elif strategy == "Trend Following":
+        elif strategy == "Momentum":
             # Calculate Ichimoku Cloud components
             data['Ichimoku_Tenkan'] = (data['high'].rolling(window=9).max() + data['low'].rolling(window=9).min()) / 2
             data['Ichimoku_Kijun'] = (data['high'].rolling(window=26).max() + data['low'].rolling(window=26).min()) / 2

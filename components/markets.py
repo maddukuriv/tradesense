@@ -3,12 +3,10 @@ import streamlit as st
 from supabase import create_client
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
 import plotly.express as px
-from utils.constants import Largecap, Midcap, Smallcap,sp500_tickers,ftse100_tickers,crypto_largecap,crypto_midcap,Indices,Commodities,Currencies,SUPABASE_URL,SUPABASE_KEY
+from utils.constants import Largecap, Midcap, Smallcap, sp500_tickers, ftse100_tickers, crypto_largecap, crypto_midcap, Indices, Commodities, Currencies, SUPABASE_URL, SUPABASE_KEY
 from datetime import datetime, timedelta
-import requests
-    
+
 # Initialize Supabase client
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -19,7 +17,7 @@ def get_stock_data(ticker):
         if response.data:
             data = pd.DataFrame(response.data)
             data['date'] = pd.to_datetime(data['date'])
-            data = data.sort_values(by='date', ascending=True)  # Ensure sorting by date
+            data = data.sort_values(by='date', ascending=True)
             data.set_index('date', inplace=True)
             return data
         else:
@@ -31,11 +29,11 @@ def get_stock_data(ticker):
 def get_stock_info(ticker):
     """Fetch stock sector and industry info from Supabase."""
     try:
-        response = supabase.table("stock_info").select("sector, industry","longname","marketcap").filter("ticker", "eq", ticker).execute()
-        return response.data[0] if response.data else {"sector": "N/A", "industry": "N/A","longname": "N/A","marketcap": "N/A"}
+        response = supabase.table("stock_info").select("sector, industry", "longname", "marketcap").filter("ticker", "eq", ticker).execute()
+        return response.data[0] if response.data else {"sector": "N/A", "industry": "N/A", "longname": "N/A", "marketcap": "N/A"}
     except Exception as e:
         st.error(f"Error fetching stock info: {e}")
-        return {"sector": "N/A", "industry": "N/A","longname": "N/A","marketcap": "N/A"}
+        return {"sector": "N/A", "industry": "N/A", "longname": "N/A", "marketcap": "N/A"}
 
 @st.cache_data(ttl=300)
 def get_sector_industry_price_changes(tickers, include_sector_industry=False):
@@ -58,7 +56,7 @@ def get_sector_industry_price_changes(tickers, include_sector_industry=False):
             stock_info = get_stock_info(ticker) if include_sector_industry else {}
 
             if price_data_1y is not None and not price_data_1y.empty:
-                price_data_1y = price_data_1y.sort_index()  # Ensure chronological order
+                price_data_1y = price_data_1y.sort_index()
                 last_traded_price = price_data_1y['close'].iloc[-1]
                 one_day_volume = price_data_1y['volume'].iloc[-1]
 
@@ -74,9 +72,9 @@ def get_sector_industry_price_changes(tickers, include_sector_industry=False):
                 ten_day_change = get_price_change(10)
                 fifteen_day_change = get_price_change(15)
                 thirty_day_change = get_price_change(30)
-                three_month_change = get_price_change(63)  # ~63 trading days in 3 months
-                six_month_change = get_price_change(126)  # ~126 trading days in 6 months
-                twelve_month_change = get_price_change(252)  # ~252 trading days in a year
+                three_month_change = get_price_change(63)
+                six_month_change = get_price_change(126)
+                twelve_month_change = get_price_change(252)
 
             else:
                 last_traded_price = None
@@ -119,8 +117,8 @@ def get_sector_industry_price_changes(tickers, include_sector_industry=False):
     df.fillna(0, inplace=True)
     return df
 
-
 def markets_app():
+    st.title("Market Overview Dashboard")
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["Indices", "Stocks", "Commodities", "Currencies", "Cryptocurrencies"])
     
     ticker_mapping = {
@@ -139,7 +137,7 @@ def markets_app():
     for tab, market in zip([tab1, tab2, tab3, tab4, tab5], ticker_mapping.keys()):
         with tab:
             if market == "Stocks":
-                stock_category = st.radio("Select Stock Category", ["Largecap", "Midcap", "Smallcap", "Multicap"],horizontal=True)
+                stock_category = st.radio("Select Stock Category", ["Largecap", "Midcap", "Smallcap", "Multicap"], horizontal=True)
                 tickers = ticker_mapping[market][stock_category]
             else:
                 tickers = ticker_mapping[market]
@@ -150,7 +148,8 @@ def markets_app():
             st.dataframe(df)
 
             time_frame = st.radio(f"Select Time Frame for {market}", 
-                ['1D % Change','2D % Change', '3D % Change', '5D % Change', '10D % Change','15D % Change', '30D % Change', '3M % Change', '6M % Change', '12M % Change'],horizontal=True
+                ['1D % Change','2D % Change', '3D % Change', '5D % Change', '10D % Change','15D % Change', '30D % Change', '3M % Change', '6M % Change', '12M % Change'],
+                horizontal=True
             )
 
             if time_frame in df.columns:
@@ -163,19 +162,38 @@ def markets_app():
 
             if include_sector_industry:
                 st.subheader('Sector and Industry Performance')
-                df_treemap = df[df[time_frame] > 0]
-                if not df_treemap.empty:
-                    fig_treemap = px.treemap(df_treemap, path=['Sector', 'Industry'], values=time_frame,
-                                             title=f'Treemap of {time_frame} Performance', color=time_frame)
-                    st.plotly_chart(fig_treemap)
+                
+                # Keep all values including negatives
+                df_filtered = df[df[time_frame].notnull()]
+
+                if not df_filtered.empty:
+                    # Sector Performance
+                    sector_perf = df_filtered.groupby("Sector")[time_frame].mean().reset_index()
+                    sector_perf = sector_perf.sort_values(by=time_frame, ascending=False)
+                    fig_sector = px.bar(
+                        sector_perf,
+                        x='Sector',
+                        y=time_frame,
+                        title=f'{time_frame} Sector Performance',
+                        color=time_frame,
+                        color_continuous_scale=px.colors.diverging.RdYlGn
+                    )
+                    st.plotly_chart(fig_sector)
+
+                    # Industry Performance
+                    industry_perf = df_filtered.groupby("Industry")[time_frame].mean().reset_index()
+                    industry_perf = industry_perf.sort_values(by=time_frame, ascending=False)
+                    fig_industry = px.bar(
+                        industry_perf,
+                        x='Industry',
+                        y=time_frame,
+                        title=f'{time_frame} Industry Performance',
+                        color=time_frame,
+                        color_continuous_scale=px.colors.diverging.RdYlGn
+                    )
+                    st.plotly_chart(fig_industry)
                 else:
                     st.warning("No meaningful data available.")
 
 if __name__ == "__main__":
     markets_app()
-
-
-
-
-
-
